@@ -26,11 +26,14 @@
     "package": "npm run build && electron-builder --mac",
     "postinstall": "install-electron && electron-builder install-app-deps",
     "verify:native": "electron scripts/verify-native.mjs",
-    "verify:valhalla": "TRAILRT_LIVE_VALHALLA=${TRAILRT_LIVE_VALHALLA:-https://valhalla1.openstreetmap.de} vitest run src/main/routing/valhalla.live.test.ts",
+    "build:valhalla": "bash scripts/build-valhalla.sh",
+    "verify:valhalla": "electron scripts/verify-valhalla.mjs",
     "licences": "node scripts/generate-licences.mjs",
     "typecheck:e2e": "tsc --noEmit -p tsconfig.e2e.json",
     "licences:check": "node scripts/generate-licences.mjs",
-    "fixtures": "node scripts/generate-fixtures.mjs"
+    "fixtures": "node scripts/generate-fixtures.mjs",
+    "verify:valhalla:remote": "TRAILRT_LIVE_VALHALLA=${TRAILRT_LIVE_VALHALLA:-https://valhalla1.openstreetmap.de} vitest run src/main/routing/valhalla.live.test.ts",
+    "verify:geofabrik": "TRAILRT_LIVE_GEOFABRIK=1 vitest run src/main/routing/geofabrik.live.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "13.0.3",

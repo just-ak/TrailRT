@@ -772,3 +772,30 @@ export type RoutingRouteLegRequest = z.infer<typeof routingRouteLegRequest>;
 export type RoutingCreateSnappedRequest = z.infer<
   typeof routingCreateSnappedRequest
 >;
+
+/**
+ * The visible map area, for matching against downloadable regions.
+ *
+ * Bounds rather than centre-and-zoom: the renderer already has the bounds from
+ * Leaflet, and re-deriving them in the main process from a zoom level would
+ * need the viewport pixel size too.
+ */
+export const routingSuggestRegionsRequest = z
+  .object({
+    minLat: latSchema,
+    minLon: lonSchema,
+    maxLat: latSchema,
+    maxLon: lonSchema,
+  })
+  .strict()
+  .refine((v) => v.maxLat > v.minLat && v.maxLon > v.minLon, {
+    message: 'The visible area is empty.',
+  });
+
+export const routingDownloadRegionRequest = z
+  .object({ regionId: z.string().min(1).max(128) })
+  .strict();
+
+export type RoutingSuggestRegionsRequest = z.infer<
+  typeof routingSuggestRegionsRequest
+>;

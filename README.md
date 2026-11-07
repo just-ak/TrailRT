@@ -11,7 +11,8 @@ waypoints that persist across restarts. Routes are drawn and edited directly on
 the map with undo and redo over every edit; GPX, KML, KMZ, TCX, FIT and CSV
 import and export; and the map now carries a scale bar, cursor coordinates,
 layer visibility, a measure tool, a combined elevation and road-attribute
-profile, and optional snap-to-road. Phase 5 (windy-roads routing) is next.
+profile, and snap-to-road backed by a routing engine built into the app. Phase 5
+(windy-roads routing) is next.
 
 Every acceptance criterion is verified against the packaged DMG build, not just
 the development output: 812 unit tests and 68 end-to-end tests pass, with a
@@ -34,49 +35,50 @@ you draw, and nothing in the UI claims otherwise. Point it at a Valhalla
 instance — your own or one you are permitted to use — and the features become
 available after you accept a consent prompt that names the host.
 
-### Testing snap-to-road
+### Road routing is built in
 
-The quickest way to see it work, with nothing to install:
+The Valhalla routing engine is **embedded in the app**. There is no server to
+install, no endpoint to configure, no account, and no network request — and
+therefore no consent prompt, because nothing leaves your machine.
 
-1. Open **Settings → Road routing**.
-2. Set the routing endpoint to `https://valhalla1.openstreetmap.de`.
-   **Note the `1`.** The address without it is the demo _website_, not the API,
-   and it answers with an HTTP 405 — which is the single most likely reason a
-   correctly configured client looks broken.
-3. Press **Test connection**. It routes two fixed sample points in Switzerland
-   and reports the round trip. It sends none of your routes, so you can check a
-   host before trusting it with them.
-4. Tick the consent box, which names the host and lists what is and is not
-   transmitted.
-5. Select a trip, then either press the snap routing tool in the map toolbar and
-   click along a road, or draw a straight-line route and press **Snap to roads**
-   in its properties.
+It runs in-process as an N-API addon, so there is no daemon, no port and no
+background process. Measured inside Electron against a local graph: a route in
+52 ms, road attributes across 51 edges in 7 ms.
 
-That public instance is run by FOSSGIS and is rate-limited to roughly one
-request a second. TrailRT spaces out calls to any non-loopback host to stay
-inside that, so a multi-leg snap is deliberately unhurried. It is fine for
-trying the feature out and **not** appropriate for routine use.
+What you do need is a **region**, because the engine is useless without a
+routing graph. Pan the map to where you want to route and press **Add a map
+region**: TrailRT matches the visible area against Geofabrik's published
+extracts and offers the few that cover it, most specific first, with real
+download sizes. Pick one and it downloads and builds a graph locally.
 
-For real use, self-host. The upstream
-[Valhalla Docker image](https://github.com/valhalla/valhalla/blob/master/docker/README.md)
-builds a routing graph from an OpenStreetMap extract of your region and serves
-it on port 8002, so the endpoint becomes `http://localhost:8002` — which the
-origin policy permits over plain http precisely because it never leaves your
-machine, and which is exempt from the call spacing above.
+Sizes matter, which is why they are shown before you commit. Zoomed in on
+Liechtenstein the options are the country at 3.3 MB, or the Alps bundle that
+covers your whole view at 2.3 GB. Anything past 2 GB is marked unselectable
+rather than allowed to start a download that would be refused at the end.
 
-To verify the adapter itself against a live instance:
+Importing a `.osm.pbf` by hand still works, for a custom extract or a region
+Geofabrik does not publish.
+
+Building the app therefore has one extra prerequisite:
 
 ```sh
-npm run verify:valhalla     # defaults to the public demo instance
+npm run build:valhalla   # compiles Valhalla 3.9.1 (~7 min, needs Homebrew)
+npm run verify:valhalla  # proves it loads in Electron and returns speed limits
 ```
+
+Neither is part of `npm run verify`, so day-to-day development is unaffected.
+
+An external Valhalla server is still supported for anyone who already runs one —
+set the endpoint in Settings and it is used instead. `npm run
+verify:valhalla:remote` exercises that path against the public demo instance.
 
 Two limits stated plainly:
 
-- The Valhalla adapter is verified against the published API reference, against
-  a loopback server for the error paths, and — via `npm run verify:valhalla` —
-  against a real Valhalla instance. What is **not** verified is _your_
-  endpoint; that is what Test connection is for, and Settings says so until you
-  have run it.
+- **Apple silicon only.** The engine is compiled from source, and an x64 build
+  would mean a second toolchain under Rosetta and a second compile every
+  release. Intel Macs are not supported, and the app declares that rather than
+  failing to launch. macOS **13.3** or later, because Valhalla's use of libc++
+  `<format>` needs `std::to_chars`. See ADR 0013.
 - Posted speed limits come from OpenStreetMap, where `maxspeed` coverage is
   partial. Distance with no known limit is reported as a sized **Unknown** band
   and is never redistributed across the known bands or inferred from road
@@ -127,8 +129,8 @@ good set rather than an aspiration.
    render cache for large files, import with a preview-then-commit pipeline, and
    an import report that never silently discards data
 4. **Advanced mapping** — _complete._ OpenTopoMap and user-supplied tile
-   sources, overlays, a provider-agnostic routing abstraction with a Valhalla
-   adapter, an interactive snap routing tool plus one-step snapping of an
+   sources, overlays, a provider-agnostic routing abstraction with an
+   embedded Valhalla engine (ADR 0013) and an HTTP adapter for a remote one, an interactive snap routing tool plus one-step snapping of an
    existing route, both keeping your points as control points, a combined
    elevation / speed / road-class profile, distance-weighted speed
    distribution, scale bar, cursor coordinates, layer visibility, keyboard
@@ -225,11 +227,11 @@ Recorded up front rather than discovered later:
 - **Tile usage** follows the OpenStreetMap policy: no prefetching, no bulk or
   area downloads. Offline maps are available today as a user-supplied local tile
   source, configured in Settings.
-- **Road routing** needs an external service you configure yourself, and the
-  Valhalla adapter has been verified against the published API reference and
-  synthetic fixtures rather than a live instance — see above. There is no
-  default endpoint, by policy: core functionality must not depend on a network
-  service.
+- **Road routing needs a map region.** The engine is embedded, but it cannot
+  route until you give it an OpenStreetMap extract to build a graph from. That
+  is a one-off per region.
+- **Apple silicon only, macOS 13.3+.** See ADR 0013 for why, including the
+  `std::to_chars` constraint that sets the floor.
 - **Snapping moves routes, never tracks.** A recording is measured data, so a
   track's samples are never relocated onto a road. A track can still be
   map-matched to _read_ road attributes, which leaves every sample where it is.

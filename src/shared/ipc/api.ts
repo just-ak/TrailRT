@@ -28,6 +28,10 @@ import type {
   AttributeStatus,
   ConnectionTest,
   ConsentNotice,
+  LoadedRegion,
+  RegionCandidate,
+  RegionJobProgress,
+  RegionProgressEvent,
   PreviewedLeg,
   Profile,
   RouteProvenance,
@@ -261,6 +265,17 @@ export interface TrailRtApi {
     test(
       req: Req<typeof S.routingTestRequest>,
     ): Promise<Result<ConnectionTest>>;
+    /** Opens a file dialog, then builds a graph. Progress arrives as events. */
+    importRegion(): Promise<Result<LoadedRegion | null>>;
+    region(): Promise<Result<LoadedRegion | null>>;
+    /** Extracts covering the visible map area, most specific first. */
+    suggestRegions(
+      req: Req<typeof S.routingSuggestRegionsRequest>,
+    ): Promise<Result<RegionCandidate[]>>;
+    /** Downloads a chosen extract and builds a graph. Progress via events. */
+    downloadRegion(
+      req: Req<typeof S.routingDownloadRegionRequest>,
+    ): Promise<Result<LoadedRegion>>;
     snap(req: Req<typeof S.routingSnapRequest>): Promise<Result<SnapOutcome>>;
     /** One leg, no write. The interactive tool's per-click call. */
     routeLeg(
@@ -319,6 +334,12 @@ export interface TrailRtApi {
     onUndoStateChanged(listener: (state: UndoState) => void): () => void;
     onImportProgress(
       listener: (progress: ImportProgress) => void,
+    ): () => void;
+    onRegionProgress(
+      listener: (progress: RegionProgressEvent) => void,
+    ): () => void;
+    onRegionJobProgress(
+      listener: (progress: RegionJobProgress) => void,
     ): () => void;
   };
 }

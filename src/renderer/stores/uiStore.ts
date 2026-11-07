@@ -28,7 +28,9 @@ export type DialogKind =
     }
   /** Files already parsed and staged in the main process, awaiting confirmation. */
   | { kind: 'import'; staged: StagedImport[] }
-  | { kind: 'export'; scope: ExportScopeRequest };
+  | { kind: 'export'; scope: ExportScopeRequest }
+  /** Picks a downloadable map region from the visible map area. */
+  | { kind: 'regionPicker' };
 
 interface UiState {
   layout: PanelLayout;

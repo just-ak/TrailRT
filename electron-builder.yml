@@ -15,11 +15,34 @@ files:
 asarUnpack:
   - '**/node_modules/better-sqlite3/**'
 
+# The bundled Valhalla routing engine, so snap-to-road and posted speed limits
+# work offline with nothing for the user to install. See ADR 0013.
+#
+# extraResources, not files: these are native binaries and dylibs that must sit
+# in a real directory on disk. Inside the asar they could not be dlopen'd, and
+# the tile-building CLIs could not be executed at all.
+extraResources:
+  - from: resources/valhalla
+    to: valhalla
+    filter:
+      - '**/*'
+
 mac:
   category: public.app-category.healthcare-fitness
+  # 13.3, raised from Electron 45's own 13.0, because the bundled Valhalla
+  # addon is compiled against macOS 13.3 — libc++'s <format> uses std::to_chars,
+  # which is unavailable before then. Declaring 13.0 while shipping a 13.3
+  # binary would be a launch failure on 13.0-13.2 rather than a clear refusal.
+  # See ADR 0013 and scripts/build-valhalla.sh.
+  minimumSystemVersion: '13.3'
+  # arm64 only. The bundled Valhalla routing engine is compiled from source,
+  # and an x64 build would mean a second Homebrew toolchain under Rosetta plus
+  # a second compile on every release. Intel Macs are not supported; the DMG
+  # name says arm64 and the README says so plainly, so an Intel user gets a
+  # clear "unsupported" rather than a binary that fails to launch. See ADR 0013.
   target:
     - target: dmg
-      arch: [arm64, x64]
+      arch: [arm64]
   # Ad-hoc signing: no Developer ID is available yet. See ADR 0009.
   # When one is obtained, replace "-" with the certificate name (or let
   # electron-builder auto-discover it) and enable notarize below. The

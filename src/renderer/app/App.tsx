@@ -5,12 +5,14 @@ import { RestoreDialog } from "../features/backup/RestoreDialog";
 import { ExportDialog } from "../features/export/ExportDialog";
 import { ImportDialog } from "../features/import/ImportDialog";
 import { ConfirmDeleteDialog } from "../features/library/ConfirmDeleteDialog";
+import { RegionPickerDialog } from "../features/settings/RegionPickerDialog";
 import { SettingsDialog } from "../features/settings/SettingsDialog";
 import * as actions from "../lib/actions";
 import { api, callOr, describeError } from "../lib/client";
 import { useLibraryStore } from "../stores/libraryStore";
 import { useSettingsStore } from "../stores/settingsStore";
 import { useUiStore } from "../stores/uiStore";
+import { useRoutingStore } from "../stores/routingStore";
 import { useUndoStore } from "../stores/undoStore";
 import { Layout } from "./Layout";
 
@@ -59,6 +61,29 @@ export function App(): ReactNode {
   useEffect(() => {
     return api().events.onThemeChanged(setSystemPrefersDark);
   }, [setSystemPrefersDark]);
+
+  /*
+   * Routing status and the loaded map region.
+   *
+   * Both are local reads — neither can reach the network, even when a remote
+   * endpoint is configured — so they are safe at startup. Without them the
+   * snap tool would start out disabled regardless of whether the built-in
+   * engine is ready.
+   */
+  useEffect(() => {
+    void useRoutingStore.getState().loadStatus();
+    void useRoutingStore.getState().loadRegion();
+    const offStage = api().events.onRegionProgress((progress) => {
+      useRoutingStore.getState().setRegionProgress(progress);
+    });
+    const offJob = api().events.onRegionJobProgress((progress) => {
+      useRoutingStore.getState().setRegionJob(progress);
+    });
+    return () => {
+      offStage();
+      offJob();
+    };
+  }, []);
 
   // The undo stack lives in the main process; this mirror drives the Edit
   // menu's enabled state and labels.
@@ -176,6 +201,9 @@ export function App(): ReactNode {
         />
       )}
       {dialog.kind === "export" && <ExportDialog scope={dialog.scope} />}
+      {dialog.kind === "regionPicker" && (
+        <RegionPickerDialog onClose={() => useUiStore.getState().closeDialog()} />
+      )}
 
       <Toast />
     </>

@@ -9,6 +9,7 @@ import type { ConnectionTest, ConsentNotice } from "@shared/routing/results";
 import type { ThemePreference, UnitSystem } from "@shared/domain/types";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
+import * as actions from "../../lib/actions";
 import { api, callOr } from "../../lib/client";
 import { useRoutingStore } from "../../stores/routingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -272,6 +273,9 @@ function RoutingSettings(): ReactNode {
   const update = useSettingsStore((s) => s.set);
   const loadStatus = useRoutingStore((s) => s.loadStatus);
   const status = useRoutingStore((s) => s.status);
+  const region = useRoutingStore((s) => s.region);
+  const regionImporting = useRoutingStore((s) => s.regionImporting);
+  const regionProgress = useRoutingStore((s) => s.regionProgress);
 
   /*
    * A local draft of the endpoint, committed on blur.
@@ -386,17 +390,74 @@ function RoutingSettings(): ReactNode {
         Road routing
       </h3>
       <p className={`${hintClass} mb-2`}>
-        Optional. With no service configured, routes are straight lines between
-        the points you place and TrailRT makes no network requests beyond map
-        tiles. Everything else keeps working exactly as it does now.
+        A routing engine is built into TrailRT and runs on this machine. It
+        needs a map region to work from, and nothing is sent anywhere. A remote
+        service is optional, for anyone who already runs one.
       </p>
 
+      {/* --- the built-in engine's map region */}
+      <div className="mb-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)] p-3">
+        <p className={labelClass}>Map region</p>
+        {region === null ? (
+          <p className={`${hintClass} mb-2`}>
+            No region loaded. Pan the map to where you want to route, then add
+            a region — TrailRT finds the extracts covering that area and shows
+            their download sizes. A country is typically a few hundred
+            megabytes and builds in a minute or two.
+          </p>
+        ) : (
+          <p className={`${hintClass} mb-2`}>
+            <strong>{region.regionName}</strong> ·{' '}
+            {region.tileCount.toLocaleString()} tiles ·{' '}
+            {(region.graphBytes / 1024 ** 2).toFixed(0)} MB · built{' '}
+            {new Date(region.builtAt).toLocaleDateString()}
+          </p>
+        )}
+
+        {regionImporting ? (
+          <p
+            role="status"
+            className="text-[12px] text-[var(--color-text-primary)]"
+          >
+            {regionProgress?.stage ?? 'Starting…'}
+            <span className={`${hintClass} ml-2`}>
+              This can take a few minutes. You can keep using the rest of the
+              app.
+            </span>
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={region === null ? 'primary' : 'default'}
+              onClick={() => actions.openRegionPicker()}
+            >
+              {region === null ? 'Add a map region…' : 'Replace region…'}
+            </Button>
+            {/* The manual path stays: Geofabrik granularity stops at published
+                regions, so anyone wanting a custom extract still needs it. */}
+            <Button onClick={() => void actions.importRoutingRegion()}>
+              Import a .osm.pbf…
+            </Button>
+          </div>
+        )}
+
+        {region !== null && !regionImporting && (
+          /* One region at a time, said out loud. Valhalla cannot merge a
+             second one, and a user who expects additive imports would end up
+             quietly losing the first. */
+          <p className={`${hintClass} mt-1`}>
+            Importing another region replaces this one.
+          </p>
+        )}
+      </div>
+
       <div className="py-2">
-        <p className={labelClass}>Routing endpoint</p>
+        <p className={labelClass}>Remote routing service (optional)</p>
         <p className={`${hintClass} mb-1`}>
-          The base URL of a Valhalla instance — your own, or one you are
-          permitted to use. <strong>https</strong> anywhere; plain{" "}
-          <strong>http</strong> only for a service on this machine.
+          Leave empty to use the built-in engine. Setting an address here
+          overrides it — a deliberate choice is respected rather than ignored.
+          <strong> https</strong> anywhere; plain <strong>http</strong> only for
+          a service on this machine.
         </p>
         <p className={`${hintClass} mb-1`}>
           To try it without running anything, use the public demo instance{" "}

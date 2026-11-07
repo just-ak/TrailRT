@@ -200,18 +200,26 @@ test.describe('measure tool', () => {
   });
 });
 
-test.describe('routing with no provider configured', () => {
-  test('reports not-configured rather than an error', async () => {
+test.describe('routing with the engine present but no map region', () => {
+  test('reports a missing region, not an error', async () => {
     const status = await harness.page.evaluate(async () => {
       const result = await window.trailrt.routing.status();
       return result.ok ? result.data : null;
     });
 
     expect(status?.available).toBe(false);
-    expect(status?.reason).toBe('not-configured');
+    /*
+     * The engine ships with the app (ADR 0013), so a fresh install has an
+     * engine and no map data — not "nothing configured". The distinction
+     * matters because the remedies differ: one is an import, the other is a
+     * settings change.
+     */
+    expect(status?.reason).toBe('no-map-data');
+    expect(status?.kind).toBe('embedded');
+    // No host, so nothing to allowlist and nothing to consent to.
     expect(status?.origin).toBeNull();
-    // The copy has to say the app still works, not that something is missing.
-    expect(status?.message).toMatch(/straight lines/i);
+    // Actionable, not a complaint.
+    expect(status?.message).toMatch(/import an openstreetmap region/i);
   });
 
   test('refuses a snap with a distinguishable error code', async () => {
@@ -237,6 +245,8 @@ test.describe('routing with no provider configured', () => {
 
     // Not a generic failure: the renderer distinguishes this from a consent
     // prompt and from a bad endpoint, and offers a different action for each.
+    // A missing map region surfaces as PROVIDER_UNAVAILABLE too, since from
+    // the caller's side the engine genuinely cannot serve the request.
     expect(outcome).toEqual({ ok: false, code: 'PROVIDER_UNAVAILABLE' });
   });
 
@@ -516,7 +526,9 @@ test.describe('the snap routing tool', () => {
     // one that says why it cannot run.
     await expect(tool).toBeVisible();
     await expect(tool).toBeDisabled();
-    await expect(tool).toHaveAttribute('title', /straight lines/i);
+    // The tooltip carries the engine's own reason, so it says what to do
+    // rather than only that something is wrong.
+    await expect(tool).toHaveAttribute('title', /import an openstreetmap region/i);
   });
 
   test('refuses a leg request with the same code as a snap', async () => {
@@ -580,16 +592,26 @@ test.describe('the snap routing tool', () => {
       'clearAttributes',
       'consentNotice',
       'createSnapped',
+      // Fetches a published extract covering the visible map area and builds a
+      // graph from it, so a user never has to understand OpenStreetMap
+      // distribution to get routing working.
+      'downloadRegion',
+      // The only channel in the application that spawns a child process.
+      'importRegion',
       'match',
       'profile',
       'provenance',
+      'region',
       'routeLeg',
       'snap',
       'speedDistribution',
       'status',
-      // The connection test. Listed here deliberately: it is the one routing
-      // call not gated on consent, so its presence should be a decision
-      // someone made rather than something that drifted in.
+      // Ranks downloadable extracts against the current viewport. A read, so
+      // it reaches the index but never downloads an extract.
+      'suggestRegions',
+      // The connection test. Listed deliberately: it is the one routing call
+      // not gated on consent, so its presence should be a decision someone
+      // made rather than something that drifted in.
       'test',
     ]);
   });

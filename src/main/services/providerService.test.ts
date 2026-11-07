@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -9,6 +9,7 @@ import { createDatabase, type Db, type DbHandle } from '../db/client';
 import { ServiceError } from './errors';
 import * as providerService from './providerService';
 import * as settingsService from './settingsService';
+import { embeddedPaths } from '../routing/embedded';
 
 let dir: string;
 let handle: DbHandle;
@@ -300,5 +301,122 @@ describe('settingsSetRequest: routingEndpoint', () => {
         value,
       ).toBe(false);
     }
+  });
+});
+
+describe('the built-in engine', () => {
+  let engineDir: string;
+  let engine: ReturnType<typeof embeddedPaths>;
+
+  beforeEach(() => {
+    engineDir = mkdtempSync(join(tmpdir(), 'trailrt-engine-'));
+    const resources = join(engineDir, 'resources');
+    mkdirSync(join(resources, 'valhalla'), { recursive: true });
+    engine = embeddedPaths(join(engineDir, 'userData'), resources);
+  });
+
+  afterEach(() => {
+    providerService.setEmbeddedLocator(() => null);
+    rmSync(engineDir, { recursive: true, force: true });
+  });
+
+  const present = () => {
+    writeFileSync(engine.addon, 'addon', 'utf8');
+    writeFileSync(engine.configTemplate, JSON.stringify({ mjolnir: {} }), 'utf8');
+  };
+  const withGraph = () => {
+    mkdirSync(join(engine.tileDir, '0'), { recursive: true });
+    writeFileSync(join(engine.tileDir, '0', 't.gph'), 'x', 'utf8');
+  };
+
+  it('reports no-engine when the build is missing it', () => {
+    providerService.setEmbeddedLocator(() => engine);
+
+    const status = providerService.resolveFrom(DEFAULT_SETTINGS).status;
+
+    expect(status.available).toBe(false);
+    expect(status.reason).toBe('no-engine');
+    expect(status.kind).toBe('embedded');
+  });
+
+  /*
+   * The first-run state, and not an error. A user who has just installed the
+   * app has an engine and no map, and the message has to be an instruction
+   * rather than a complaint.
+   */
+  it('reports no-map-data when the engine has no region yet', () => {
+    present();
+    providerService.setEmbeddedLocator(() => engine);
+
+    const status = providerService.resolveFrom(DEFAULT_SETTINGS).status;
+
+    expect(status.available).toBe(false);
+    expect(status.reason).toBe('no-map-data');
+    expect(status.message).toMatch(/Import an OpenStreetMap region/i);
+  });
+
+  it('becomes available with no endpoint and no consent once a region exists', () => {
+    present();
+    withGraph();
+    providerService.setEmbeddedLocator(() => engine);
+
+    const resolution = providerService.resolveFrom(DEFAULT_SETTINGS);
+
+    expect(resolution.available).toBe(true);
+    if (!resolution.available) return;
+    expect(resolution.status.kind).toBe('embedded');
+    expect(resolution.provider.id).toBe('valhalla-embedded');
+    // Nothing leaves the machine, so there is nothing to consent to and no
+    // host to allowlist in the CSP.
+    expect(DEFAULT_SETTINGS.routingConsentAccepted).toBe(false);
+    expect(resolution.provider.origins).toEqual([]);
+    expect(resolution.status.origin).toBeNull();
+  });
+
+  /*
+   * A user who typed a host in went out of their way. Silently preferring the
+   * built-in engine would be the application overruling a deliberate choice.
+   */
+  it('lets an explicitly configured remote endpoint win', () => {
+    present();
+    withGraph();
+    providerService.setEmbeddedLocator(() => engine);
+
+    const resolution = providerService.resolveFrom(
+      settings({
+        routingEndpoint: 'https://routing.example.org',
+        routingConsentAccepted: true,
+      }),
+    );
+
+    expect(resolution.available).toBe(true);
+    if (!resolution.available) return;
+    expect(resolution.status.kind).toBe('remote');
+    expect(resolution.provider.id).toBe('valhalla');
+    expect(resolution.status.origin).toBe('https://routing.example.org');
+  });
+
+  it('still demands consent for a remote endpoint even with the engine ready', () => {
+    present();
+    withGraph();
+    providerService.setEmbeddedLocator(() => engine);
+
+    const status = providerService.resolveFrom(
+      settings({ routingEndpoint: 'https://routing.example.org' }),
+    ).status;
+
+    // Falling back to the embedded engine here would quietly route around the
+    // user's stated intent; refusing names the one thing they need to do.
+    expect(status.reason).toBe('consent-required');
+  });
+
+  it('hands requireProvider the embedded engine', () => {
+    present();
+    withGraph();
+    providerService.setEmbeddedLocator(() => engine);
+
+    const { provider } = providerService.requireProvider(db);
+
+    expect(provider.id).toBe('valhalla-embedded');
   });
 });

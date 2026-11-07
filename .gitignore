@@ -22,3 +22,9 @@ blob-report/
 
 # Generated test fixtures (binary / bulk) — run `npm run fixtures`
 test-data/generated/
+
+# The bundled Valhalla engine: ~58 MB of compiled output produced by
+# scripts/build-valhalla.sh + scripts/bundle-valhalla.sh. Build artefacts, not
+# source — the source of the combined work is Valhalla's own repository at the
+# pinned tag, which satisfies GPL-3.0 since Valhalla is MIT. See ADR 0013.
+/resources/valhalla/

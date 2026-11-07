@@ -63,14 +63,15 @@ test.describe('route drawing', () => {
     /*
      * The hint bar must be explicit that nothing is snapped to a road.
      *
-     * With no routing service configured — which is the default and the state
-     * these tests run in — the wording names the reason rather than merely
-     * stating the fact. Phase 4 added the snap toggle, and it is deliberately
-     * absent here: a control that cannot work must not be shown.
+     * Since ADR 0013 the engine is built into the app, so the reason it cannot
+     * snap here is a missing map region rather than a missing service — these
+     * tests run against a fresh user-data directory with no graph. The wording
+     * names that, because it is the thing the user can fix.
+     *
+     * The snap toggle is deliberately absent: a control that cannot work must
+     * not be shown.
      */
-    await expect(
-      page.getByText(/no routing service configured/i),
-    ).toBeVisible();
+    await expect(page.getByText(/no map region loaded yet/i)).toBeVisible();
     await expect(
       page.getByRole('button', { name: /snap to roads/i }),
     ).toHaveCount(0);

@@ -15,6 +15,12 @@ import {
   createValhallaProvider,
   VALHALLA_PROVIDER_ID,
 } from '../routing/valhalla';
+import {
+  createEmbeddedProvider,
+  embeddedState,
+  embeddedVersion,
+  type EmbeddedPaths,
+} from '../routing/embedded';
 import { ServiceError } from './errors';
 import * as settingsService from './settingsService';
 
@@ -83,10 +89,19 @@ function statusFor(
   origin: string | null,
   message: string | null,
   attribution: string | null,
+  extra: {
+    kind?: RoutingStatus['kind'];
+    providerId?: string | null;
+    engineVersion?: string | null;
+  } = {},
 ): RoutingStatus {
   return {
     available: reason === 'available',
-    providerId: reason === 'available' ? VALHALLA_PROVIDER_ID : null,
+    kind: extra.kind ?? 'none',
+    engineVersion: extra.engineVersion ?? null,
+    providerId:
+      extra.providerId ??
+      (reason === 'available' ? VALHALLA_PROVIDER_ID : null),
     origin,
     reason,
     message,
@@ -103,6 +118,21 @@ function statusFor(
   };
 }
 
+/**
+ * How the embedded engine is located.
+ *
+ * Injected rather than imported, because resolving it needs `electron.app` for
+ * the user-data and resources directories, and this module is unit tested
+ * without an Electron runtime. `main/index.ts` installs the real locator at
+ * startup; tests point it at a temporary directory or leave it returning null
+ * to exercise the no-engine path.
+ */
+let embeddedLocator: () => EmbeddedPaths | null = () => null;
+
+export function setEmbeddedLocator(locator: () => EmbeddedPaths | null): void {
+  embeddedLocator = locator;
+}
+
 /** Origins that have answered a test route since launch. Not persisted. */
 const testedOrigins = new Set<string>();
 
@@ -116,16 +146,60 @@ const testedOrigins = new Set<string>();
 export function resolveFrom(settings: AppSettings): RoutingResolution {
   const endpoint = settings.routingEndpoint.trim();
 
+  /*
+   * An explicitly configured endpoint wins over the built-in engine.
+   *
+   * Not because remote is better — it is slower, needs consent and needs a
+   * network — but because a user who typed a host in went out of their way to
+   * do it, and silently ignoring that would be the application overruling a
+   * deliberate choice. The default is an empty endpoint, so the good path is
+   * also the default path.
+   */
   if (endpoint.length === 0) {
+    const paths = embeddedLocator();
+
+    if (paths === null) {
+      return {
+        available: false,
+        status: statusFor(
+          settings,
+          'not-configured',
+          null,
+          'No routing service is configured. Routes are drawn as straight lines between the points you place.',
+          null,
+        ),
+      };
+    }
+
+    const state = embeddedState(paths);
+
+    if (!state.usable) {
+      return {
+        available: false,
+        status: statusFor(
+          settings,
+          state.reason === 'no-addon' ? 'no-engine' : 'no-map-data',
+          null,
+          state.message,
+          null,
+          {
+            kind: 'embedded',
+            engineVersion:
+              state.reason === 'no-addon' ? null : embeddedVersion(paths),
+          },
+        ),
+      };
+    }
+
+    const provider = createEmbeddedProvider(paths);
     return {
-      available: false,
-      status: statusFor(
-        settings,
-        'not-configured',
-        null,
-        'No routing service is configured. Routes are drawn as straight lines between the points you place.',
-        null,
-      ),
+      available: true,
+      provider,
+      status: statusFor(settings, 'available', null, null, provider.attribution, {
+        kind: 'embedded',
+        providerId: provider.id,
+        engineVersion: embeddedVersion(paths),
+      }),
     };
   }
 
@@ -134,7 +208,9 @@ export function resolveFrom(settings: AppSettings): RoutingResolution {
   if (!check.ok || check.origin === null) {
     return {
       available: false,
-      status: statusFor(settings, 'invalid-endpoint', null, check.message, null),
+      status: statusFor(settings, 'invalid-endpoint', null, check.message, null, {
+        kind: 'remote',
+      }),
     };
   }
 
@@ -147,6 +223,7 @@ export function resolveFrom(settings: AppSettings): RoutingResolution {
         check.origin,
         `Snapping and road attributes send coordinates to ${check.origin}. Accept that in Settings before TrailRT will contact it.`,
         null,
+        { kind: 'remote' },
       ),
     };
   }
@@ -162,6 +239,7 @@ export function resolveFrom(settings: AppSettings): RoutingResolution {
       check.origin,
       null,
       provider.attribution,
+      { kind: 'remote', providerId: provider.id },
     ),
   };
 }

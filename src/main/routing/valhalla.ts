@@ -144,26 +144,48 @@ export interface ValhallaOptions {
 }
 
 export const VALHALLA_PROVIDER_ID = 'valhalla';
+export const EMBEDDED_PROVIDER_ID = 'valhalla-embedded';
 
-export function createValhallaProvider(
-  options: ValhallaOptions,
+/**
+ * How a request reaches Valhalla.
+ *
+ * `path` is the HTTP-style action name — `/route`, `/trace_attributes` — which
+ * the embedded transport maps onto the matching method on `tyr::actor_t`. That
+ * the two share a vocabulary is not a coincidence: the actor is what Valhalla's
+ * own HTTP service dispatches to, and it takes the same JSON.
+ */
+export type ValhallaTransport = <T>(path: string, body: unknown) => Promise<T>;
+
+export interface ValhallaProviderMeta {
+  id: string;
+  name: string;
+  /**
+   * Origins the CSP must allow. **Empty for the embedded engine**, which is the
+   * whole point: there is no host to allowlist because no request is made.
+   */
+  origins: readonly string[];
+  attribution: string;
+}
+
+/**
+ * Builds a provider around a transport.
+ *
+ * Every line of request construction and response translation below is shared
+ * between the embedded engine and a remote HTTP instance. Only the transport
+ * differs, which is what makes "the same adapter, verified once" true rather
+ * than aspirational — and it is why the embedded path inherits the km→m and
+ * km/h→m/s conversions, the null-not-zero handling and the unmatched-leg
+ * behaviour without a second implementation to keep in step.
+ */
+export function createValhallaProviderWith(
+  call: ValhallaTransport,
+  meta: ValhallaProviderMeta,
 ): RoutingProvider {
-  const origins = [options.endpoint];
-
-  const call = async <T>(path: string, body: unknown): Promise<T> =>
-    postJson<T>({
-      endpoint: options.endpoint,
-      path,
-      body,
-      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
-      ...(options.signal === undefined ? {} : { signal: options.signal }),
-    });
-
   return {
-    id: VALHALLA_PROVIDER_ID,
-    name: 'Valhalla',
-    origins,
-    attribution: 'Routing by Valhalla · Road data © OpenStreetMap contributors',
+    id: meta.id,
+    name: meta.name,
+    origins: meta.origins,
+    attribution: meta.attribution,
 
     async snap(controlPoints, mode) {
       if (controlPoints.length < 2) {
@@ -249,7 +271,7 @@ export function createValhallaProvider(
         }
       }
 
-      return { provider: VALHALLA_PROVIDER_ID, mode, legs, unmatchedLegs };
+      return { provider: meta.id, mode, legs, unmatchedLegs };
     },
 
     async match(shape, mode) {
@@ -314,7 +336,7 @@ export function createValhallaProvider(
       ).length;
 
       return {
-        provider: VALHALLA_PROVIDER_ID,
+        provider: meta.id,
         mode,
         shape: matchedShape,
         edges,
@@ -322,4 +344,31 @@ export function createValhallaProvider(
       };
     },
   };
+}
+
+/**
+ * A provider talking to a remote Valhalla over HTTP.
+ *
+ * Still supported after ADR 0013 embedded the engine: a user who already runs
+ * a shared instance can point at it, and this is the path
+ * `npm run verify:valhalla:remote` exercises against the public demo.
+ */
+export function createValhallaProvider(
+  options: ValhallaOptions,
+): RoutingProvider {
+  const call: ValhallaTransport = <T>(path: string, body: unknown) =>
+    postJson<T>({
+      endpoint: options.endpoint,
+      path,
+      body,
+      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
+    });
+
+  return createValhallaProviderWith(call, {
+    id: VALHALLA_PROVIDER_ID,
+    name: 'Valhalla',
+    origins: [options.endpoint],
+    attribution: 'Routing by Valhalla · Road data © OpenStreetMap contributors',
+  });
 }

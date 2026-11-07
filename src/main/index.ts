@@ -11,7 +11,9 @@ import {
   installContentSecurityPolicy,
   installTileUserAgent,
 } from './security/csp';
+import { currentEmbeddedPaths } from './routing/embeddedLocation';
 import * as backupService from './services/backupService';
+import * as providerService from './services/providerService';
 import * as settingsService from './services/settingsService';
 import {
   createMainWindow,
@@ -126,6 +128,16 @@ async function start(): Promise<void> {
   });
   installTileUserAgent(app.getVersion());
   denyAllPermissions();
+
+  /*
+   * Tell the provider layer where the built-in routing engine lives.
+   *
+   * Injected here rather than imported there, because resolving it needs
+   * `app.getPath` and `app.isPackaged`, and `providerService` is unit tested
+   * without an Electron runtime. Installed before any IPC handler can run, so
+   * the first `routing:status` call already sees the engine.
+   */
+  providerService.setEmbeddedLocator(currentEmbeddedPaths);
 
   // --- IPC and menus
   registerIpcHandlers();

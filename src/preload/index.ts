@@ -3,6 +3,10 @@ import { CHANNELS, EVENTS, type MenuAction } from '@shared/ipc/channels';
 import type { TrailRtApi } from '@shared/ipc/api';
 import type { UndoState } from '@shared/domain/types';
 import type { ImportProgress } from '@shared/io/types';
+import type {
+  RegionJobProgress,
+  RegionProgressEvent,
+} from '@shared/routing/results';
 
 /**
  * The context bridge surface.
@@ -154,6 +158,10 @@ const api: TrailRtApi = {
     status: () => call(CHANNELS.routing.status),
     consentNotice: (req) => call(CHANNELS.routing.consentNotice, req),
     test: (req) => call(CHANNELS.routing.test, req),
+    importRegion: () => call(CHANNELS.routing.importRegion),
+    region: () => call(CHANNELS.routing.region),
+    suggestRegions: (req) => call(CHANNELS.routing.suggestRegions, req),
+    downloadRegion: (req) => call(CHANNELS.routing.downloadRegion, req),
     snap: (req) => call(CHANNELS.routing.snap, req),
     routeLeg: (req) => call(CHANNELS.routing.routeLeg, req),
     createSnapped: (req) => call(CHANNELS.routing.createSnapped, req),
@@ -188,6 +196,10 @@ const api: TrailRtApi = {
       subscribe<[UndoState]>(EVENTS.undoStateChanged, listener),
     onImportProgress: (listener) =>
       subscribe<[ImportProgress]>(EVENTS.importProgress, listener),
+    onRegionProgress: (listener) =>
+      subscribe<[RegionProgressEvent]>(EVENTS.regionProgress, listener),
+    onRegionJobProgress: (listener) =>
+      subscribe<[RegionJobProgress]>(EVENTS.regionJobProgress, listener),
   },
 };
 

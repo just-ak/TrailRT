@@ -92,20 +92,43 @@ export function RoadDataSection({
         <div className="mb-2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)] p-2">
           <p className="text-[12px] text-[var(--color-text-secondary)]">
             {status?.message ??
-              "No routing service is configured. Routes stay as the straight lines you draw."}
+              "Road routing is unavailable. Routes stay as the straight lines you draw."}
           </p>
-          <Button
-            onClick={() => openDialog({ kind: "settings" })}
-            // The one actionable thing from here, for all three unavailable
-            // states: not configured, invalid endpoint, consent outstanding.
-          >
-            Open Settings
-          </Button>
+          {/*
+            A missing map region is a different problem from a missing or
+            unconsented server, and sending the user to Settings for it would
+            be a dead end — there is nothing there to fix it. Each state gets
+            the action that actually resolves it.
+          */}
+          <div className="mt-2">
+            {status?.reason === "no-map-data" ? (
+              <Button
+                variant="primary"
+                onClick={() => actions.openRegionPicker()}
+              >
+                Add a map region…
+              </Button>
+            ) : status?.reason === "no-engine" ? (
+              <p className="text-[11px] text-[var(--color-text-muted)]">
+                This build is missing the routing engine. Nothing in Settings
+                will fix it; the app needs rebuilding.
+              </p>
+            ) : (
+              <Button onClick={() => openDialog({ kind: "settings" })}>
+                Open Settings
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
       {available && (
         <>
+          <p className="mb-2 text-[11px] text-[var(--color-text-muted)]">
+            {status?.kind === "embedded"
+              ? `Built-in engine${status.engineVersion === null ? "" : ` (Valhalla ${status.engineVersion})`} — runs on this machine, nothing is sent anywhere.`
+              : `Remote service at ${status?.origin ?? "a configured host"}.`}
+          </p>
           <div className="mb-2 flex items-center justify-between gap-2">
             <label
               htmlFor={`mode-${ownerId}`}

@@ -164,3 +164,72 @@ Update `docs/progress-mindmap.svg` as each task changes status.
   - E2E: the tool is present but disabled with no provider; `routeLeg` refuses
     with `PROVIDER_UNAVAILABLE`; a leg/point mismatch is refused at the schema
   - _Requirements: 3.1, 3.2, 3.3, 3.6, 3.8, 9_
+
+- [x] 18. Embed the routing engine
+  - Build Valhalla 3.9.1 from source with `ENABLE_NODE_BINDINGS=ON` and
+    `ENABLE_SERVICES=OFF`: the N-API bindings wrap `tyr::actor_t`, which takes
+    the same JSON as the HTTP API, so there is no daemon, port or supervisor
+  - `scripts/build-valhalla.sh`, `scripts/bundle-valhalla.sh`,
+    `scripts/verify-valhalla.mjs`, `npm run build:valhalla`,
+    `npm run verify:valhalla`
+  - Relocatable bundle: 113 dylibs rewritten to `@rpath` with
+    `@loader_path`-relative rpaths, ad-hoc re-signed
+  - Adapter refactored so the embedded and HTTP providers share every line of
+    request construction and response translation — only the transport differs
+  - arm64 only; `minimumSystemVersion` raised to 13.3 for `std::to_chars`
+  - Licence audit of the native tree, including the libspatialite /
+    readosm tri-licence election to LGPL-2.1-or-later
+  - Verification: the bundler relocates a copy and loads it in Electron,
+    because a path audit passed on a bundle that could not load
+  - _Requirements: 2.1, 2.2, 2.6, 3.1, 6.1; ADR 0013_
+
+- [x] 19. Wire the UI to the embedded engine
+  - `LocalValhallaProvider` (`main/routing/embedded.ts`), preferred when no
+    endpoint is configured — needs no endpoint and **no consent**, because
+    nothing leaves the machine, and contributes no CSP origin
+  - An explicitly configured remote endpoint still wins: a deliberate choice is
+    respected rather than overruled
+  - Map region import: `routing:importRegion` spawns `valhalla_build_tiles`
+    into a staging directory and swaps it in only on success, so a failed or
+    cancelled build cannot leave a half-written graph that reports as usable
+  - Region metadata stored beside the graph, not in settings, so deleting the
+    graph takes its label with it
+  - Three distinguishable unavailable states — `no-engine` (broken build),
+    `no-map-data` (user action), `consent-required` (remote only) — each with
+    the action that actually resolves it
+  - Unit tests: presence checks, config generation, region round-trip,
+    embedded-vs-remote preference, consent still enforced for remote
+  - E2E against the real engine and a real graph: status available with no
+    endpoint or consent, a leg routed in-process, a drawn route snapped with
+    control points kept, posted speed limits off the local graph, the toolbar
+    tool enabled, the properties panel naming the engine
+  - _Requirements: 3.1, 3.2, 3.3, 6.1, 6.4, 12.1; ADR 0013_
+
+- [x] 20. Region download from the visible map area
+  - `shared/geo/polygon.ts`: pure point-in-polygon, bounding-box area and
+    containment — planar on purpose, since these are coarse administrative
+    outlines and the question is "which country am I looking at"
+  - `main/routing/geofabrik.ts`: parses Geofabrik's `index-v1.json` (554
+    regions, nested three deep, polygon boundaries plus a direct `.pbf` URL)
+    and ranks candidates for a viewport
+  - **Ranked by the viewport centre, not by full coverage.** The obvious rule
+    is wrong and measurably so: zoomed to Vaduz the viewport corners cross
+    Liechtenstein's border, so the smallest fully-containing region becomes
+    the 2.3 GB Alps bundle. `coversViewport` is reported per candidate instead,
+    so the UI can offer the choice for a view spanning a border
+  - Real download sizes via HEAD through the `-latest.osm.pbf` → dated-file
+    redirect, followed only within the same origin
+  - Oversized candidates marked unselectable up front rather than refused at
+    the end of a multi-gigabyte download
+  - Index cached on disk with a week's TTL, and used even when stale if the
+    network fails — a week-old index beats no picker
+  - Extract deleted after the graph is built; it is the raw input and several
+    times the size of what it produces
+  - Geofabrik chosen over an Overpass bounding box because a highway-only
+    Overpass extract loses the relations that encode turn restrictions, so the
+    graph would route the wrong way down no-entry streets with nothing to
+    indicate why
+  - Unit tests on synthetic geometry reproducing the border-spanning and
+    spill-over cases; `npm run verify:geofabrik` checks the real index still
+    parses and still ranks as assumed
+  - _Requirements: 3.1, 6.1, 8.1; ADR 0013_

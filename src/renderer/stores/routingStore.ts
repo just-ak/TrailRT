@@ -3,6 +3,9 @@ import type { SpeedDistribution } from '@shared/geo/speedBands';
 import type { MatchedEdge } from '@shared/routing/RoutingProvider';
 import type {
   AttributeOwnerType,
+  LoadedRegion,
+  RegionJobProgress,
+  RegionProgressEvent,
   AttributeStatus,
   Profile,
   RouteProvenance,
@@ -55,7 +58,19 @@ interface RoutingState {
    */
   provenance: Record<string, RouteProvenance>;
 
+  /** The map region loaded into the built-in engine, or null for none. */
+  region: LoadedRegion | null;
+  /** True while a graph is being built. Can take minutes. */
+  regionImporting: boolean;
+  regionProgress: RegionProgressEvent | null;
+  /** Download-and-build progress for an automatically fetched region. */
+  regionJob: RegionJobProgress | null;
+
   loadStatus(): Promise<RoutingStatus | null>;
+  loadRegion(): Promise<void>;
+  setRegionImporting(importing: boolean): void;
+  setRegionProgress(progress: RegionProgressEvent | null): void;
+  setRegionJob(progress: RegionJobProgress | null): void;
   loadProvenance(routeId: string): Promise<void>;
   loadProfile(
     ownerType: AttributeOwnerType,
@@ -79,6 +94,10 @@ interface RoutingState {
 
 export const useRoutingStore = create<RoutingState>((set, get) => ({
   status: null,
+  region: null,
+  regionImporting: false,
+  regionProgress: null,
+  regionJob: null,
   busy: {},
   profiles: {},
   posted: {},
@@ -91,6 +110,14 @@ export const useRoutingStore = create<RoutingState>((set, get) => ({
     set({ status });
     return status;
   },
+
+  loadRegion: async () => {
+    set({ region: await callOr(api().routing.region(), null) });
+  },
+
+  setRegionImporting: (regionImporting) => set({ regionImporting }),
+  setRegionProgress: (regionProgress) => set({ regionProgress }),
+  setRegionJob: (regionJob) => set({ regionJob }),
 
   loadProvenance: async (routeId) => {
     const entry = await callOr(api().routing.provenance({ routeId }), null);

@@ -626,7 +626,15 @@ export function MapView(): ReactNode {
               </button>
             ) : (
               <span className="pointer-events-none ml-2 opacity-70">
-                Straight lines — no routing service configured
+                {/*
+                  The reason, not just the fact. "No routing service" was
+                  accurate when routing meant an external server; now the
+                  engine is built in and the usual cause is a missing map
+                  region, which is something the user can fix.
+                */}
+                {routingStatus?.reason === "no-map-data"
+                  ? "Straight lines — no map region loaded yet"
+                  : "Straight lines — road routing unavailable"}
               </span>
             ))}
 

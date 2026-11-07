@@ -32,6 +32,13 @@ import * as settingsService from '../services/settingsService';
 import * as tripService from '../services/tripService';
 import * as undoService from '../services/undoService';
 import * as waypointService from '../services/waypointService';
+import { readLoadedRegion, writeLoadedRegion } from '../routing/embedded';
+import { currentEmbeddedPaths } from '../routing/embeddedLocation';
+import { importRegion } from '../routing/regionImport';
+import {
+  downloadAndBuild,
+  suggestRegions,
+} from '../routing/regionCatalogue';
 import { openExternal } from '../security/navigation';
 import { installApplicationMenu } from '../menu/appMenu';
 import { sendToRenderer } from '../window';
@@ -610,6 +617,66 @@ export function registerIpcHandlers(): void {
         }),
       );
     },
+  );
+
+  /*
+   * Building a routing graph. The only handler that spawns a child process.
+   *
+   * No zod schema: it takes no arguments at all. The extract path comes from a
+   * native file dialog opened here, so the renderer never supplies or learns a
+   * filesystem path — the same rule the import pipeline follows.
+   */
+  handleNoArgs(CHANNELS.routing.importRegion, async () => {
+    const paths = currentEmbeddedPaths();
+
+    const chosen = await dialog.showOpenDialog({
+      title: 'Import a map region',
+      message:
+        'Choose an OpenStreetMap extract (.osm.pbf) for the area you want to route in.',
+      properties: ['openFile'],
+      filters: [{ name: 'OpenStreetMap extract', extensions: ['pbf'] }],
+    });
+    if (chosen.canceled || chosen.filePaths[0] === undefined) return null;
+
+    const result = await importRegion({
+      paths,
+      extractPath: chosen.filePaths[0],
+      onProgress: (progress) =>
+        sendToRenderer(EVENTS.regionProgress, progress),
+    });
+
+    writeLoadedRegion(paths, result);
+    return result;
+  });
+
+  handle(
+    CHANNELS.routing.suggestRegions,
+    S.routingSuggestRegionsRequest,
+    (req) =>
+      suggestRegions(currentEmbeddedPaths(), {
+        minLat: req.minLat,
+        minLon: req.minLon,
+        maxLat: req.maxLat,
+        maxLon: req.maxLon,
+      }),
+  );
+
+  handle(
+    CHANNELS.routing.downloadRegion,
+    S.routingDownloadRegionRequest,
+    async (req) => {
+      const paths = currentEmbeddedPaths();
+      const result = await downloadAndBuild(paths, req.regionId, {
+        onProgress: (progress) =>
+          sendToRenderer(EVENTS.regionJobProgress, progress),
+      });
+      writeLoadedRegion(paths, result);
+      return result;
+    },
+  );
+
+  handleNoArgs(CHANNELS.routing.region, () =>
+    readLoadedRegion(currentEmbeddedPaths()),
   );
 
   handle(CHANNELS.routing.provenance, S.routingProvenanceRequest, (req) =>

@@ -20,11 +20,28 @@ export type AttributeOwnerType = 'route' | 'track';
 export type RoutingUnavailableReason =
   | 'not-configured'
   | 'invalid-endpoint'
-  | 'consent-required';
+  | 'consent-required'
+  /** The built-in engine is present but has no map region loaded yet. */
+  | 'no-map-data'
+  /** The built-in engine is missing from the build entirely. */
+  | 'no-engine';
+
+/**
+ * Which engine is answering.
+ *
+ * Worth surfacing rather than hiding behind "routing works", because the two
+ * differ in ways a user can feel: the embedded engine is offline, instant and
+ * private, while a remote one is none of those and needed consent.
+ */
+export type RoutingKind = 'embedded' | 'remote' | 'none';
 
 /** Whether routing is usable, and if not, which of three things to do about it. */
 export interface RoutingStatus {
   available: boolean;
+  /** Embedded, remote, or nothing usable. */
+  kind: RoutingKind;
+  /** Valhalla's version, when the embedded engine could be loaded. */
+  engineVersion: string | null;
   providerId: string | null;
   /** Scheme + host + port the app would contact. Null when unresolvable. */
   origin: string | null;
@@ -192,4 +209,63 @@ export interface Profile {
 
   /** Provenance for the road bands. Null when nothing has been matched. */
   attributes: AttributeStatus | null;
+}
+
+/** Progress while a routing graph is being built. */
+export interface RegionProgressEvent {
+  stage: string;
+  percent: number | null;
+}
+
+/**
+ * The map region currently loaded into the built-in engine.
+ *
+ * Null when none has been imported, which is the first-run state and not an
+ * error. One region at a time: Valhalla cannot incrementally merge a second
+ * one, and a half-merged graph routes wrongly at the seam in ways that are very
+ * hard to spot.
+ */
+export interface LoadedRegion {
+  regionName: string;
+  tileCount: number;
+  builtAt: number;
+  graphBytes: number;
+}
+
+/**
+ * A downloadable extract that could serve the current map view.
+ *
+ * Ranked most specific first. `coversViewport` is reported rather than used to
+ * filter, because the useful choice for a view spanning a border is between
+ * "the country the centre is in" and "the bundle covering both" — and only the
+ * user knows which they meant.
+ */
+export interface RegionCandidate {
+  id: string;
+  name: string;
+  parent: string | null;
+  /** True when the whole visible area falls inside this region. */
+  coversViewport: boolean;
+  /** Download size, or null when the server would not say. */
+  sizeBytes: number | null;
+  /**
+   * True when the extract is past what TrailRT will build.
+   *
+   * Reported here so the picker can refuse it before a multi-gigabyte
+   * download starts, rather than at the end of one. The regions that cover a
+   * zoomed-out viewport are routinely enormous — the Alps bundle is 2.3 GB and
+   * Germany/Austria/Switzerland is 6.3 GB — so this is the common case, not an
+   * edge case.
+   */
+  tooLarge: boolean;
+}
+
+/** Progress while a region is being downloaded and built. */
+export interface RegionJobProgress {
+  phase: 'downloading' | 'building';
+  /** Download stage only. */
+  receivedBytes: number | null;
+  totalBytes: number | null;
+  /** Build stage only — the coarse stage name. */
+  stage: string | null;
 }

@@ -813,3 +813,86 @@ export async function finishSnapRouting(): Promise<void> {
     toast(describeError(cause), 'error');
   }
 }
+
+/**
+ * Imports a map region for the built-in routing engine.
+ *
+ * The main process opens the file dialog, so the renderer neither supplies nor
+ * learns a filesystem path — the same rule the file import pipeline follows.
+ *
+ * Can take minutes on a large extract, so progress arrives as events and the
+ * toast reports the outcome rather than the UI blocking.
+ */
+export async function importRoutingRegion(): Promise<void> {
+  const routing = useRoutingStore.getState();
+  routing.setRegionImporting(true);
+
+  try {
+    const region = await call(api().routing.importRegion());
+
+    // Null means the user cancelled the dialog. Not a failure, and not worth
+    // a toast — they know they cancelled.
+    if (region === null) return;
+
+    await Promise.all([
+      useRoutingStore.getState().loadStatus(),
+      useRoutingStore.getState().loadRegion(),
+    ]);
+    // Cached road attributes were matched against a different graph, so their
+    // provenance no longer describes anything real.
+    useRoutingStore.getState().clear();
+
+    toast(
+      `Map region "${region.regionName}" ready — ${region.tileCount.toLocaleString()} tiles, ${(region.graphBytes / 1024 ** 2).toFixed(0)} MB. Snapping and speed limits now work offline.`,
+    );
+  } catch (cause) {
+    toast(describeError(cause), 'error');
+  } finally {
+    useRoutingStore.getState().setRegionImporting(false);
+    useRoutingStore.getState().setRegionProgress(null);
+  }
+}
+
+/** Opens the region picker, which reads the currently visible map area. */
+export function openRegionPicker(): void {
+  useUiStore.getState().openDialog({ kind: 'regionPicker' });
+}
+
+/**
+ * Downloads a chosen region and builds a graph from it.
+ *
+ * Closes the picker only on success. Leaving it open on failure keeps the
+ * candidate list and the error together, so the user can pick a different
+ * region without starting over.
+ */
+export async function downloadRoutingRegion(
+  regionId: string,
+  onDone?: () => void,
+): Promise<void> {
+  const routing = useRoutingStore.getState();
+  routing.setRegionImporting(true);
+
+  try {
+    const region = await call(api().routing.downloadRegion({ regionId }));
+
+    await Promise.all([
+      useRoutingStore.getState().loadStatus(),
+      useRoutingStore.getState().loadRegion(),
+    ]);
+    // Cached road attributes were matched against a different graph, so their
+    // provenance no longer describes anything real.
+    useRoutingStore.getState().clear();
+
+    toast(
+      `Map region "${region.regionName}" ready — ${region.tileCount.toLocaleString()} tiles. Snapping and speed limits now work offline.`,
+    );
+    onDone?.();
+  } catch (cause) {
+    toast(describeError(cause), 'error');
+  } finally {
+    const store = useRoutingStore.getState();
+    store.setRegionImporting(false);
+    store.setRegionJob(null);
+    store.setRegionProgress(null);
+  }
+}

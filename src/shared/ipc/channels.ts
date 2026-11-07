@@ -114,6 +114,19 @@ export const CHANNELS = {
      * no geometry of the user's — see `providerService.testConnection`.
      */
     test: 'routing:test',
+    /**
+     * Builds a routing graph from an OpenStreetMap extract the user picks.
+     *
+     * The only channel that runs a child process. One-shot, at import time
+     * only — the engine itself is in-process. See ADR 0013.
+     */
+    importRegion: 'routing:importRegion',
+    /** What region, if any, is currently loaded. */
+    region: 'routing:region',
+    /** Which downloadable extracts cover the current map view. */
+    suggestRegions: 'routing:suggestRegions',
+    /** Downloads a chosen extract and builds a graph from it. */
+    downloadRegion: 'routing:downloadRegion',
     snap: 'routing:snap',
     /**
      * Routes one leg and writes nothing. Backs the interactive snap routing
@@ -158,6 +171,10 @@ export const EVENTS = {
   undoStateChanged: 'event:undoStateChanged',
   /** Coarse progress during a large import, pushed per file and per batch. */
   importProgress: 'event:importProgress',
+  /** Coarse progress while a routing graph is being built. */
+  regionProgress: 'event:regionProgress',
+  /** Download-and-build progress for an automatically fetched region. */
+  regionJobProgress: 'event:regionJobProgress',
 } as const;
 
 /**
