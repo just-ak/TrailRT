@@ -46,7 +46,9 @@ export function state(): UndoState {
  * recorded as a no-op the user could click.
  */
 export function record(inverse: Command, label?: string): UndoState {
-  if (!isUndoable(inverse.kind)) return state();
+  // The whole command, not just its kind: a batch of non-undoable members is
+  // itself not undoable, and only the payload can say so. See ADR 0014.
+  if (!isUndoable(inverse)) return state();
 
   undoStack.push({ command: inverse, label: label ?? labelFor(inverse.kind) });
   if (undoStack.length > MAX_DEPTH) undoStack.shift();

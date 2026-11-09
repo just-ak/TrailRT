@@ -1,6 +1,10 @@
-# Phase 5: Intelligent Windy Roads Routing — Requirements
+# Phase 8: Intelligent Windy Roads Routing — Requirements
 
-Status: not started. **Blocked on Phase 4.** See
+Status: requirements written. Phase 4 has shipped, and this phase follows
+Phase 6 (route alternatives and shaping), whose shaping-point model and
+alternatives picker it builds on, and Phase 7, which built and calibrated the
+twistiness score this phase's Requirement 3 asks for (`shared/geo/twistiness.ts`,
+ADR 0018). See
 [`investigation.md`](investigation.md) for why that dependency is hard rather
 than a sequencing preference.
 
@@ -122,6 +126,12 @@ The deliverable is a documented finding, not a feature. It gates Requirement 5.
 A pure, dependency-free scoring function in `src/shared/geo/`, built from
 scratch — the investigation confirmed there is no bearing or angle maths in the
 project to build on.
+
+> **Delivered early, in Phase 7.** `shared/geo/twistiness.ts` scores a line
+> from heading change after resampling, with unknown for sparse or short input,
+> and is calibrated against six real roads around Buxton. This phase reuses it
+> for per-edge costs and verifies the remaining criteria (curve-radius terms in
+> the cost, edge-level caching) rather than writing a second scorer.
 
 #### Acceptance criteria
 

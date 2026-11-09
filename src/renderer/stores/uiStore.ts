@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { DEFAULT_SETTINGS, PANEL_LIMITS } from '@shared/domain/defaults';
 import type {
   AppSettings,
+  BatchAssessment,
+  BatchMember,
   PanelLayout,
   ThemePreference,
 } from '@shared/domain/types';
@@ -26,6 +28,19 @@ export type DialogKind =
       target: { type: 'trip' | 'folder'; id: string; name: string };
       counts: Record<string, number>;
     }
+  /**
+   * Batch deletion, gated on confirmation because it may be partly
+   * irreversible.
+   *
+   * Carries the assessment the main process produced rather than recomputing
+   * it here, so the warning the user reads is the one the mutation will
+   * honour (Requirement 2.5).
+   */
+  | {
+      kind: 'confirmBatchDelete';
+      members: BatchMember[];
+      assessment: BatchAssessment;
+    }
   /** Files already parsed and staged in the main process, awaiting confirmation. */
   | { kind: 'import'; staged: StagedImport[] }
   | { kind: 'export'; scope: ExportScopeRequest }
@@ -47,6 +62,23 @@ interface UiState {
    * has asked for anything.
    */
   profile: { ownerType: 'route' | 'track'; ownerId: string } | null;
+  /**
+   * The geometry whose point table is open, or null.
+   *
+   * Transient, like the profile drawer: the table is a view of one object's
+   * geometry, and a table restored on launch would be editing something the
+   * user has not selected yet.
+   */
+  pointTable: { ownerType: 'route' | 'track'; ownerId: string } | null;
+  /**
+   * Point indices the table has selected, mirrored onto the map.
+   *
+   * Lives here rather than in the table so the map layer can read it without
+   * the two components having to know about each other. Read-only as far as
+   * the data is concerned: highlighting changes nothing and records no undo
+   * entry (Requirement 5.6).
+   */
+  highlightedPoints: readonly number[];
 
   hydrate(settings: AppSettings, systemPrefersDark: boolean): void;
   setLayout(patch: Partial<PanelLayout>): void;
@@ -61,6 +93,9 @@ interface UiState {
   setMapOffline(offline: boolean): void;
   openProfile(ownerType: 'route' | 'track', ownerId: string): void;
   closeProfile(): void;
+  openPointTable(ownerType: 'route' | 'track', ownerId: string): void;
+  closePointTable(): void;
+  setHighlightedPoints(indices: readonly number[]): void;
   isDark(): boolean;
 }
 
@@ -84,6 +119,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   toast: null,
   mapOffline: false,
   profile: null,
+  pointTable: null,
+  highlightedPoints: [],
 
   hydrate: (settings, systemPrefersDark) => {
     set({
@@ -132,6 +169,16 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   openProfile: (ownerType, ownerId) => set({ profile: { ownerType, ownerId } }),
   closeProfile: () => set({ profile: null }),
+
+  openPointTable: (ownerType, ownerId) =>
+    // Highlighting is cleared with the owner: indices are only meaningful
+    // against the geometry they came from, and carrying them over would mark
+    // arbitrary points on a different object.
+    set({ pointTable: { ownerType, ownerId }, highlightedPoints: [] }),
+
+  closePointTable: () => set({ pointTable: null, highlightedPoints: [] }),
+
+  setHighlightedPoints: (indices) => set({ highlightedPoints: indices }),
 
   isDark: () => {
     const { theme, systemPrefersDark } = get();

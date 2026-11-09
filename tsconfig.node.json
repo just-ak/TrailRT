@@ -4,6 +4,7 @@
     "src/main/**/*",
     "src/preload/**/*",
     "src/shared/**/*",
+    "test-data/**/*.ts",
     "electron.vite.config.ts",
     "drizzle.config.ts",
     "vitest.config.ts",
@@ -16,7 +17,8 @@
     "paths": {
       "@main/*": ["./src/main/*"],
       "@preload/*": ["./src/preload/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@fixtures/*": ["./test-data/*"]
     }
   }
 }

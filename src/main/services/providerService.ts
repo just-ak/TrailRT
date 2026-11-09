@@ -2,6 +2,9 @@ import type { AppSettings } from '@shared/domain/types';
 import { checkRoutingOrigin } from '@shared/net/origin';
 import {
   DEFAULT_TRANSPORT_MODE,
+  NO_ROUTING_CAPABILITIES,
+  providerCapabilities,
+  type RoutingCapabilities,
   type RoutingProvider,
   type TransportMode,
 } from '@shared/routing/RoutingProvider';
@@ -93,6 +96,7 @@ function statusFor(
     kind?: RoutingStatus['kind'];
     providerId?: string | null;
     engineVersion?: string | null;
+    capabilities?: RoutingCapabilities;
   } = {},
 ): RoutingStatus {
   return {
@@ -115,6 +119,7 @@ function statusFor(
      * success for a server that has since been switched off.
      */
     endpointTested: origin !== null && testedOrigins.has(origin),
+    capabilities: extra.capabilities ?? NO_ROUTING_CAPABILITIES,
   };
 }
 
@@ -199,6 +204,7 @@ export function resolveFrom(settings: AppSettings): RoutingResolution {
         kind: 'embedded',
         providerId: provider.id,
         engineVersion: embeddedVersion(paths),
+        capabilities: providerCapabilities(provider),
       }),
     };
   }
@@ -239,7 +245,11 @@ export function resolveFrom(settings: AppSettings): RoutingResolution {
       check.origin,
       null,
       provider.attribution,
-      { kind: 'remote', providerId: provider.id },
+      {
+        kind: 'remote',
+        providerId: provider.id,
+        capabilities: providerCapabilities(provider),
+      },
     ),
   };
 }

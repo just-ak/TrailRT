@@ -1,10 +1,10 @@
-# Phase 6: Garmin Compatibility — Requirements
+# Phase 9: Garmin Compatibility — Requirements
 
 Status: not started. Blocked on Phase 4.
 
 ## Introduction
 
-Phase 6 is predominantly an **investigation** phase. Its primary deliverables
+Phase 9 is predominantly an **investigation** phase. Its primary deliverables
 are documented findings, not features. That framing is deliberate: GDB and IMG
 are proprietary formats with no viable JavaScript tooling and real licensing
 constraints, as established in ADR 0006.

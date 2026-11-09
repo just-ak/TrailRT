@@ -62,6 +62,10 @@ DEPS=(
   # CMake checks for the executables, not the library, so the library alone is
   # not enough and the error it gives names neither package.
   spatialite-tools
+  # Not a Valhalla dependency: bundle-valhalla.sh ships its `osmium` beside the
+  # Valhalla tools, to merge several regions into one extract before building.
+  # Valhalla aborts on overlapping extracts. ADR 0018.
+  osmium-tool
 )
 
 missing=()

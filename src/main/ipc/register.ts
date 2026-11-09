@@ -19,6 +19,7 @@ import { readCsv } from '../io/csv/read';
 import { ServiceError } from '../services/errors';
 import * as trackService from '../services/trackService';
 import * as backupService from '../services/backupService';
+import * as batchService from '../services/batchService';
 import * as folderService from '../services/folderService';
 import type { Mutation } from '../services/folderService';
 import * as geometryService from '../services/geometryService';
@@ -28,6 +29,7 @@ import * as providerService from '../services/providerService';
 import * as roadAttributeService from '../services/roadAttributeService';
 import * as routeService from '../services/routeService';
 import * as routingService from '../services/routingService';
+import * as shapingService from '../services/shapingService';
 import * as settingsService from '../services/settingsService';
 import * as tripService from '../services/tripService';
 import * as undoService from '../services/undoService';
@@ -37,8 +39,11 @@ import { currentEmbeddedPaths } from '../routing/embeddedLocation';
 import { importRegion } from '../routing/regionImport';
 import {
   downloadAndBuild,
+  regionMap,
+  regionSizes,
   suggestRegions,
 } from '../routing/regionCatalogue';
+import { createTerrainStore, type TerrainStore } from '../terrain/terrainStore';
 import { openExternal } from '../security/navigation';
 import { installApplicationMenu } from '../menu/appMenu';
 import { sendToRenderer } from '../window';
@@ -100,8 +105,11 @@ function reparseTrackSegments(
  * Every mutating handler goes through this, which is what guarantees the stack
  * and the menu cannot fall out of step with the database.
  */
-function commit<T>(mutation: Mutation<T>): T {
-  undoService.record(mutation.inverse);
+function commit<T>(mutation: Mutation<T>, label?: string): T {
+  // `label` names a batch by its count and composition — "delete 3 routes and
+  // 1 track" — which a flat record keyed by command kind cannot express. Every
+  // other caller leaves it out and gets the per-kind label.
+  undoService.record(mutation.inverse, label);
   ctx().notifyLibraryChanged();
   publishUndoState(undoService.state());
   return mutation.result;
@@ -126,6 +134,20 @@ function publishUndoState(state: UndoState): void {
  * `ctx().handle.db` is read at call time rather than captured, because
  * restoring a backup replaces the database handle.
  */
+
+/**
+ * One terrain store per directory, so its in-memory tile cache survives
+ * between profiles. Keyed by directory because tests and the packaged app use
+ * different user-data roots.
+ */
+let terrainStore: { dir: string; store: TerrainStore } | null = null;
+function terrainFor(paths: { terrainDir: string }): TerrainStore {
+  if (terrainStore === null || terrainStore.dir !== paths.terrainDir) {
+    terrainStore = { dir: paths.terrainDir, store: createTerrainStore(paths.terrainDir) };
+  }
+  return terrainStore.store;
+}
+
 export function registerIpcHandlers(): void {
   // ------------------------------------------------------------- library
   handle(CHANNELS.library.tree, S.libraryTreeRequest, (req) =>
@@ -413,6 +435,53 @@ export function registerIpcHandlers(): void {
       ),
   );
 
+  // Read-only: the point table's paging. Records nothing.
+  handle(CHANNELS.tracks.points, S.trackPointsPageRequest, (req) =>
+    trackService.pointsPage(ctx().handle.db, req),
+  );
+
+  handle(CHANNELS.tracks.editPoint, S.trackEditPointRequest, (req) =>
+    commit(trackService.editPointAt(ctx().handle.db, req)),
+  );
+
+  handle(CHANNELS.tracks.deletePoints, S.trackDeletePointsRequest, (req) =>
+    commit(trackService.deletePointsAt(ctx().handle.db, req.id, req.indices)),
+  );
+
+  // --------------------------------------------------------------- batch
+  /*
+   * One handler per batch operation, plus a dry run.
+   *
+   * `assess` deliberately records nothing and mutates nothing: it exists so
+   * the confirmation dialog can name what will not be reversible *before* the
+   * user agrees to it, rather than reporting it afterwards.
+   */
+  handle(CHANNELS.batch.assess, S.batchAssessRequest, (req) =>
+    batchService.assess(ctx().handle.db, req.members, req.operation),
+  );
+
+  handle(CHANNELS.batch.delete, S.batchDeleteRequest, (req) => {
+    const mutation = batchService.remove(ctx().handle.db, req.members);
+    // One commit for the whole batch: one undo entry, one library-changed
+    // event, one native-menu rebuild — Requirement 2.7.
+    return commit(
+      mutation,
+      batchService.labelFor('delete', mutation.result.counts),
+    );
+  });
+
+  handle(CHANNELS.batch.move, S.batchMoveRequest, (req) => {
+    const mutation = batchService.moveToTrip(
+      ctx().handle.db,
+      req.members,
+      req.tripId,
+    );
+    return commit(
+      mutation,
+      batchService.labelFor('move', mutation.result.counts),
+    );
+  });
+
   // --------------------------------------------------------------- import
   handleNoArgs(CHANNELS.importing.choose, async () => {
     const chosen = await dialog.showOpenDialog({
@@ -591,6 +660,32 @@ export function registerIpcHandlers(): void {
     );
   });
 
+  // ------------------------------------------- Phase 6: alternatives, shaping
+
+  handle(CHANNELS.routing.routeSection, S.routingRouteSectionRequest, async (req) => {
+    const { provider, mode } = providerService.requireProvider(ctx().handle.db);
+    return shapingService.routeSection(provider, req.locations, req.mode ?? mode);
+  });
+
+  handle(CHANNELS.routing.alternatives, S.routingAlternativesRequest, async (req) => {
+    const { provider, mode } = providerService.requireProvider(ctx().handle.db);
+    return shapingService.alternatives(provider, req.from, req.to, req.mode ?? mode, req.count);
+  });
+
+  handle(CHANNELS.routing.applyEdit, S.routingApplyEditRequest, (req) => {
+    const db = ctx().handle.db;
+    const mutation = shapingService.applyEdit(db, {
+      routeId: req.routeId,
+      expected: req.expected,
+      edit: req.edit,
+      legs: req.legs,
+    });
+    // As for a snap: the cached edges describe a line that no longer exists,
+    // and "not matched yet" is the honest state, not "stale".
+    roadAttributeService.clear(db, 'route', req.routeId);
+    return commit(mutation);
+  });
+
   handle(
     CHANNELS.routing.createSnapped,
     S.routingCreateSnappedRequest,
@@ -612,6 +707,7 @@ export function registerIpcHandlers(): void {
           colour: req.colour,
           controlPoints: req.controlPoints,
           legs: req.legs,
+          roles: req.roles,
           mode: req.mode ?? mode,
           provider: status.providerId ?? 'unknown',
         }),
@@ -645,8 +741,10 @@ export function registerIpcHandlers(): void {
         sendToRenderer(EVENTS.regionProgress, progress),
     });
 
-    writeLoadedRegion(paths, result);
-    return result;
+    // A file the user picked names no index regions, so none are recorded.
+    const loaded = { ...result, regionIds: [] };
+    writeLoadedRegion(paths, loaded);
+    return loaded;
   });
 
   handle(
@@ -666,12 +764,39 @@ export function registerIpcHandlers(): void {
     S.routingDownloadRegionRequest,
     async (req) => {
       const paths = currentEmbeddedPaths();
-      const result = await downloadAndBuild(paths, req.regionId, {
+      const result = await downloadAndBuild(paths, req.regionIds, {
+        terrain: terrainFor(paths),
         onProgress: (progress) =>
           sendToRenderer(EVENTS.regionJobProgress, progress),
       });
       writeLoadedRegion(paths, result);
       return result;
+    },
+  );
+
+  handleNoArgs(CHANNELS.routing.regionMap, () =>
+    regionMap(currentEmbeddedPaths()),
+  );
+
+  handle(CHANNELS.routing.regionSizes, S.routingRegionSizesRequest, (req) =>
+    regionSizes(currentEmbeddedPaths(), req.regionIds),
+  );
+
+  handle(
+    CHANNELS.routing.downloadTerrain,
+    S.routingDownloadTerrainRequest,
+    async (req) => {
+      const names = profileService.terrainTilesFor(
+        ctx().handle.db,
+        req.ownerType,
+        req.ownerId,
+      );
+      const outcome = await terrainFor(currentEmbeddedPaths()).download(names);
+      return {
+        downloaded: outcome.downloaded.length,
+        sea: outcome.sea.length,
+        failed: outcome.failed.length,
+      };
     },
   );
 
@@ -714,6 +839,8 @@ export function registerIpcHandlers(): void {
       ownerType: req.ownerType,
       ownerId: req.ownerId,
       maxSamples: req.maxSamples,
+      ukDefaults: settingsService.all(ctx().handle.db).ukDefaultSpeedLimits,
+      terrain: terrainFor(currentEmbeddedPaths()),
     }),
   );
 
@@ -730,6 +857,7 @@ export function registerIpcHandlers(): void {
           req.ownerType,
           req.ownerId,
           units,
+          { ukDefaults: settingsService.all(db).ukDefaultSpeedLimits },
         );
       }
 

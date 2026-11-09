@@ -4,7 +4,8 @@
     "tests/**/*",
     "playwright.config.ts",
     "src/renderer/types/global.d.ts",
-    "src/shared/**/*"
+    "src/shared/**/*",
+    "test-data/**/*.ts"
   ],
   "compilerOptions": {
     // End-to-end specs run in Node, but `page.evaluate` callbacks are
@@ -13,7 +14,8 @@
     "types": ["node"],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
     "paths": {
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@fixtures/*": ["./test-data/*"]
     }
   }
 }

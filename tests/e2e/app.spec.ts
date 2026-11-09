@@ -83,6 +83,9 @@ test.describe('security posture', () => {
     expect(api.namespaces).toEqual([
       'app',
       'backup',
+      // Phase 5. Multi-object move and delete, kept out of the per-kind
+      // namespaces because a batch is one undo entry rather than N.
+      'batch',
       'events',
       'exporting',
       'folders',

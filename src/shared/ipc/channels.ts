@@ -77,6 +77,31 @@ export const CHANNELS = {
     delete: 'tracks:delete',
     hasOriginal: 'tracks:hasOriginal',
     restoreOriginal: 'tracks:restoreOriginal',
+    /**
+     * One window of exact points, for the point table.
+     *
+     * Paged because a recording can hold 200,000 points and a table shows
+     * forty. Always exact, never the render cache — an index from a simplified
+     * payload would not identify the sample the user is editing.
+     */
+    points: 'tracks:points',
+    /** Corrects one sample. The original file remains the way back. */
+    editPoint: 'tracks:editPoint',
+    /** Deletes points at arbitrary indices, preserving segment breaks. */
+    deletePoints: 'tracks:deletePoints',
+  },
+  /**
+   * Multi-object move and delete.
+   *
+   * One channel per operation plus a dry run, rather than looping the
+   * single-object channels: a loop would give one undo entry, one library
+   * refresh and one native-menu rebuild *per member*. See ADR 0014.
+   */
+  batch: {
+    /** What the batch would do, including what it cannot reverse. */
+    assess: 'batch:assess',
+    delete: 'batch:delete',
+    move: 'batch:move',
   },
   /**
    * Import is a three-step conversation, not one call: the main process opens
@@ -125,8 +150,17 @@ export const CHANNELS = {
     region: 'routing:region',
     /** Which downloadable extracts cover the current map view. */
     suggestRegions: 'routing:suggestRegions',
-    /** Downloads a chosen extract and builds a graph from it. */
+    /**
+     * Downloads the chosen extracts, merges them when there are several, and
+     * builds one graph. ADR 0018.
+     */
     downloadRegion: 'routing:downloadRegion',
+    /** The UK's downloadable regions, as shapes for the picker's map. */
+    regionMap: 'routing:regionMap',
+    /** Download sizes for a selection of regions. */
+    regionSizes: 'routing:regionSizes',
+    /** Terrain tiles covering one route or track, for its profile. */
+    downloadTerrain: 'routing:downloadTerrain',
     snap: 'routing:snap',
     /**
      * Routes one leg and writes nothing. Backs the interactive snap routing
@@ -135,6 +169,12 @@ export const CHANNELS = {
     routeLeg: 'routing:routeLeg',
     /** Saves a route built with the tool, as previewed. */
     createSnapped: 'routing:createSnapped',
+    /** Routes a section through shaping points and writes nothing. Phase 6. */
+    routeSection: 'routing:routeSection',
+    /** The routes the engine offers between two points. Writes nothing. */
+    alternatives: 'routing:alternatives',
+    /** Commits a shaping edit to a saved route, as previewed. */
+    applyEdit: 'routing:applyEdit',
     provenance: 'routing:provenance',
     match: 'routing:match',
     attributes: 'routing:attributes',
@@ -186,6 +226,7 @@ export const MENU_ACTIONS = [
   'trip:new',
   'folder:new',
   'route:new',
+  'route:newStraight',
   'waypoint:new',
   'edit:undo',
   'edit:redo',

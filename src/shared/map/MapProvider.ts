@@ -9,7 +9,7 @@
  * `RoutingProvider` now lives in `shared/routing/RoutingProvider.ts`, declared
  * in Phase 4 because Phase 4 implements it. `GarminMapProvider` is still
  * deliberately absent: an interface with no implementation and no caller is a
- * placeholder, and the steering rules forbid those. It is Phase 6.
+ * placeholder, and the steering rules forbid those. It belongs to the Garmin phase.
  */
 
 export type MapProviderKind =
@@ -17,6 +17,19 @@ export type MapProviderKind =
   | 'vector-tiles'
   | 'offline'
   | 'garmin';
+
+/**
+ * How far the map itself zooms, whichever base map is showing.
+ *
+ * A provider's own `maxZoom` is the deepest level it **serves**, not a limit on
+ * the map. Using it as the map's limit broke switching providers: zoomed to 19
+ * on OpenStreetMap, a switch to OpenTopoMap (17) left the map at 19 with a
+ * layer that draws nothing past 17 — a blank map, and the old provider's
+ * attribution left behind. The tile layer is now given this as its `maxZoom`
+ * and the provider's value as `maxNativeZoom`, so past what a provider serves
+ * Leaflet enlarges its deepest tiles instead of showing nothing.
+ */
+export const MAP_MAX_ZOOM = 19;
 
 export interface MapProvider {
   readonly id: string;
@@ -75,7 +88,8 @@ export const OSM_PROVIDER: MapProvider = {
  * CC-BY-SA 2.0. Crediting only one would misstate who made what.
  *
  * Its maxZoom is 17, lower than OSM's 19. The tile layer must honour that
- * rather than requesting zoom 18 and painting blank tiles.
+ * rather than requesting zoom 18 and painting blank tiles: it is passed as
+ * `maxNativeZoom`, so at 18 and 19 the zoom-17 tiles are enlarged.
  *
  * It is a volunteer-run service with finite capacity, so the same restraint the
  * OSM policy demands applies: no prefetching, no bulk retrieval.

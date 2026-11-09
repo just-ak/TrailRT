@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { BoundingBox } from '@shared/geo/polygon';
-import { parseIndex, rankRegions, findRegion } from './geofabrik';
+import {
+  findRegion,
+  joinRegionNames,
+  parseIndex,
+  rankRegions,
+  ukRegions,
+} from './geofabrik';
 import { ServiceError } from '../services/errors';
 
 /**
@@ -194,5 +200,60 @@ describe('findRegion', () => {
     // Regions do get renamed and removed upstream, and a cached index can
     // name one that no longer exists.
     expect(() => findRegion(regions, 'atlantis')).toThrow(/no longer/i);
+  });
+});
+
+describe('ukRegions (ADR 0018)', () => {
+  const uk = parseIndex(
+    JSON.stringify({
+      type: 'FeatureCollection',
+      features: [
+        square('europe', null, -20, 30, 40, 70),
+        square('united-kingdom', 'europe', -9, 49, 2, 61),
+        square('england', 'united-kingdom', -6, 49.5, 2, 56),
+        square('derbyshire', 'england', -2.04, 52.69, -1.16, 53.55),
+        square('cheshire', 'england', -3.13, 52.94, -1.97, 53.49),
+        square('scotland', 'united-kingdom', -9, 54.6, 0, 61),
+        square('wales', 'united-kingdom', -5.6, 51.3, -2.6, 53.5),
+        square('ireland-and-northern-ireland', 'europe', -11, 51.3, -5.4, 55.5),
+        square('isle-of-man', 'europe', -4.9, 54, -4.3, 54.5),
+        square('france', 'europe', -5, 42, 8, 51),
+      ],
+    }),
+  );
+
+  it('offers English counties, Scotland, Wales and the island of Ireland, and nothing else', () => {
+    const ids = ukRegions(uk, new Set()).map((r) => r.id);
+    expect(ids.toSorted()).toEqual(
+      ['cheshire', 'derbyshire', 'ireland-and-northern-ireland', 'scotland', 'wales'],
+    );
+  });
+
+  it('says that Northern Ireland only comes with the Republic', () => {
+    const ireland = ukRegions(uk, new Set()).find(
+      (r) => r.id === 'ireland-and-northern-ireland',
+    );
+    expect(ireland?.note).toMatch(/only published together with the Republic/i);
+  });
+
+  it('marks the loaded regions', () => {
+    const loaded = ukRegions(uk, new Set(['derbyshire']));
+    expect(loaded.find((r) => r.id === 'derbyshire')?.loaded).toBe(true);
+    expect(loaded.find((r) => r.id === 'cheshire')?.loaded).toBe(false);
+  });
+
+  it('rounds rings for drawing only', () => {
+    const derbyshire = ukRegions(uk, new Set()).find((r) => r.id === 'derbyshire');
+    expect(derbyshire?.rings[0]?.[0]).toEqual([-2.04, 52.69]);
+  });
+});
+
+describe('joinRegionNames', () => {
+  it('reads naturally for one, three and many', () => {
+    expect(joinRegionNames(['Derbyshire'])).toBe('Derbyshire');
+    expect(joinRegionNames(['Derbyshire', 'Cheshire', 'Staffordshire'])).toBe(
+      'Derbyshire, Cheshire and Staffordshire',
+    );
+    expect(joinRegionNames(['A', 'B', 'C', 'D', 'E', 'F'])).toBe('A, B and 4 more');
   });
 });

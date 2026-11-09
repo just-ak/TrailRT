@@ -7,7 +7,7 @@ import {
   type BoundingBox,
   type Ring,
 } from '@shared/geo/polygon';
-import type { RegionCandidate } from '@shared/routing/results';
+import type { RegionCandidate, RegionMapEntry } from '@shared/routing/results';
 import { ServiceError } from '../services/errors';
 
 /**
@@ -218,6 +218,62 @@ export function rankRegions(
     sizeBytes: null,
     tooLarge: false,
   }));
+}
+
+/**
+ * The regions the UK map offers. ADR 0018.
+ *
+ * England's county-level extracts, plus Scotland and Wales, which Geofabrik
+ * publishes whole. Northern Ireland is not published on its own; the only
+ * extract containing it is the island of Ireland, so that is offered with a
+ * note rather than left for the user to discover.
+ */
+export const UK_COUNTY_PARENT = 'england';
+export const UK_STANDALONE_REGIONS = [
+  'scotland',
+  'wales',
+  'ireland-and-northern-ireland',
+] as const;
+
+const NOTES: Record<string, string> = {
+  'ireland-and-northern-ireland':
+    'Northern Ireland is only published together with the Republic of Ireland, as one extract.',
+};
+
+/** Rounds to about 10 m. The rings only draw the map; they never decide coverage. */
+const round = (value: number): number => Math.round(value * 1e4) / 1e4;
+
+export function ukRegions(
+  regions: readonly ParsedRegion[],
+  loadedIds: ReadonlySet<string>,
+): RegionMapEntry[] {
+  const standalone = new Set<string>(UK_STANDALONE_REGIONS);
+  return regions
+    .filter(
+      (region) => region.parent === UK_COUNTY_PARENT || standalone.has(region.id),
+    )
+    .toSorted((a, b) => a.name.localeCompare(b.name))
+    .map((region) => ({
+      id: region.id,
+      name: region.name,
+      rings: region.rings.map((ring) =>
+        ring.map(([lon, lat]) => [round(lon), round(lat)] as [number, number]),
+      ),
+      loaded: loadedIds.has(region.id),
+      note: NOTES[region.id] ?? null,
+    }));
+}
+
+/**
+ * Display names for a set of regions: "Derbyshire, Cheshire and Staffordshire",
+ * or past three, "Derbyshire, Cheshire and 4 more".
+ */
+export function joinRegionNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? '';
+  if (names.length <= 3) {
+    return `${names.slice(0, -1).join(', ')} and ${names.at(-1) ?? ''}`;
+  }
+  return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`;
 }
 
 export function findRegion(

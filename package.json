@@ -33,7 +33,9 @@
     "licences:check": "node scripts/generate-licences.mjs",
     "fixtures": "node scripts/generate-fixtures.mjs",
     "verify:valhalla:remote": "TRAILRT_LIVE_VALHALLA=${TRAILRT_LIVE_VALHALLA:-https://valhalla1.openstreetmap.de} vitest run src/main/routing/valhalla.live.test.ts",
-    "verify:geofabrik": "TRAILRT_LIVE_GEOFABRIK=1 vitest run src/main/routing/geofabrik.live.test.ts"
+    "verify:geofabrik": "TRAILRT_LIVE_GEOFABRIK=1 vitest run src/main/routing/geofabrik.live.test.ts",
+    "verify:shaping": "TRAILRT_LIVE_EMBEDDED=${TRAILRT_LIVE_EMBEDDED:-1} vitest run src/main/routing/shaping.live.test.ts",
+    "verify:regions": "TRAILRT_LIVE_REGIONS=1 vitest run src/main/routing/regions.live.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "13.0.3",

@@ -6,14 +6,35 @@ import {
   movePoint,
 } from '@shared/geo/routeEdit';
 import { wazeNavigateUrl } from '@shared/integrations/waze';
-import type { SnapOutcome } from '@shared/routing/results';
+import type { LatLon } from '@shared/geo/distance';
+import { EditRefused, planEdit, type RouteEdit } from '@shared/routing/edit';
+import { pinCandidate } from '@shared/routing/pin';
+import { flattenLegsWithBoundaries } from '@shared/routing/splice';
+import type { SectionLocation } from '@shared/routing/RoutingProvider';
+import {
+  asPreviewedLeg,
+  type Candidate,
+  type EditOutcome,
+  type PreviewedLeg,
+  type SnapOutcome,
+} from '@shared/routing/results';
+import {
+  shapingStateFrom,
+  type ShapingState,
+} from '../features/map/shapingState';
 import { AppError, api, call, callOr, describeError } from './client';
 import { useEditorStore } from '../stores/editorStore';
 import { useGeometryStore } from '../stores/geometryStore';
 import { useLibraryStore } from '../stores/libraryStore';
 import { useRoutingStore } from '../stores/routingStore';
 import { useSelectionStore } from '../stores/selectionStore';
-import { useSnapRoutingStore } from '../stores/snapRoutingStore';
+import { useSettingsStore } from '../stores/settingsStore';
+import { useShapingStore } from '../stores/shapingStore';
+import {
+  draftLegShapes,
+  snapComplete,
+  useSnapRoutingStore,
+} from '../stores/snapRoutingStore';
 import { useUiStore } from '../stores/uiStore';
 
 /**
@@ -240,6 +261,12 @@ export async function deleteWaypoint(id: string): Promise<void> {
 // -------------------------------------------------------------------- undo
 
 export async function undo(): Promise<void> {
+  // Inside the snap routing tool nothing is in the database yet, so ⌘Z means
+  // "undo my last edit to this draft" (Requirement 8.7).
+  if (useEditorStore.getState().mode === 'snapRoute') {
+    undoSnapDraft();
+    return;
+  }
   try {
     await call(api().undo.undo());
     await refreshAll();
@@ -260,18 +287,44 @@ export async function redo(): Promise<void> {
 // ------------------------------------------------------------------- modes
 
 /**
- * Starts drawing a route in the trip that owns the current selection.
+ * "New Route": starts a route in the trip that owns the current selection.
+ *
+ * Following roads is the default (ADR 0018). When the engine can route, this is
+ * the road-following tool; when it cannot, the route is drawn as straight lines
+ * and the hint bar says why, with a way to add map regions. It is never
+ * silently straight.
  *
  * Requires a trip context: a route must belong to exactly one trip (ADR 0004),
  * so there is no sensible "draw with nothing selected".
  */
-export function startDrawingRoute(): void {
+export async function startDrawingRoute(): Promise<void> {
   const tripId = currentTripId();
   if (tripId === null) {
     toast('Select a trip first — a route has to belong to one.', 'error');
     return;
   }
-  useEditorStore.getState().startDrawRoute(tripId);
+
+  const status = await useRoutingStore.getState().loadStatus();
+  if (status !== null && status.available) {
+    await startSnapRouting();
+    return;
+  }
+  useEditorStore.getState().startDrawRoute(tripId, 'unavailable');
+}
+
+/**
+ * "New Straight-Line Route": a route that deliberately does not follow roads.
+ *
+ * For paths no road graph knows — off-road, ferries, private land. A menu
+ * command rather than a toggle, so the default never has to be switched back.
+ */
+export function startStraightLineRoute(): void {
+  const tripId = currentTripId();
+  if (tripId === null) {
+    toast('Select a trip first — a route has to belong to one.', 'error');
+    return;
+  }
+  useEditorStore.getState().startDrawRoute(tripId, 'chosen');
 }
 
 export function startPlacingWaypoint(): void {
@@ -473,14 +526,46 @@ function routingFailure(cause: unknown): void {
  */
 export async function snapRoute(
   routeId: string,
+  controlPoints?: readonly { lat: number; lon: number }[],
 ): Promise<SnapOutcome | null> {
   const routing = useRoutingStore.getState();
   routing.setBusy('route', routeId, true);
 
   try {
-    const outcome = await call(api().routing.snap({ routeId }));
+    const outcome = await call(
+      api().routing.snap({
+        routeId,
+        ...(controlPoints === undefined
+          ? {}
+          : { controlPoints: [...controlPoints] }),
+      }),
+    );
     routing.invalidate('route', routeId);
     await refreshAll();
+
+    /*
+     * A displaced control point is reported before anything else.
+     *
+     * It is the more serious finding. An unmatched leg means "there is no road
+     * between these two points", which is a fact about the route. A displaced
+     * control point means the engine had no road *anywhere near* one of them
+     * and quietly routed to somewhere else instead — which almost always means
+     * the loaded map region does not reach it, and makes the result wrong
+     * rather than incomplete. See ADR 0016.
+     */
+    if (outcome.displaced.length > 0) {
+      const worst = outcome.displaced.reduce((a, b) =>
+        b.displacementM > a.displacementM ? b : a,
+      );
+      const km = (worst.displacementM / 1000).toFixed(1);
+      toast(
+        `${outcome.displaced.length} point${outcome.displaced.length === 1 ? '' : 's'} ` +
+          `had no road nearby — one was ${km} km from the nearest road in the loaded map region. ` +
+          `Those sections were left as straight lines. Add the map regions covering your route in Settings.`,
+        'error',
+      );
+      return outcome;
+    }
 
     const unmatched = outcome.unmatchedLegs.length;
     if (unmatched > 0) {
@@ -508,17 +593,287 @@ export async function snapRoute(
   }
 }
 
+// ------------------------------------------- Phase 6: shaping a saved route
+
+/** What shaping needs to know about a saved snapped route, or null. */
+export function shapingStateOf(routeId: string): ShapingState | null {
+  const provenance = useRoutingStore.getState().provenance[routeId];
+  const points = pointsOf(routeId);
+  if (provenance === undefined || points === null) return null;
+  return shapingStateFrom(points, provenance.controlPoints);
+}
+
+/** Routes a section for a shaping preview. No write. */
+export function routeSection(section: SectionLocation[]): Promise<PreviewedLeg[]> {
+  return call(api().routing.routeSection({ locations: section }));
+}
+
 /**
- * Creates a route from drawn points, snapping it when the user asked for that.
+ * Commits a shaping edit to a saved snapped route: one undo entry.
  *
- * The route is created first and snapped second, deliberately. If the provider
- * is unreachable the user keeps the route they drew instead of losing the
- * gesture entirely — which is what a single create-and-snap call would do.
+ * `previewLegs` are the legs the user watched appear while dragging; they are
+ * what gets stored. When there are none but the edit needs routing — an
+ * Alt-click removal, say — the section is routed here first.
+ *
+ * A route snapped before Phase 6 has no leg boundaries, so its first edit
+ * re-routes the whole route once to establish them, and says so
+ * (Requirement 8.8). The control points do not move in that re-route, so a
+ * preview computed against them is still valid afterwards; only a click on
+ * the old line has to become a drag-style insert, since the line itself has
+ * changed.
+ */
+export async function applyShapingEdit(
+  routeId: string,
+  edit: RouteEdit,
+  previewLegs: PreviewedLeg[] | null,
+): Promise<void> {
+  const routing = useRoutingStore.getState();
+  if (routing.isBusy('route', routeId)) return;
+  routing.setBusy('route', routeId, true);
+
+  try {
+    await routing.loadProvenance(routeId);
+    let state = shapingStateOf(routeId);
+    if (state === null) {
+      toast('Only a route that follows the roads can be shaped. Snap it to roads first.', 'error');
+      return;
+    }
+
+    let nextEdit = edit;
+    let legs = previewLegs;
+    if (!state.boundariesKnown) {
+      toast('Re-routing the whole route once to enable section editing…');
+      await call(api().routing.snap({ routeId }));
+      await refreshAll();
+      await useRoutingStore.getState().loadProvenance(routeId);
+      state = shapingStateOf(routeId);
+      if (state === null) return;
+      if (nextEdit.kind === 'insertOnLine') {
+        nextEdit = { kind: 'insert', leg: nextEdit.leg, at: nextEdit.at };
+        legs = null;
+      }
+    }
+
+    const plan = planEdit(state.control, state.legs, nextEdit);
+    if (plan.section !== null && legs === null) legs = await routeSection(plan.section);
+
+    const outcome = await call(
+      api().routing.applyEdit({
+        routeId,
+        expected: state.expected,
+        edit: toWireEdit(nextEdit),
+        legs: plan.section === null || legs === null ? null : legs.map(asPreviewedLeg),
+      }),
+    );
+    useRoutingStore.getState().invalidate('route', routeId);
+    await refreshAll();
+    await useRoutingStore.getState().loadProvenance(routeId);
+    describeEdit(outcome);
+  } catch (cause) {
+    if (cause instanceof EditRefused) toast(cause.message, 'error');
+    else routingFailure(cause);
+    await refreshAll();
+  } finally {
+    useRoutingStore.getState().setBusy('route', routeId, false);
+  }
+}
+
+/** Routes a section and joins its legs, for verifying a pinned alternative. */
+async function routeJoined(section: SectionLocation[]): Promise<LatLon[]> {
+  return flattenLegsWithBoundaries(await routeSection(section)).points;
+}
+
+/**
+ * Asks the engine for the routes on offer for one leg of a saved route and
+ * shows them (Requirement 2). Writes nothing.
+ */
+export async function showLegAlternatives(routeId: string, leg: number): Promise<void> {
+  const state = shapingStateOf(routeId);
+  const from = state?.control[leg]?.point;
+  const to = state?.control[leg + 1]?.point;
+  if (state === null || from === undefined || to === undefined) return;
+
+  try {
+    const items = await call(api().routing.alternatives({ from, to, count: 3 }));
+    if (items.length === 0) {
+      toast('No road route was found for this section.', 'error');
+      return;
+    }
+    useShapingStore.getState().show({
+      routeId,
+      leg,
+      items,
+      current: state.legs[leg] ?? [],
+    });
+  } catch (cause) {
+    routingFailure(cause);
+  }
+}
+
+export function dismissLegAlternatives(): void {
+  useShapingStore.getState().clear();
+}
+
+/**
+ * Uses the selected candidate for that leg: one undo entry.
+ *
+ * Any candidate but the engine's own first choice is pinned with shaping
+ * points first, so a later re-route of the leg keeps the chosen roads
+ * (Requirement 3). When the pins cannot be confirmed, the chosen geometry is
+ * still used and the user is told what that means.
+ */
+export async function chooseLegCandidate(): Promise<void> {
+  const store = useShapingStore.getState();
+  const choice = store.legCandidates;
+  if (choice === null || choice.checking) return;
+  const candidate = choice.items[choice.selected];
+  const preferred = choice.items[0];
+  if (candidate === undefined || preferred === undefined) return;
+
+  store.setChecking(true);
+  try {
+    const pinned =
+      choice.selected === 0
+        ? { shaping: [], verified: true }
+        : await pinCandidate(candidate.shape, preferred.shape, routeJoined);
+    await applyShapingEdit(
+      choice.routeId,
+      { kind: 'choose', leg: choice.leg, candidate: candidate.shape, shaping: pinned.shaping },
+      null,
+    );
+    if (!pinned.verified) {
+      toast(
+        'Route updated. TrailRT could not confirm that re-routing this section later will keep these roads — check it if you move a neighbouring point.',
+      );
+    }
+  } catch (cause) {
+    routingFailure(cause);
+  } finally {
+    useShapingStore.getState().clear();
+  }
+}
+
+// ------------------------------------------- Phase 6: extending a saved route
+
+/** One extend click at a time, in order: each is a write and an undo entry. */
+let extendQueue: Promise<void> = Promise.resolve();
+function inExtendOrder(task: () => Promise<void>): Promise<void> {
+  extendQueue = extendQueue.then(task).catch((cause: unknown) => {
+    toast(describeError(cause), 'error');
+  });
+  return extendQueue;
+}
+
+/** Leaves the leg choice in place if one is showing: the next action decides it. */
+async function settleLegChoice(routeId: string): Promise<void> {
+  const choice = useShapingStore.getState().legCandidates;
+  if (choice === null || choice.routeId !== routeId) return;
+  if (choice.selected > 0) await chooseLegCandidate();
+  else dismissLegAlternatives();
+}
+
+export function startExtendingRoute(routeId: string): void {
+  useEditorStore.getState().startExtendRoute(routeId);
+  toast('Extending the route. Click to add points along the roads · Enter or Esc to stop.');
+}
+
+/**
+ * Appends a via point to the route being extended and routes the new leg
+ * (Requirement 6.5). One undo entry per click.
+ *
+ * Asks for the routes on offer first and uses the engine's preferred one as
+ * the new leg, so a click costs one routing request rather than two; the
+ * others are then shown, and choosing one is a further undo entry. A
+ * candidate already selected for the previous leg is used before moving on,
+ * as in the snap routing tool.
+ */
+export function extendRouteTo(point: LatLon): Promise<void> {
+  return inExtendOrder(async () => {
+    const routeId = useEditorStore.getState().targetRouteId;
+    if (routeId === null) return;
+    await settleLegChoice(routeId);
+
+    const state = shapingStateOf(routeId);
+    const from = state?.control.at(-1)?.point;
+    if (state === null || from === undefined) return;
+
+    const offer =
+      useSettingsStore.getState().settings.routeAlternatives &&
+      useRoutingStore.getState().status?.capabilities.alternatives === true;
+
+    let items: Candidate[] = [];
+    let legs: PreviewedLeg[] | null = null;
+    if (offer) {
+      try {
+        items = await call(api().routing.alternatives({ from, to: point, count: 3 }));
+      } catch (cause) {
+        routingFailure(cause);
+        return;
+      }
+      legs = [
+        items[0] ?? { matched: false, shape: [from, point], distanceM: null, displacementM: null },
+      ];
+    }
+
+    await applyShapingEdit(routeId, { kind: 'append', at: point }, legs);
+
+    const after = shapingStateOf(routeId);
+    if (items.length > 0 && after !== null && after.control.length === state.control.length + 1) {
+      useShapingStore.getState().show({
+        routeId,
+        leg: after.control.length - 2,
+        items,
+        current: after.legs.at(-1) ?? [],
+      });
+    }
+  });
+}
+
+export function stopExtendingRoute(): Promise<void> {
+  return inExtendOrder(async () => {
+    const routeId = useEditorStore.getState().targetRouteId;
+    if (routeId !== null) await settleLegChoice(routeId);
+    useEditorStore.getState().cancel();
+  });
+}
+
+/** `RouteEdit` with its read-only arrays copied, as the IPC schema expects. */
+function toWireEdit(edit: RouteEdit) {
+  return edit.kind === 'choose'
+    ? { ...edit, candidate: [...edit.candidate], shaping: [...edit.shaping] }
+    : edit;
+}
+
+/**
+ * Speaks up only when an edit did something the user should know about. A
+ * toast for every successful drag would be noise; the route on the map is the
+ * confirmation.
+ */
+function describeEdit(outcome: EditOutcome): void {
+  if (outcome.displaced.length > 0) {
+    const worst = outcome.displaced.reduce((a, b) => (b.displacementM > a.displacementM ? b : a));
+    toast(
+      `A point had no road nearby — it was ${(worst.displacementM / 1000).toFixed(1)} km from the nearest road in the loaded map region. That section was left as a straight line.`,
+      'error',
+    );
+    return;
+  }
+  if (!outcome.undoable) {
+    toast('Route updated. This edit cannot be undone; the section it replaced was too large to keep.');
+  }
+}
+
+/**
+ * Creates a straight-line route from drawn points.
+ *
+ * Road-following routes come from the snap routing tool, which is what "New
+ * Route" opens whenever the engine can route (ADR 0018). This path is only
+ * reached for a deliberate straight-line route, or as the fallback when routing
+ * is unavailable — so it never snaps.
  */
 export async function createRouteFromDrawnPoints(
   tripId: string,
   points: readonly RoutePoint[],
-  snap: boolean,
 ): Promise<void> {
   if (points.length === 0) {
     toast('Nothing to save — place at least one point.', 'error');
@@ -532,18 +887,7 @@ export async function createRouteFromDrawnPoints(
     await refreshAll();
     await useSelectionStore.getState().select({ kind: 'route', id: route.id });
 
-    if (!snap || points.length < 2) {
-      toast(`Route saved with ${points.length} points.`);
-      return;
-    }
-
-    const outcome = await snapRoute(route.id);
-    if (outcome === null) {
-      toast(
-        'Route saved, but it could not be snapped. It is still the straight-line route you drew.',
-        'error',
-      );
-    }
+    toast(`Route saved with ${points.length} points.`);
   } catch (cause) {
     toast(describeError(cause), 'error');
   }
@@ -627,6 +971,21 @@ export function openProfile(
   useUiStore.getState().openProfile(ownerType, ownerId);
 }
 
+/**
+ * Opens the point table for a geometry.
+ *
+ * Opened on request rather than with the selection: for a track it starts
+ * paging exact points, and doing that every time something is clicked would
+ * make selection feel slow for a drawer most users have closed — the same
+ * reasoning the profile drawer follows.
+ */
+export function openPointTable(
+  ownerType: 'route' | 'track',
+  ownerId: string,
+): void {
+  useUiStore.getState().openPointTable(ownerType, ownerId);
+}
+
 // ------------------------------------------- the interactive snap routing tool
 
 /**
@@ -698,12 +1057,45 @@ async function drainSnapLegs(): Promise<void> {
       const generation = store.generation;
       store.setRouting(true);
 
-      let leg;
+      /*
+       * The leg to the most recently placed point is offered with its
+       * alternatives (Requirement 1.1), unless the user turned that off or the
+       * provider cannot. Earlier holes — a click ahead of a slow provider —
+       * route plainly: only the newest leg is the one the user is choosing.
+       */
+      const isNewest = gap.index === store.legs.length - 1;
+      const offerCandidates =
+        isNewest &&
+        useSettingsStore.getState().settings.routeAlternatives &&
+        useRoutingStore.getState().status?.capabilities.alternatives === true;
+
       try {
-        // eslint-disable-next-line no-await-in-loop
-        leg = await call(
-          api().routing.routeLeg({ from: gap.from, to: gap.to }),
-        );
+        if (offerCandidates) {
+          // eslint-disable-next-line no-await-in-loop
+          const items = await call(
+            api().routing.alternatives({ from: gap.from, to: gap.to, count: 3 }),
+          );
+          const accepted =
+            items.length === 0
+              ? // No road route at all: the same straight unmatched leg a
+                // plain route reports (Phase 4 Requirement 3.6).
+                useSnapRoutingStore.getState().acceptLeg(generation, gap.index, {
+                  matched: false,
+                  shape: [gap.from, gap.to],
+                  distanceM: null,
+                  displacementM: null,
+                })
+              : useSnapRoutingStore.getState().acceptCandidates(generation, gap.index, items);
+          if (!accepted) return;
+        } else {
+          // eslint-disable-next-line no-await-in-loop
+          const leg = await call(api().routing.routeLeg({ from: gap.from, to: gap.to }));
+          if (!useSnapRoutingStore.getState().acceptLeg(generation, gap.index, leg)) {
+            // The line changed while we were waiting. Another drain will pick
+            // up from wherever it now is.
+            return;
+          }
+        }
       } catch (cause) {
         const current = useSnapRoutingStore.getState();
         if (current.generation !== generation) return;
@@ -719,33 +1111,113 @@ async function drainSnapLegs(): Promise<void> {
         routingFailure(cause);
         return;
       }
-
-      if (!useSnapRoutingStore.getState().acceptLeg(generation, gap.index, leg)) {
-        // The line changed while we were waiting. Another drain will pick up
-        // from wherever it now is.
-        return;
-      }
     }
   } finally {
     draining = false;
     // A generation bump during the await above can leave `routing` stuck on,
     // because the loop returned before clearing it.
-    if (useSnapRoutingStore.getState().nextGap() === null) {
-      useSnapRoutingStore.getState().setRouting(false);
+    const after = useSnapRoutingStore.getState();
+    if (after.nextGap() === null || after.error !== null) {
+      after.setRouting(false);
     } else {
       void drainSnapLegs();
     }
   }
 }
 
+/**
+ * Serialises the tool's own mutations.
+ *
+ * Accepting a chosen candidate has to pin it first, which routes, and a click
+ * that arrives meanwhile must land after it — otherwise two quick clicks could
+ * append in the wrong order. Every tool mutation that can wait goes through
+ * here, in arrival order.
+ */
+let toolQueue: Promise<void> = Promise.resolve();
+function inToolOrder(task: () => Promise<void> | void): Promise<void> {
+  toolQueue = toolQueue.then(task).catch((cause: unknown) => {
+    toast(describeError(cause), 'error');
+  });
+  return toolQueue;
+}
+
+/**
+ * Accepts the candidate selected for the newest leg (Requirement 1.6).
+ *
+ * Candidate A is the engine's own choice and needs nothing more. Any other is
+ * pinned with shaping points on it so that re-routing the leg later keeps the
+ * chosen roads (Requirement 3); the pins lie on the candidate, so the
+ * geometry the user saw does not change.
+ */
+async function acceptSnapCandidate(): Promise<void> {
+  const store = useSnapRoutingStore.getState();
+  const choice = store.candidates;
+  if (choice === null) return;
+  store.clearCandidates();
+  const chosen = choice.items[choice.selected];
+  const preferred = choice.items[0];
+  if (choice.selected === 0 || chosen === undefined || preferred === undefined) return;
+
+  const generation = store.generation;
+  const pinned = await pinCandidate(chosen.shape, preferred.shape, routeJoined);
+  const now = useSnapRoutingStore.getState();
+  // The draft moved on while pinning (undo, cancel): the pins describe a leg
+  // that no longer exists, so they are dropped rather than applied.
+  if (now.generation !== generation || pinned.shaping.length === 0) return;
+
+  const plan = planEdit(
+    now.controlPoints.map((point, i) => ({ point, role: now.roles[i] ?? 'via' })),
+    draftLegShapes(now.controlPoints, now.legs),
+    { kind: 'choose', leg: choice.leg, candidate: chosen.shape, shaping: pinned.shaping },
+  );
+  now.applyPlan(plan, null);
+  if (!pinned.verified) {
+    toast(
+      'Using that route. TrailRT could not confirm that re-routing this section later will keep these roads.',
+    );
+  }
+}
+
+/** A shaping edit to the draft, from dragging or clicking in the tool. */
+export function applySnapDraftEdit(edit: RouteEdit, routed: PreviewedLeg[] | null): Promise<void> {
+  return inToolOrder(async () => {
+    await acceptSnapCandidate();
+    const store = useSnapRoutingStore.getState();
+    const plan = planEdit(
+      store.controlPoints.map((point, i) => ({ point, role: store.roles[i] ?? 'via' })),
+      draftLegShapes(store.controlPoints, store.legs),
+      edit,
+    );
+    store.applyPlan(plan, routed);
+    void drainSnapLegs();
+  });
+}
+
+/** ⌘Z in the tool. */
+export function undoSnapDraft(): void {
+  void inToolOrder(() => {
+    if (!useSnapRoutingStore.getState().undo()) {
+      toast('Nothing to undo in this route yet.');
+      return;
+    }
+    void drainSnapLegs();
+  });
+}
+
 export function appendSnapPoint(point: { lat: number; lon: number }): void {
-  useSnapRoutingStore.getState().appendPoint(point);
-  void drainSnapLegs();
+  void inToolOrder(async () => {
+    // Placing the next point accepts the candidate chosen for the last leg.
+    await acceptSnapCandidate();
+    useSnapRoutingStore.getState().appendPoint(point);
+    void drainSnapLegs();
+  });
 }
 
 export function undoLastSnapPoint(): void {
-  useSnapRoutingStore.getState().undoLastPoint();
-  void drainSnapLegs();
+  void inToolOrder(() => {
+    useSnapRoutingStore.getState().undoLastPoint();
+    void drainSnapLegs();
+  });
 }
 
 /**
@@ -755,7 +1227,34 @@ export function undoLastSnapPoint(): void {
  * shorter than the one on screen, and the user would have no way to tell. A
  * leg that failed outright is the same situation and gets the same refusal.
  */
-export async function finishSnapRouting(): Promise<void> {
+export function finishSnapRouting(): Promise<void> {
+  return inToolOrder(async () => {
+    await acceptSnapCandidate();
+    await finishSnapRoutingNow();
+  });
+}
+
+/** How long finishing waits for a leg still in flight. The engine takes milliseconds. */
+const LEG_WAIT_MS = 5000;
+
+/**
+ * The draft once every leg is routed, a leg has failed, or the wait runs out.
+ *
+ * Polls the store rather than awaiting the drain: the drain is deliberately
+ * fire-and-forget so clicks never wait for it, and a click can start another
+ * drain while this one is being awaited.
+ */
+async function legsSettled(timeoutMs: number) {
+  const started = Date.now();
+  for (;;) {
+    const state = useSnapRoutingStore.getState();
+    if (snapComplete(state.legs) || state.error !== null) return state;
+    if (Date.now() - started > timeoutMs) return state;
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+}
+
+async function finishSnapRoutingNow(): Promise<void> {
   const editor = useEditorStore.getState();
   const tripId = editor.targetTripId;
   const snap = useSnapRoutingStore.getState();
@@ -770,18 +1269,24 @@ export async function finishSnapRouting(): Promise<void> {
     return;
   }
 
-  if (snap.legs.length !== snap.controlPoints.length - 1) {
+  // Enter or a double-click straight after the last click arrives while that
+  // leg is still being routed. Waiting a moment for it is what the user meant;
+  // refusing and making them press Enter again is not.
+  const settled = await legsSettled(LEG_WAIT_MS);
+  if (settled.generation !== snap.generation) return;
+  if (!snapComplete(settled.legs)) {
     toast(
-      snap.error === null
+      settled.error === null
         ? 'Still routing the last leg — give it a moment.'
-        : `The last leg could not be routed: ${snap.error}`,
+        : `The last leg could not be routed: ${settled.error}`,
       'error',
     );
     return;
   }
 
-  const controlPoints = snap.controlPoints;
-  const legs = snap.legs;
+  const controlPoints = settled.controlPoints;
+  const legs = settled.legs;
+  const roles = settled.roles;
   const unmatched = legs.filter((leg) => !leg.matched).length;
 
   // Cleared before the write so a second Enter cannot submit the same route
@@ -794,7 +1299,9 @@ export async function finishSnapRouting(): Promise<void> {
         tripId,
         name: 'New Route',
         controlPoints: [...controlPoints],
-        legs: [...legs],
+        // Named fields only: the boundary refuses any extra key.
+        legs: legs.map(asPreviewedLeg),
+        roles: [...roles],
       }),
     );
     await refreshAll();
@@ -853,27 +1360,34 @@ export async function importRoutingRegion(): Promise<void> {
   }
 }
 
-/** Opens the region picker, which reads the currently visible map area. */
+/** Opens Settings, where map regions are managed. */
+export function openSettings(): void {
+  useUiStore.getState().openDialog({ kind: 'settings' });
+}
+
+/** Opens the region picker: the UK county map, with Elsewhere for the rest. */
 export function openRegionPicker(): void {
   useUiStore.getState().openDialog({ kind: 'regionPicker' });
 }
 
 /**
- * Downloads a chosen region and builds a graph from it.
+ * Downloads the chosen regions and builds one graph from them.
  *
  * Closes the picker only on success. Leaving it open on failure keeps the
- * candidate list and the error together, so the user can pick a different
- * region without starting over.
+ * selection and the error together, so the user can change the selection
+ * without starting over.
  */
-export async function downloadRoutingRegion(
-  regionId: string,
+export async function downloadRoutingRegions(
+  regionIds: readonly string[],
   onDone?: () => void,
 ): Promise<void> {
   const routing = useRoutingStore.getState();
   routing.setRegionImporting(true);
 
   try {
-    const region = await call(api().routing.downloadRegion({ regionId }));
+    const region = await call(
+      api().routing.downloadRegion({ regionIds: [...regionIds] }),
+    );
 
     await Promise.all([
       useRoutingStore.getState().loadStatus(),
@@ -884,8 +1398,11 @@ export async function downloadRoutingRegion(
     useRoutingStore.getState().clear();
 
     toast(
-      `Map region "${region.regionName}" ready — ${region.tileCount.toLocaleString()} tiles. Snapping and speed limits now work offline.`,
+      `Map ready for ${region.regionName} — ${region.tileCount.toLocaleString()} tiles. Routes follow roads, offline.`,
     );
+    if (region.terrainWarning !== undefined && region.terrainWarning !== null) {
+      toast(region.terrainWarning, 'error');
+    }
     onDone?.();
   } catch (cause) {
     toast(describeError(cause), 'error');

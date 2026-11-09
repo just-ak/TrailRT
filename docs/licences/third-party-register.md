@@ -5,7 +5,7 @@ licensed GPL-3.0-or-later; every entry here must be inbound-compatible with that
 
 **GENERATED FILE** — regenerate with `npm run licences`.
 
-Generated 2026-11-06 from the installed dependency tree
+Generated 2026-11-09 from the installed dependency tree
 on Node v26.13.0. Packages examined: **372**. Incompatibilities: **0**.
 
 ## Licence distribution
@@ -437,9 +437,10 @@ Distributed to users, so these licences bind the combined work.
 
 ## Native components: the embedded Valhalla routing engine
 
-Maintained **by hand**. These are not npm dependencies, so
-`npm run licences` cannot see them — it reads the lockfile, and none of this is
-in it. Regenerate the npm sections with that command; update this one whenever
+Maintained **by hand** in `docs/licences/native-and-data.md`, which
+`npm run licences` appends to the generated register verbatim. These are not npm
+dependencies, so the generator cannot see them — it reads the lockfile, and none
+of this is in it. Edit that file, not the register; update it whenever
 `VALHALLA_TAG` in `scripts/build-valhalla.sh` changes or the dependency set
 moves.
 
@@ -485,7 +486,28 @@ Verified against each component's licence file at tag 3.9.1:
 | tz | Public domain |
 | googletest, fastcov | BSD-3-Clause / MIT — build and test only, not shipped |
 
-Nothing in either table carries a field-of-use restriction, and nothing is
+### Bundled beside Valhalla: osmium-tool (ADR 0018)
+
+`resources/valhalla/bin/osmium` merges several regions' extracts into one before
+the tile build, because Valhalla aborts on overlapping extracts. Copied from the
+Homebrew bottle by `scripts/bundle-valhalla.sh` and made relocatable with the
+rest. A separate executable, run as a child process.
+
+| Component | Version | Licence | Verdict |
+| --- | --- | --- | --- |
+| osmium-tool | 1.19.1 | GPL-3.0-or-later | Fine — same licence family as the app |
+| libosmium (header-only, compiled in) | 2.23.1 | BSL-1.0 | Fine |
+| protozero (header-only, compiled in) | — | BSD-2-Clause | Fine |
+| boost (program_options, container) | 1.92.0 | BSL-1.0 | Fine — already listed |
+| lz4 | 1.11.0 | BSD-2-Clause | Fine — already listed |
+| expat, zlib, bzip2 | system | MIT / zlib / bzip2 | Fine — macOS system libraries, not shipped |
+
+GPL-3.0-or-later obliges us to offer osmium-tool's corresponding source with the
+binary. The version above plus the public upstream repository
+(<https://github.com/osmcode/osmium-tool>, tag `v1.19.1`) identifies it exactly,
+and is published with each release alongside TrailRT's own source.
+
+Nothing in these tables carries a field-of-use restriction, and nothing is
 GPL-2.0-**only**, which is the combination the licensing rules reject.
 
 ### Source availability
@@ -495,3 +517,14 @@ the combined work. Valhalla is MIT, so its own terms add no requirement beyond
 attribution, and the pinned tag in `scripts/build-valhalla.sh` plus the public
 repository identifies exactly what was built. The GPL-3.0 obligation is met by
 publishing TrailRT's source together with that pin.
+
+## Data downloaded at runtime (ADR 0018)
+
+Not code, and not shipped in the app: fetched at the user's choice, cached in
+their data directory, and attributed in the About window.
+
+| Data | Source | Terms |
+| --- | --- | --- |
+| Road graph extracts | Geofabrik (`download.geofabrik.de`) | © OpenStreetMap contributors, ODbL 1.0 |
+| UK boundary (`src/shared/geo/ukBoundary.ts`, 150 points, generated) | Geofabrik region index | © OpenStreetMap contributors, ODbL 1.0 |
+| Terrain elevation tiles | Terrain Tiles, AWS Registry of Open Data (`elevation-tiles-prod.s3.amazonaws.com`) | Open data, derived from SRTM (NASA, public domain) and other sources listed at <https://github.com/tilezen/joerd/blob/master/docs/attribution.md>. Attribution required; given in the About window |

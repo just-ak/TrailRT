@@ -3,6 +3,7 @@ import { PANEL_LIMITS } from "@shared/domain/defaults";
 import { SplitPane } from "../components/SplitPane";
 import { LibraryPanel } from "../features/library/LibraryPanel";
 import { MapView } from "../features/map/MapView";
+import { PointTable } from "../features/points/PointTable";
 import { ProfilePanel } from "../features/profile/ProfilePanel";
 import { PropertiesPanel } from "../features/properties/PropertiesPanel";
 import { useUiStore } from "../stores/uiStore";
@@ -19,6 +20,7 @@ export function Layout(): ReactNode {
   const setLayout = useUiStore((s) => s.setLayout);
   const profile = useUiStore((s) => s.profile);
   const closeProfile = useUiStore((s) => s.closeProfile);
+  const pointTable = useUiStore((s) => s.pointTable);
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--color-surface)]">
@@ -50,6 +52,16 @@ export function Layout(): ReactNode {
             ownerType={profile.ownerType}
             ownerId={profile.ownerId}
             onClose={closeProfile}
+          />
+        )}
+        {pointTable !== null && (
+          <PointTable
+            // Remount on a change of geometry: indices only mean anything
+            // against the object they came from, so carrying row selection
+            // across would highlight arbitrary points on something else.
+            key={`${pointTable.ownerType}:${pointTable.ownerId}`}
+            ownerType={pointTable.ownerType}
+            ownerId={pointTable.ownerId}
           />
         )}
       </div>

@@ -172,6 +172,17 @@ const lines = [
   '',
 ];
 
+/*
+ * The native components and runtime data are maintained by hand in their own
+ * file and appended verbatim. They used to live at the end of the register
+ * itself, which meant every regeneration silently deleted them — a register
+ * that lags what ships is a compliance failure, not an inconvenience.
+ */
+const handMaintained = join(root, 'docs/licences/native-and-data.md');
+if (existsSync(handMaintained)) {
+  lines.push(readFileSync(handMaintained, 'utf8').trimEnd(), '');
+}
+
 mkdirSync(join(root, 'docs/licences'), { recursive: true });
 writeFileSync(join(root, 'docs/licences/third-party-register.md'), lines.join('\n'));
 

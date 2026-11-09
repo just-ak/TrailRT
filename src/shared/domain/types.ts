@@ -157,6 +157,16 @@ export interface AppSettings {
    */
   routingConsentAccepted: boolean;
   transportMode: TransportMode;
+  /**
+   * Offer the routes on offer for each new leg while drawing. On by default;
+   * off makes the snap routing tool behave as it did in Phase 4. Phase 6.
+   */
+  routeAlternatives: boolean;
+  /**
+   * Count a UK road with no posted limit at its statutory default, labelled
+   * assumed. On by default; off is ADR 0011's posted-only reporting. ADR 0018.
+   */
+  ukDefaultSpeedLimits: boolean;
   showScaleBar: boolean;
   layerVisibility: LayerVisibility;
   backupIntervalHours: number;
@@ -333,4 +343,69 @@ export interface TrackGeometry {
   /** True when these came from the simplified render cache. */
   simplified: boolean;
   segments: { points: { lat: number; lon: number }[] }[];
+}
+
+// -------------------------------------- Phase 5: object and point management
+
+/**
+ * A window of a track's points, for the point table.
+ *
+ * Paged because a recording can hold 200,000 points and a table shows forty.
+ * `total` sizes the scrollbar without holding the data; `segmentBreaks` is the
+ * **whole** track's structure, not the window's, because a renderer cannot
+ * infer a break from a window that does not contain one.
+ *
+ * These are always exact points. A simplified payload would mean the row the
+ * user edits is not the sample they are looking at.
+ */
+export interface TrackPointsPage {
+  trackId: Id;
+  /** Points in the whole track, not in this window. */
+  total: number;
+  /** Flat index of the first returned point. */
+  offset: number;
+  /**
+   * Flat index of the last point of every segment but the last. Empty for a
+   * single-segment track. See `shared/geo/segments.ts`.
+   */
+  segmentBreaks: number[];
+  points: TrackPoint[];
+}
+
+/** An object a batch operation can act on. Trips and folders are excluded. */
+export type BatchKind = 'route' | 'track' | 'waypoint';
+
+export interface BatchMember {
+  kind: BatchKind;
+  id: Id;
+}
+
+export type BatchOperation = 'delete' | 'move';
+
+/**
+ * What a batch will do, answered **before** it is applied.
+ *
+ * Requirement 2.5: partial undoability is stated up front rather than
+ * discovered afterwards. The same calculation backs both the dry run and the
+ * real thing, so the warning cannot disagree with the outcome.
+ */
+export interface BatchAssessment {
+  operation: BatchOperation;
+  counts: Record<BatchKind, number>;
+  total: number;
+  /** Whether one ⌘Z will reverse the whole batch. */
+  undoable: boolean;
+  /** Members that cannot be reversed, so the UI can name them. */
+  notUndoable: BatchMember[];
+  /** Points that would be irreversibly removed. Null when nothing is. */
+  irreversiblePoints: number | null;
+  /** Why it is not undoable, in words, or null when it is. */
+  reason: string | null;
+  /** Members referring to objects that no longer exist. */
+  missing: BatchMember[];
+}
+
+/** What a batch actually did. */
+export interface BatchOutcome extends BatchAssessment {
+  applied: number;
 }

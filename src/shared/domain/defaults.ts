@@ -20,6 +20,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   routingEndpoint: '',
   routingConsentAccepted: false,
   transportMode: 'auto',
+  routeAlternatives: true,
+  ukDefaultSpeedLimits: true,
   showScaleBar: true,
   layerVisibility: { routes: true, tracks: true, waypoints: true },
   backupIntervalHours: 24,
@@ -35,7 +37,15 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   windowGeometry: null,
   // Centred on the Alps at a zoom that shows useful terrain rather than ocean.
-  mapPosition: { lat: 46.8, lon: 8.2, zoom: 8 },
+  /**
+   * The Peak District, centred between Buxton and Ashbourne at a zoom that
+   * frames the whole White Peak.
+   *
+   * A first launch has nothing to show, so the opening view is a guess either
+   * way. This one at least matches the geography the application is tested
+   * against and the roads its routing features were built for.
+   */
+  mapPosition: { lat: 53.14, lon: -1.83, zoom: 10 },
   expandedNodeIds: ['root', 'view:trips'],
   showArchivedTrips: false,
 };

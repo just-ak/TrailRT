@@ -127,6 +127,9 @@ export function RouteProperties({
         ) : (
           <p className="text-[13px] text-[var(--color-text-secondary)]">
             No elevation data in this route.
+            <span className="block text-[11px] text-[var(--color-text-muted)]">
+              The profile shows terrain heights from an elevation model instead.
+            </span>
           </p>
         )}
       </Field>
@@ -156,6 +159,9 @@ export function RouteProperties({
         </Button>
         <Button onClick={() => void actions.duplicateRoute(route.id)}>
           Duplicate
+        </Button>
+        <Button onClick={() => actions.openPointTable("route", route.id)}>
+          Points…
         </Button>
         <Button onClick={() => actions.openProfile("route", route.id)}>
           Profile

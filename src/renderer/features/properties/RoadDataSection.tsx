@@ -102,11 +102,14 @@ export function RoadDataSection({
           */}
           <div className="mt-2">
             {status?.reason === "no-map-data" ? (
-              <Button
-                variant="primary"
-                onClick={() => actions.openRegionPicker()}
-              >
-                Add a map region…
+              /*
+                Points at Settings rather than opening the picker here.
+                Map data is now a section of its own there, so this is no
+                longer the dead end it would have been — and one place to
+                manage regions beats two entry points into the same dialog.
+              */
+              <Button variant="primary" onClick={() => actions.openSettings()}>
+                Add map data in Settings…
               </Button>
             ) : status?.reason === "no-engine" ? (
               <p className="text-[11px] text-[var(--color-text-muted)]">
@@ -156,7 +159,15 @@ export function RoadDataSection({
           </div>
 
           <div className="mb-2 flex flex-wrap gap-2">
-            {ownerType === "route" && (
+            {/*
+              Only for a route that does not already follow roads: an import,
+              or one drawn straight. A road-routed route re-routes itself when
+              it is edited, so a button here would only invite a needless
+              whole-route re-snap. ADR 0018.
+            */}
+            {ownerType === "route" &&
+              provenance !== undefined &&
+              provenance.routingProvider === null && (
               <Button
                 disabled={busy || pointCount < 2}
                 onClick={() => void actions.snapRoute(ownerId)}
@@ -225,6 +236,32 @@ export function RoadDataSection({
               {formatTimestamp(provenance.snappedAt)}, from{" "}
               {provenance.controlPointCount} control points.
             </p>
+            {/*
+              Reported above the unmatched-leg count, because it is the more
+              serious finding. "No road between these two points" is a fact
+              about the route. "No road anywhere near this point" means the
+              loaded map region does not reach it, which makes the result wrong
+              rather than incomplete — and the engine does not say so on its
+              own. See ADR 0016.
+            */}
+            {provenance.displaced.length > 0 && (
+              <p
+                role="note"
+                className="mt-1 rounded border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-1.5 py-1 text-[var(--color-text-primary)]"
+              >
+                {provenance.displaced.length} point
+                {provenance.displaced.length === 1 ? "" : "s"} had no road
+                nearby — the furthest was{" "}
+                {(
+                  Math.max(
+                    ...provenance.displaced.map((d) => d.displacementM),
+                  ) / 1000
+                ).toFixed(1)}{" "}
+                km from the nearest road in the loaded map region. Those
+                sections were left straight. Add the regions covering your route
+                in Settings, then snap again.
+              </p>
+            )}
             {provenance.unmatchedLegs.length > 0 && (
               <p className="mt-1 text-[var(--color-danger)]">
                 {provenance.unmatchedLegs.length} section

@@ -19,16 +19,21 @@
  *
  *   npm run verify:valhalla
  *
- * Expects a graph built by scripts/build-valhalla.sh plus a test region. Set
- * VALHALLA_CONFIG and VALHALLA_ADDON to point elsewhere.
+ * Expects a graph built by scripts/build-valhalla.sh plus a region covering the
+ * test geography: the A515 south of Buxton, so the Geofabrik `derbyshire`
+ * extract or anything wider. Set VALHALLA_CONFIG and VALHALLA_ADDON to point
+ * elsewhere.
  */
 import { app } from 'electron';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
+
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const CACHE =
   process.env.TRAILRT_VALHALLA_CACHE ??
@@ -41,13 +46,22 @@ const ADDON =
 const CONFIG =
   process.env.VALHALLA_CONFIG ?? path.join(CACHE, 'work/valhalla.json');
 
-/** A stretch of road through Vaduz, inside the Liechtenstein test extract. */
-const SHAPE = [
-  { lat: 47.1385, lon: 9.5215 },
-  { lat: 47.1402, lon: 9.5222 },
-  { lat: 47.1421, lon: 9.5231 },
-  { lat: 47.144, lon: 9.524 },
-];
+/**
+ * A trace along the A515 south of Buxton, from the shared test geography.
+ *
+ * Read from `test-data/places.json` rather than copied, so one set of
+ * coordinates serves this script, the unit tests and the end-to-end specs.
+ *
+ * Two properties of it matter. The points were sampled from a real snapped
+ * route, so they lie on the carriageway — map matching needs a dense on-road
+ * trace and refuses sparse waypoints outright. And the whole run stays inside
+ * **Derbyshire**, so the smallest extract that covers it is a 44 MB county
+ * download rather than all of England. The A537 over the Cat and Fiddle would
+ * have been the more characterful choice, but it crosses into Cheshire.
+ */
+const SHAPE = JSON.parse(
+  readFileSync(path.join(ROOT, 'test-data/places.json'), 'utf8'),
+).traces.a515;
 
 const fail = (message) => {
   console.error(`FAIL: ${message}`);

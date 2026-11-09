@@ -388,6 +388,9 @@ export function TrackProperties({
         <Button onClick={() => void actions.reverseTrack(track.id)}>
           Reverse
         </Button>
+        <Button onClick={() => actions.openPointTable("track", track.id)}>
+          Points…
+        </Button>
         <Button onClick={() => actions.openProfile("track", track.id)}>
           Profile
         </Button>

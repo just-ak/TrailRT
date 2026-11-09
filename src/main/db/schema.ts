@@ -85,7 +85,7 @@ export const routes = sqliteTable(
     elevLossM: real('elev_loss_m'), // cache
     /**
      * JSON for fields an imported format carried that have no column of their
-     * own — GPX extensions, <url>, KML ExtendedData. Preserved so Phase 6 can
+     * own — GPX extensions, <url>, KML ExtendedData. Preserved so the Garmin phase can
      * round-trip them, and reported to the user on import.
      *
      * Phase 4 also records `unmatchedLegs` here: control-point index pairs a
@@ -132,6 +132,13 @@ export const routeControlPoints = sqliteTable(
     seq: integer('seq').notNull(),
     lat: real('lat').notNull(),
     lon: real('lon').notNull(),
+    /** `via` or `shaping`. Phase 6, ADR 0017. */
+    role: text('role').notNull().default('via'),
+    /**
+     * Leg boundary in `route_points`; see `shared/routing/splice.ts`. Null for
+     * a route snapped before Phase 6.
+     */
+    shapeIndex: integer('shape_index'),
   },
   (t) => [unique('uq_route_control_points_seq').on(t.routeId, t.seq)],
 );

@@ -217,6 +217,12 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     Liechtenstein's border, so the smallest fully-containing region becomes
     the 2.3 GB Alps bundle. `coversViewport` is reported per candidate instead,
     so the UI can offer the choice for a view spanning a border
+  - Confirmed again on the Buxton test geography once it replaced Vaduz
+    (ADR 0015), where the case is not a near-miss but the normal state: the
+    test loop spans Derbyshire, Cheshire and Staffordshire, and Geofabrik
+    publishes England by county, so **no county extract covers it.** A view of
+    the whole loop ranks `staffordshire` first with `coversViewport: false`,
+    and offers `england` as the one that does
   - Real download sizes via HEAD through the `-latest.osm.pbf` → dated-file
     redirect, followed only within the same origin
   - Oversized candidates marked unselectable up front rather than refused at

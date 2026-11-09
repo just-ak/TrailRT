@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import type { MapPosition } from '@shared/domain/types';
-import { getMapOverlay, resolveProvider } from '@shared/map/MapProvider';
+import { getMapOverlay, MAP_MAX_ZOOM, resolveProvider } from '@shared/map/MapProvider';
 import { setMapInstance } from './mapInstance';
 
 /**
@@ -154,6 +154,8 @@ export function useLeafletMap(options: Options): LeafletMap {
       zoomControl: false,
       attributionControl: true,
       preferCanvas: true,
+      // Fixed, not derived from the tile layers: see MAP_MAX_ZOOM.
+      maxZoom: MAP_MAX_ZOOM,
       /*
        * Keyboard panning and zooming, Requirement 4.4.
        *
@@ -266,9 +268,12 @@ export function useLeafletMap(options: Options): LeafletMap {
     const layer = L.tileLayer(resolved.tileUrlTemplate, {
       attribution: provider.attribution,
       minZoom: provider.minZoom,
-      // OpenTopoMap stops at 17. Requesting 18 would paint blank tiles, so the
-      // registry's value is honoured rather than assumed to be OSM's 19.
-      maxZoom: provider.maxZoom,
+      // OpenTopoMap stops at 17. Requesting 18 would fetch tiles that do not
+      // exist, so the provider's limit is the deepest level fetched, and past
+      // it Leaflet enlarges those tiles. The layer itself stays visible to the
+      // map's own limit; with `maxZoom: 17` it drew nothing at all at 18–19.
+      maxNativeZoom: provider.maxZoom,
+      maxZoom: MAP_MAX_ZOOM,
       ...(provider.subdomains === undefined
         ? {}
         : { subdomains: [...provider.subdomains] }),
@@ -290,8 +295,11 @@ export function useLeafletMap(options: Options): LeafletMap {
     tileLayerRef.current = layer;
 
     return () => {
-      layer.off();
+      // Remove first: Leaflet takes the layer's attribution back off the map
+      // in a one-off `remove` listener on the layer, and `off()` first would
+      // delete that listener and leave the old provider credited for ever.
       layer.remove();
+      layer.off();
     };
   }, [resolved]);
 
@@ -314,7 +322,8 @@ export function useLeafletMap(options: Options): LeafletMap {
 
     const layer = L.tileLayer(template, {
       attribution: overlay.attribution,
-      maxZoom: overlay.maxZoom,
+      maxNativeZoom: overlay.maxZoom,
+      maxZoom: MAP_MAX_ZOOM,
       opacity: overlay.opacity,
       // Above the base tiles, below every vector layer and marker. Leaflet's
       // default pane would put it level with the base map and the order would
@@ -326,8 +335,11 @@ export function useLeafletMap(options: Options): LeafletMap {
     overlayLayerRef.current = layer;
 
     return () => {
-      layer.off();
+      // Remove first: Leaflet takes the layer's attribution back off the map
+      // in a one-off `remove` listener on the layer, and `off()` first would
+      // delete that listener and leave the old provider credited for ever.
       layer.remove();
+      layer.off();
     };
   }, [options.overlayId, options.customOverlayUrl]);
 

@@ -161,7 +161,7 @@ function TripDetails({ trip }: { trip: TripWithCounts }): ReactNode {
           to add them.
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <Button onClick={() => actions.startDrawingRoute()}>New Route</Button>
+          <Button onClick={() => void actions.startDrawingRoute()}>New Route</Button>
           <Button onClick={() => actions.startPlacingWaypoint()}>
             New Waypoint
           </Button>

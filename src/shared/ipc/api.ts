@@ -1,10 +1,13 @@
 import type {
   AppSettings,
+  BatchAssessment,
+  BatchOutcome,
   Folder,
   Route,
   RouteWithPoints,
   Track,
   TrackGeometry,
+  TrackPointsPage,
   TrackWithPoints,
   Trip,
   TreeNode,
@@ -31,8 +34,13 @@ import type {
   LoadedRegion,
   RegionCandidate,
   RegionJobProgress,
+  RegionMapEntry,
+  RegionSize,
+  TerrainDownloadResult,
   RegionProgressEvent,
   PreviewedLeg,
+  Candidate,
+  EditOutcome,
   Profile,
   RouteProvenance,
   RoutingStatus,
@@ -212,6 +220,38 @@ export interface TrailRtApi {
     restoreOriginal(
       req: Req<typeof S.trackRestoreOriginalRequest>,
     ): Promise<Result<TrackWithPoints>>;
+    /**
+     * One window of exact points, with the whole track's segment breaks.
+     *
+     * The breaks are global rather than window-local because a renderer cannot
+     * infer a break from a window that does not contain one.
+     */
+    points(
+      req: Req<typeof S.trackPointsPageRequest>,
+    ): Promise<Result<TrackPointsPage>>;
+    editPoint(
+      req: Req<typeof S.trackEditPointRequest>,
+    ): Promise<Result<TrackWithPoints>>;
+    /** Non-contiguous deletion. Segment structure survives. */
+    deletePoints(
+      req: Req<typeof S.trackDeletePointsRequest>,
+    ): Promise<Result<TrackWithPoints>>;
+  };
+  /**
+   * Multi-object operations.
+   *
+   * `assess` is a read: it answers what the batch will do, including which
+   * members cannot be reversed, so the confirmation can say so before the
+   * action rather than after it.
+   */
+  batch: {
+    assess(
+      req: Req<typeof S.batchAssessRequest>,
+    ): Promise<Result<BatchAssessment>>;
+    delete(
+      req: Req<typeof S.batchDeleteRequest>,
+    ): Promise<Result<BatchOutcome>>;
+    move(req: Req<typeof S.batchMoveRequest>): Promise<Result<BatchOutcome>>;
   };
   importing: {
     /** Opens the file dialog in the main process and stages what was chosen. */
@@ -272,10 +312,23 @@ export interface TrailRtApi {
     suggestRegions(
       req: Req<typeof S.routingSuggestRegionsRequest>,
     ): Promise<Result<RegionCandidate[]>>;
-    /** Downloads a chosen extract and builds a graph. Progress via events. */
+    /**
+     * Downloads the chosen extracts, merges several into one, and builds a
+     * graph. Progress via events.
+     */
     downloadRegion(
       req: Req<typeof S.routingDownloadRegionRequest>,
     ): Promise<Result<LoadedRegion>>;
+    /** The UK's downloadable regions, for the picker's map. */
+    regionMap(): Promise<Result<RegionMapEntry[]>>;
+    /** Download sizes, null where the server will not say. */
+    regionSizes(
+      req: Req<typeof S.routingRegionSizesRequest>,
+    ): Promise<Result<RegionSize[]>>;
+    /** Downloads the terrain tiles one geometry's profile needs. */
+    downloadTerrain(
+      req: Req<typeof S.routingDownloadTerrainRequest>,
+    ): Promise<Result<TerrainDownloadResult>>;
     snap(req: Req<typeof S.routingSnapRequest>): Promise<Result<SnapOutcome>>;
     /** One leg, no write. The interactive tool's per-click call. */
     routeLeg(
@@ -284,6 +337,18 @@ export interface TrailRtApi {
     createSnapped(
       req: Req<typeof S.routingCreateSnappedRequest>,
     ): Promise<Result<Route>>;
+    /** Phase 6: route a section through shaping points. No write. */
+    routeSection(
+      req: Req<typeof S.routingRouteSectionRequest>,
+    ): Promise<Result<PreviewedLeg[]>>;
+    /** Phase 6: the routes on offer between two points. No write. */
+    alternatives(
+      req: Req<typeof S.routingAlternativesRequest>,
+    ): Promise<Result<Candidate[]>>;
+    /** Phase 6: commit a shaping edit as previewed. One undo entry. */
+    applyEdit(
+      req: Req<typeof S.routingApplyEditRequest>,
+    ): Promise<Result<EditOutcome>>;
     provenance(
       req: Req<typeof S.routingProvenanceRequest>,
     ): Promise<Result<RouteProvenance>>;

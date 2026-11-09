@@ -11,7 +11,10 @@ import {
 import { ParseError } from '@shared/io/types';
 import type { Db } from '../../db/client';
 import { folders } from '../../db/schema';
+import { checkBoundaries } from '@shared/routing/splice';
+import * as controlRepo from '../../db/repositories/routeControlPoints';
 import * as folderRepo from '../../db/repositories/folders';
+import * as routeRepo from '../../db/repositories/routes';
 import * as trackRepo from '../../db/repositories/tracks';
 import * as tripRepo from '../../db/repositories/trips';
 import * as waypointRepo from '../../db/repositories/waypoints';
@@ -39,6 +42,26 @@ import * as trackService from '../../services/trackService';
  * The whole apply runs in one transaction. A collection that fails halfway
  * leaves no folders, no trips and no orphaned geometry.
  */
+
+/**
+ * Whether a route's imported control points describe its imported shape.
+ *
+ * At least two, start and end via points, and leg boundaries that are either
+ * all valid or all unknown — a route snapped before Phase 6 carries unknown
+ * boundaries, and re-snaps once on its first edit, exactly as it would have on
+ * the machine it came from. A mixture means the file was edited by hand or
+ * truncated, and nothing it says about legs can be trusted.
+ */
+function controlFits(
+  control: readonly { role: string; shapeIndex: number | null }[],
+  pointCount: number,
+): boolean {
+  if (control.length < 2) return false;
+  if (control[0]?.role !== 'via' || control.at(-1)?.role !== 'via') return false;
+  const boundaries = control.map((c) => c.shapeIndex);
+  if (boundaries.every((b) => b === null)) return pointCount >= 2;
+  return checkBoundaries(pointCount, boundaries, control.length);
+}
 
 export interface ApplyCollectionResult {
   counts: CollectionCounts;
@@ -190,14 +213,34 @@ export function applyCollection(
         // from the geometry rather than carried over from the file.
         // Through the services, so the distance and elevation caches are
         // computed from the geometry rather than carried over from the file.
-        routeService.create(db, {
+        const created = routeService.create(db, {
           tripId: inserted.id,
           name: route.name,
           colour: route.colour,
           points: route.points,
           source: route.source,
           metadata: route.metadata,
-        });
+        }).result;
+
+        const control = route.control ?? [];
+        if (control.length > 0) {
+          if (controlFits(control, route.points.length)) {
+            controlRepo.replaceControlPoints(db, created.id, control);
+            if (route.routing !== undefined) {
+              routeRepo.writeRoutingProvenance(db, created.id, {
+                routingProvider: route.routing.provider,
+                transportMode: route.routing.transportMode,
+                snappedAt: now,
+              });
+            }
+          } else {
+            // The geometry is kept and the route arrives hand-drawn: losing a
+            // route over a fact about how it was edited would be worse.
+            warnings.push(
+              `Route "${route.name}" was imported as a hand-drawn route: its road-routing points did not match its shape.`,
+            );
+          }
+        }
       }
 
       for (const track of trip.tracks) {

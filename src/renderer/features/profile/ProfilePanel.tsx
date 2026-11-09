@@ -82,6 +82,34 @@ export function ProfilePanel({
 
   const [hoverDistanceM, setHoverDistanceM] = useState<number | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [terrainBusy, setTerrainBusy] = useState(false);
+
+  /**
+   * Fetches the terrain tiles this geometry needs, then redraws.
+   *
+   * The tiles are kept, so this is a one-off per area: the next route there
+   * draws its elevation straight away, offline.
+   */
+  const downloadTerrain = async (): Promise<void> => {
+    setTerrainBusy(true);
+    try {
+      const outcome = await call(
+        api().routing.downloadTerrain({ ownerType, ownerId }),
+      );
+      if (outcome.failed > 0) {
+        showToast(
+          `${outcome.failed} terrain tile${outcome.failed === 1 ? "" : "s"} could not be downloaded. Check your connection and try again.`,
+          "error",
+        );
+      }
+      useRoutingStore.getState().invalidate(ownerType, ownerId);
+      await loadProfile(ownerType, ownerId);
+    } catch (cause) {
+      showToast(describeError(cause), "error");
+    } finally {
+      setTerrainBusy(false);
+    }
+  };
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   /*
@@ -175,6 +203,8 @@ export function ProfilePanel({
             profile={profile}
             units={units}
             hoverDistanceM={hoverDistanceM}
+            onDownloadTerrain={() => void downloadTerrain()}
+            terrainBusy={terrainBusy}
             onHover={(distanceM) => {
               setHoverDistanceM(distanceM);
               // Keep the map centred only when the user drags past the edge;
