@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!--
+    Entitlements for the bundled Valhalla graph-building CLIs only:
+    valhalla_build_tiles and valhalla_build_admins. Applied by build/sign-mac.cjs.
+    Every other binary in the bundle keeps build/entitlements.mac.plist.
+
+    Both tools run Valhalla's tag-transform Lua through LuaJIT, and LuaJIT
+    writes machine code into ordinary pages and mprotects them executable. It
+    does not use MAP_JIT, so allow-jit alone does not cover it: under the
+    hardened runtime the kernel kills the process with "Code Signature Invalid
+    / Invalid Page" on the first lua_pcall, which is the first way parsed.
+    allow-unsigned-executable-memory is what permits that.
+
+    Kept off the main app on purpose. The in-process addon also links LuaJIT,
+    but routing never calls into Lua, so the app does not need it.
+  -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- Same reason as the app: ad-hoc signatures carry no Team ID. ADR 0009. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

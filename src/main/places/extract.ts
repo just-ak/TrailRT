@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { osmiumPoiFilters } from '@shared/poi/categories';
 import { PLACE_KINDS } from '@shared/search/PlaceSearchProvider';
 import { ServiceError } from '../services/errors';
+import { toolExitError } from '../routing/toolExit';
 
 /**
  * Pulling place data out of an OpenStreetMap extract with the bundled
@@ -63,18 +64,17 @@ function runOsmium(tool: string, args: readonly string[], signal?: AbortSignal):
 
     child.on('close', (code, killed) => {
       signal?.removeEventListener('abort', onAbort);
-      if (signal?.aborted === true || killed !== null) {
-        reject(new ServiceError('CANCELLED', 'Reading place data was cancelled.'));
-        return;
-      }
-      if (code !== 0) {
-        reject(
-          new ServiceError(
-            'PROVIDER_ERROR',
-            'Place data could not be read from the map extract.',
-            `osmium ${args[0] ?? ''} exited ${String(code)}: ${tail.trim()}`,
-          ),
-        );
+      const failure = toolExitError(
+        { code, signal: killed, aborted: signal?.aborted === true },
+        {
+          cancelled: 'Reading place data was cancelled.',
+          failed: 'Place data could not be read from the map extract.',
+          name: 'The place reader',
+        },
+        `osmium ${args[0] ?? ''} exited ${String(code)}: ${tail.trim()}`,
+      );
+      if (failure !== null) {
+        reject(failure);
         return;
       }
       resolve(out);

@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { ServiceError } from '../services/errors';
+import { toolExitError } from './toolExit';
 
 /**
  * Merges several OpenStreetMap extracts into one with `osmium merge`.
@@ -49,14 +50,17 @@ export function mergeExtracts(
 
     child.on('close', (code, signal) => {
       options.signal?.removeEventListener('abort', onAbort);
-      if (signal !== null) {
-        reject(new ServiceError('CANCELLED', 'The region download was cancelled.'));
-        return;
-      }
-      if (code !== 0) {
-        reject(
-          new ServiceError('PROVIDER_ERROR', 'Combining the regions failed.', tail),
-        );
+      const failure = toolExitError(
+        { code, signal, aborted: options.signal?.aborted === true },
+        {
+          cancelled: 'The region download was cancelled.',
+          failed: 'Combining the regions failed.',
+          name: 'The region merge tool',
+        },
+        tail,
+      );
+      if (failure !== null) {
+        reject(failure);
         return;
       }
       resolve();

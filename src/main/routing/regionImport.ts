@@ -14,6 +14,7 @@ import {
   resetEmbeddedEngine,
   type EmbeddedPaths,
 } from './embedded';
+import { toolExitError } from './toolExit';
 
 /**
  * Turning an OpenStreetMap extract into a routing graph.
@@ -216,23 +217,19 @@ function runTool(
 
     child.on('close', (code, signal) => {
       options.signal?.removeEventListener('abort', onAbort);
-      if (signal !== null) {
-        reject(new ServiceError('CANCELLED', 'The region import was cancelled.'));
-        return;
-      }
-      if (code !== 0) {
-        reject(
-          new ServiceError(
-            'PROVIDER_ERROR',
-            'Building the routing graph failed.',
-            // The tail, not the whole log: it is megabytes, and the useful
-            // part of a failure is always at the end.
-            tail.slice(-1500),
-          ),
-        );
-        return;
-      }
-      resolve();
+      const failure = toolExitError(
+        { code, signal, aborted: options.signal?.aborted === true },
+        {
+          cancelled: 'The region import was cancelled.',
+          failed: 'Building the routing graph failed.',
+          name: 'The tile builder',
+        },
+        // The tail, not the whole log: it is megabytes, and the useful part of
+        // a failure is always at the end.
+        tail.slice(-1500),
+      );
+      if (failure !== null) reject(failure);
+      else resolve();
     });
   });
 }

@@ -104,6 +104,43 @@ Because of the second, the script's final step relocates a copy to a temporary
 directory and **loads it in Electron**. A path audit alone passed on a bundle
 that could not load; only running it is evidence.
 
+#### Amendment: the packaged tools need their own entitlements (2026-11-11)
+
+The 0.1.0 DMG could download a region but never build it.
+`valhalla_build_tiles` was killed by the kernel — `SIGKILL (Code Signature
+Invalid)`, `CODESIGNING / Invalid Page`, in `libluajit lua_pcall` under
+`PBFGraphParser::ParseWays` — on the first ways it parsed. Valhalla's
+tag-transform Lua runs through LuaJIT, which writes machine code into ordinary
+pages and `mprotect`s them executable. It does not use `MAP_JIT`, so the app's
+`allow-jit` does not cover it; under the hardened runtime that takes
+`com.apple.security.cs.allow-unsigned-executable-memory`.
+
+No dev check caught it. `bundle-valhalla.sh` signs ad-hoc **without** the
+hardened runtime, so the tools worked in a checkout and in `verify:valhalla`;
+only electron-builder's re-sign at packaging turned it on. A Mac with a graph
+built from a checkout kept routing, which hid the fault until a clean install.
+The app then reported the kill as "The region import was cancelled".
+
+Decided:
+
+- `build/sign-mac.cjs` (`mac.sign`) signs as the default does but gives
+  `valhalla_build_tiles` and `valhalla_build_admins` — the two LuaJIT CLIs —
+  `build/entitlements.valhalla-tools.plist`. The main app and Electron helpers
+  keep `entitlements.mac.plist`; widening `entitlementsInherit` would have
+  handed the entitlement to every helper. The in-process addon also links
+  LuaJIT but routing never calls into Lua, verified by routing in the packaged
+  app on a graph it built itself.
+- `npm run package` ends with `verify:package`, which runs the bundled tools
+  **out of the packaged .app** on a synthetic extract. It must be thousands of
+  ways: LuaJIT only compiles hot code, and a one-way extract built cleanly with
+  the broken signing.
+- A child process ended by a signal is reported as cancelled only when the app
+  aborted it (`src/main/routing/toolExit.ts`). Otherwise it is a failure that
+  names the signal.
+
+The entitlement is compatible with notarisation, so this holds when a
+Developer ID arrives (ADR 0009).
+
 ### 6. Licensing
 
 Valhalla is MIT. Its sixteen bundled third-party components are MIT, Boost,

@@ -51,6 +51,11 @@ mac:
   hardenedRuntime: true
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
+  # Signs as the default does, except the Valhalla graph-building CLIs get
+  # build/entitlements.valhalla-tools.plist: their LuaJIT is killed under the
+  # hardened runtime without allow-unsigned-executable-memory, so Download and
+  # build would fetch a region and never build it. See build/sign-mac.cjs.
+  sign: build/sign-mac.cjs
   gatekeeperAssess: false
   # notarize: true   <- requires a Developer ID and APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID
   notarize: false
