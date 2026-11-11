@@ -46,6 +46,7 @@ export function SpeedDistributionBar({
   fetchedAt,
   provider,
   stale,
+  compact = false,
 }: {
   distribution: SpeedDistribution;
   units: UnitSystem;
@@ -53,6 +54,12 @@ export function SpeedDistributionBar({
   fetchedAt: number | null;
   provider: string | null;
   stale: boolean;
+  /**
+   * The properties panel's summary: the bar and a short legend. The band
+   * table, the provider and the longer explanations are left to the details
+   * view, which renders this without `compact`.
+   */
+  compact?: boolean;
 }): ReactNode {
   const anyAssumed = distribution.assumed.distanceM > 0;
   const sourceLabel =
@@ -101,47 +108,45 @@ export function SpeedDistributionBar({
     );
   }
 
+  if (compact) {
+    return (
+      <div>
+        <SegmentBar segments={segments} />
+        <ul className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-[var(--color-text-secondary)]">
+          {rows
+            .filter((row) => row.percent >= 0.5)
+            .map((row) => (
+              <li key={row.label} className="whitespace-nowrap">
+                <span
+                  className="mr-1 inline-block h-2 w-2 rounded-sm align-middle"
+                  style={{ background: row.colour }}
+                />
+                {row.label} {row.percent.toFixed(0)}%
+              </li>
+            ))}
+        </ul>
+        {anyAssumed && (
+          <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+            {distribution.assumed.percent.toFixed(0)}% assumed from UK default
+            limits (hatched).
+          </p>
+        )}
+        {stale && (
+          <p className="mt-1 text-[11px] text-[var(--color-danger)]">
+            The route has changed since this was read.
+          </p>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <p className="mb-1 text-[11px] text-[var(--color-text-secondary)]">
         {sourceLabel}
       </p>
 
-      <div
-        className="flex h-4 w-full overflow-hidden rounded border border-[var(--color-border-subtle)]"
-        role="img"
-        aria-label={`Share of distance by speed band. ${segments
-          .map((row) => `${row.key}: ${row.percent.toFixed(0)} per cent`)
-          .join(". ")}`}
-      >
-        {segments.map((row) => (
-          <div
-            key={row.key}
-            data-assumed={row.assumed ? "true" : undefined}
-            style={{
-              width: `${row.percent}%`,
-              background: row.colour,
-              ...(row.isUnknown
-                ? {
-                    // A hatch, so Unknown is distinguishable from a speed band
-                    // even in greyscale or to a colour-blind reader.
-                    backgroundImage:
-                      "repeating-linear-gradient(45deg, rgba(255,255,255,0.45) 0 3px, transparent 3px 6px)",
-                  }
-                : row.assumed
-                  ? {
-                      // Assumed: the band's colour, faded and cross-hatched the
-                      // other way from Unknown, so the three states never blur.
-                      opacity: 0.6,
-                      backgroundImage:
-                        "repeating-linear-gradient(-45deg, rgba(255,255,255,0.6) 0 2px, transparent 2px 5px)",
-                    }
-                  : {}),
-            }}
-            title={`${row.key} — ${row.percent.toFixed(1)}%`}
-          />
-        ))}
-      </div>
+      <SegmentBar segments={segments} />
 
       {anyAssumed && (
         <p className="mt-1 text-[11px] text-[var(--color-text-secondary)]">
@@ -230,6 +235,55 @@ export function SpeedDistributionBar({
           )}
         </p>
       )}
+    </div>
+  );
+}
+
+interface Segment {
+  key: string;
+  percent: number;
+  colour: string;
+  isUnknown: boolean;
+  assumed: boolean;
+}
+
+/** The stacked bar itself, shared by the full and compact layouts. */
+function SegmentBar({ segments }: { segments: readonly Segment[] }): ReactNode {
+  return (
+    <div
+      className="flex h-4 w-full overflow-hidden rounded border border-[var(--color-border-subtle)]"
+      role="img"
+      aria-label={`Share of distance by speed band. ${segments
+        .map((row) => `${row.key}: ${row.percent.toFixed(0)} per cent`)
+        .join(". ")}`}
+    >
+      {segments.map((row) => (
+        <div
+          key={row.key}
+          data-assumed={row.assumed ? "true" : undefined}
+          style={{
+            width: `${row.percent}%`,
+            background: row.colour,
+            ...(row.isUnknown
+              ? {
+                  // A hatch, so Unknown is distinguishable from a speed band
+                  // even in greyscale or to a colour-blind reader.
+                  backgroundImage:
+                    "repeating-linear-gradient(45deg, rgba(255,255,255,0.45) 0 3px, transparent 3px 6px)",
+                }
+              : row.assumed
+                ? {
+                    // Assumed: the band's colour, faded and cross-hatched the
+                    // other way from Unknown, so the three states never blur.
+                    opacity: 0.6,
+                    backgroundImage:
+                      "repeating-linear-gradient(-45deg, rgba(255,255,255,0.6) 0 2px, transparent 2px 5px)",
+                  }
+                : {}),
+          }}
+          title={`${row.key} — ${row.percent.toFixed(1)}%`}
+        />
+      ))}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { wazeNavigateUrl, wazeTargetFor } from './waze';
+import { wazeNavigateUrl, wazeTargetsFor } from './waze';
 
 describe('wazeNavigateUrl', () => {
   it('builds an https link with the encoded coordinate pair', () => {
@@ -26,22 +26,21 @@ describe('wazeNavigateUrl', () => {
   });
 });
 
-describe('wazeTargetFor', () => {
+describe('wazeTargetsFor', () => {
   it('hands off a waypoint at its own position', () => {
-    const target = wazeTargetFor({
+    const targets = wazeTargetsFor({
       kind: 'waypoint',
       name: 'Trailhead',
       point: { lat: 46.5, lon: 8 },
     });
 
-    expect(target?.label).toBe('Trailhead');
-    expect(target?.point).toEqual({ lat: 46.5, lon: 8 });
+    expect(targets).toEqual([
+      { label: 'Trailhead', point: { lat: 46.5, lon: 8 } },
+    ]);
   });
 
-  // Not the start: the user is about to travel the route, so where it finishes
-  // is the useful destination.
-  it('hands off the end point of a route, and says so in the label', () => {
-    const target = wazeTargetFor({
+  it('offers the start and the end of a route, each labelled', () => {
+    const targets = wazeTargetsFor({
       kind: 'route',
       name: 'Alpine loop',
       points: [
@@ -51,13 +50,16 @@ describe('wazeTargetFor', () => {
       ],
     });
 
-    expect(target?.point).toEqual({ lat: 46.7, lon: 8.2 });
-    // The limitation is in the label, where the user cannot miss it.
-    expect(target?.label).toContain('end point');
+    // Two separate single-point hand-offs, never the intermediate points:
+    // Waze takes one destination.
+    expect(targets).toEqual([
+      { label: 'Start', point: { lat: 46.5, lon: 8 } },
+      { label: 'End', point: { lat: 46.7, lon: 8.2 } },
+    ]);
   });
 
   it('does the same for a track', () => {
-    const target = wazeTargetFor({
+    const targets = wazeTargetsFor({
       kind: 'track',
       name: 'Morning ride',
       points: [
@@ -66,13 +68,25 @@ describe('wazeTargetFor', () => {
       ],
     });
 
-    expect(target?.point).toEqual({ lat: 3, lon: 4 });
-    expect(target?.label).toContain('end point');
+    expect(targets.map((t) => t.point)).toEqual([
+      { lat: 1, lon: 2 },
+      { lat: 3, lon: 4 },
+    ]);
   });
 
-  it('returns null for an empty geometry so the control can be disabled', () => {
-    expect(
-      wazeTargetFor({ kind: 'route', name: 'Empty', points: [] }),
-    ).toBeNull();
+  it('copies coordinates only, dropping any other point fields', () => {
+    const [start] = wazeTargetsFor({
+      kind: 'route',
+      name: 'With elevation',
+      points: [{ lat: 1, lon: 2, ele: 300 } as { lat: number; lon: number }],
+    });
+
+    expect(start?.point).toEqual({ lat: 1, lon: 2 });
+  });
+
+  it('returns nothing for an empty geometry so the control can be disabled', () => {
+    expect(wazeTargetsFor({ kind: 'route', name: 'Empty', points: [] })).toEqual(
+      [],
+    );
   });
 });

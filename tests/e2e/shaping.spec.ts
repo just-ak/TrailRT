@@ -118,7 +118,7 @@ test.describe('route alternatives and shaping', () => {
     const { page } = harness;
 
     // Following roads is the default (ADR 0018): New Route is the tool.
-    await page.getByRole('button', { name: 'New Route', exact: true }).click();
+    await page.getByRole('button', { name: 'New route', exact: true }).click();
     for (const at of [START, END]) {
       const { x, y } = await pixelOf(page, at);
       await page.mouse.click(x, y);

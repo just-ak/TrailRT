@@ -77,7 +77,7 @@ async function clickAt(page: Page, index: number): Promise<void> {
 /** Starts New Route from the trip's properties panel. */
 async function newRoute(page: Page): Promise<void> {
   await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
-  await page.getByRole('button', { name: 'New Route', exact: true }).click();
+  await page.getByRole('button', { name: 'New route', exact: true }).click();
   await expect(page.getByText(/Click to extend along the roads/)).toBeVisible();
 }
 

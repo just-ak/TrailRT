@@ -234,6 +234,12 @@ export interface AttributeStatus {
 }
 
 export interface ProfileSample {
+  /**
+   * Index of the source point this sample was taken from, in the same
+   * numbering the point table uses (a track's segments flattened in order).
+   * Lets the chart and the table select the same point.
+   */
+  index: number;
   /** Cumulative metres from the start. */
   distanceM: number;
   lat: number;
@@ -338,6 +344,11 @@ export interface LoadedRegion {
   graphBytes: number;
   /** Set when the graph built but its terrain tiles did not all download. */
   terrainWarning?: string | null;
+  /**
+   * Set when the graph built but its place data (POIs, place names) did not.
+   * Phase 10: routing still works; search and POIs offer a rebuild.
+   */
+  placesWarning?: string | null;
 }
 
 /**

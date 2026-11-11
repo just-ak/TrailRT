@@ -73,7 +73,13 @@ export type TreeNodeKind =
   | 'view'
   | 'route'
   | 'track'
-  | 'waypoint';
+  | 'waypoint'
+  /**
+   * Phase 10: a heading row in a dated trip's plan (a day, "Not in the
+   * plan"), or a plan step with no object of its own (a ferry). Never
+   * selectable: it has no `ref`.
+   */
+  | 'group';
 
 export type ViewId =
   | 'trips'
@@ -104,6 +110,10 @@ export interface TreeNode {
   status?: TripStatus;
   /** Secondary text, such as a route's distance or an owning trip's name. */
   detail?: string;
+  /** Phase 10: open the first time it appears, as a dated trip's days are. */
+  defaultExpanded?: boolean;
+  /** Phase 10: a glyph for a `group` row, which has no object kind to show. */
+  glyph?: string;
   children: TreeNode[];
 }
 
@@ -130,6 +140,13 @@ export interface PanelLayout {
   propertiesWidth: number;
   libraryVisible: boolean;
   propertiesVisible: boolean;
+  /**
+   * Phase 10: the panel below the map (profile, calendar, places). Optional
+   * because layouts saved before it load without them; absent means the
+   * default height, shown.
+   */
+  drawerHeight?: number;
+  drawerVisible?: boolean;
 }
 
 /**
@@ -189,12 +206,29 @@ export interface LayerVisibility {
   routes: boolean;
   tracks: boolean;
   waypoints: boolean;
+  /**
+   * Phase 10: points of interest found along a route. Optional because
+   * settings saved before Phase 10 have no such key; absent means shown.
+   */
+  pois?: boolean;
 }
 
 // ------------------------------------------------- Phase 2: routes, waypoints
 
 /** Source of an object's geometry. Imports are never modified implicitly. */
 export type GeometrySource = 'user' | 'import';
+
+/**
+ * Where a waypoint came from. `poi` is a point of interest added from the
+ * place data (Phase 10 Requirement 8.3): placed by the user's choice, but
+ * describing a real place recorded in OpenStreetMap, with its provenance in
+ * the waypoint's metadata.
+ */
+export type WaypointSource = GeometrySource | 'poi';
+
+export function isWaypointSource(value: unknown): value is WaypointSource {
+  return value === 'user' || value === 'import' || value === 'poi';
+}
 
 export interface RoutePoint {
   lat: number;
@@ -252,7 +286,7 @@ export interface Waypoint {
   description: string | null;
   symbol: string | null;
   notes: string | null;
-  source: GeometrySource;
+  source: WaypointSource;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }

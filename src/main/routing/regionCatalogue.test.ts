@@ -65,6 +65,8 @@ interface Calls {
   downloads: string[];
   merges: string[][];
   builtFrom: string[];
+  /** Phase 10: what the place build was given. */
+  places: { sources: string[]; extract: string; regions: string[]; ringCount: number }[];
 }
 
 function fakeSteps(
@@ -87,11 +89,20 @@ function fakeSteps(
       return { regionName: 'ignored', tileCount: 40, builtAt: 1, graphBytes: 2 };
     },
     mergeAvailable: () => true,
+    places: async (input) => {
+      calls.places.push({
+        sources: [...input.sources],
+        extract: input.extract,
+        regions: input.regions.map((r) => r.name),
+        ringCount: input.regions.reduce((n, r) => n + r.rings.length, 0),
+      });
+      return null;
+    },
     ...overrides,
   };
 }
 
-const newCalls = (): Calls => ({ downloads: [], merges: [], builtFrom: [] });
+const newCalls = (): Calls => ({ downloads: [], merges: [], builtFrom: [], places: [] });
 
 describe('downloadAndBuild', () => {
   it('builds a single region directly, with no merge', async () => {
@@ -118,7 +129,32 @@ describe('downloadAndBuild', () => {
     ]);
     expect(calls.builtFrom).toEqual([join(paths.downloadDir, 'merged.osm.pbf')]);
     expect(region.regionName).toBe('Derbyshire, Cheshire and Staffordshire');
-    expect(new Set(progress)).toEqual(new Set(['downloading', 'merging']));
+    // 'building' is the place step's "Reading places"; the fake graph build reports nothing.
+    expect(new Set(progress)).toEqual(new Set(['downloading', 'merging', 'building']));
+  });
+
+  it('builds place data from the merged file, dated from the source extracts', async () => {
+    const calls = newCalls();
+    const region = await downloadAndBuild(paths, ['derbyshire', 'cheshire'], { steps: fakeSteps(calls) });
+    expect(calls.places).toEqual([
+      {
+        // The merge drops the PBF timestamp, so the date is read from these.
+        sources: ['derbyshire', 'cheshire'].map((id) => join(paths.downloadDir, `${id}.osm.pbf`)),
+        extract: join(paths.downloadDir, 'merged.osm.pbf'),
+        regions: ['Derbyshire', 'Cheshire'],
+        ringCount: 2,
+      },
+    ]);
+    expect(region.placesWarning).toBeNull();
+  });
+
+  it('reports a place failure as a warning and still returns the graph', async () => {
+    const calls = newCalls();
+    const region = await downloadAndBuild(paths, ['derbyshire'], {
+      steps: fakeSteps(calls, { places: async () => 'Routing is ready, but place data could not be built.' }),
+    });
+    expect(region.tileCount).toBe(40);
+    expect(region.placesWarning).toMatch(/place data could not be built/);
   });
 
   it('refuses several regions when this build has no merge tool', async () => {

@@ -3,7 +3,8 @@ import type { UnitSystem, Waypoint } from "@shared/domain/types";
 import { isKnownSymbol, WAYPOINT_SYMBOLS } from "@shared/domain/symbols";
 import { formatElevation, formatTimestamp } from "@shared/geo/units";
 import { isValidLat, isValidLon } from "@shared/geo/distance";
-import { Button } from "../../components/Button";
+import { Copy, Trash2 } from "lucide-react";
+import { IconButton } from "../../components/IconButton";
 import * as actions from "../../lib/actions";
 import { useUiStore } from "../../stores/uiStore";
 import { Field, INPUT_CLASS, ReadOnly } from "./fields";
@@ -225,10 +226,10 @@ export function WaypointProperties({
         <ReadOnly value={formatTimestamp(waypoint.updatedAt)} />
       </Field>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={() => void actions.duplicateWaypoint(waypoint.id)}>
-          Duplicate
-        </Button>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <IconButton hint="Duplicate the waypoint" onClick={() => void actions.duplicateWaypoint(waypoint.id)}>
+          <Copy size={16} aria-hidden="true" />
+        </IconButton>
         <WazeButton
           selection={{
             kind: "waypoint",
@@ -236,12 +237,14 @@ export function WaypointProperties({
             point: { lat: waypoint.lat, lon: waypoint.lon },
           }}
         />
-        <Button
+        <IconButton
+          hint="Delete the waypoint"
           variant="danger"
+          className="ml-auto"
           onClick={() => void actions.deleteWaypoint(waypoint.id)}
         >
-          Delete
-        </Button>
+          <Trash2 size={16} aria-hidden="true" />
+        </IconButton>
       </div>
     </div>
   );

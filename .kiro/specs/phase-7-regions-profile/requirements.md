@@ -1,6 +1,6 @@
 # Phase 7: UK regions, road-following by default, and a fuller profile — Requirements
 
-Status: **complete.** All 15 tasks done and verified. Tasks 1–13 against the packaged app; tasks 14 and 15, fixes reported afterwards, against the development build.
+Status: **complete.** All 16 tasks done and verified. Tasks 1–13 against the packaged app; tasks 14–16, fixes and owner feedback reported afterwards, against the development build.
 
 Five changes the owner asked for after Phase 6 shipped:
 
@@ -230,6 +230,44 @@ applied only when it is labelled as assumed.
    correcting one rule is a one-line change.
 8. ADR 0018 SHALL amend ADR 0011 §2 to allow this, and SHALL record the
    conditions under which it is allowed.
+
+### Requirement 6: A plainer route panel (owner feedback)
+
+Added after the phase shipped. The owner found the route panel "too techie for
+the standard person", and reported that changing the transport mode did not
+change the estimated duration.
+
+1. THE route panel SHALL lead with name, colour, distance, an estimated time,
+   the transport mode, and the speed-limit summary. Start and end coordinates,
+   point count, elevation detail, source, last-modified time, the routing
+   engine and the snap provenance SHALL move to a Details popup opened from an
+   ⓘ button. This amends Phase 2 Requirement 4.1: those values are still shown,
+   one click away.
+2. THE estimated time SHALL depend on the transport mode. Walking SHALL use
+   the planning speed from Settings. Cycling, car and motorcycle SHALL use a
+   stated typical average. The caption SHALL give the speed and where it came
+   from, so the figure is still labelled as an estimate (Phase 2 Requirement
+   4.3).
+3. WHEN a route or track is selected AND the built-in engine is in use, road
+   data SHALL be looked up without a button press. The lookup SHALL run at most
+   once per selection, SHALL NOT toast, and SHALL show a failure inline with a
+   retry. A remote service SHALL still be contacted only when the user asks,
+   because consent covers actions the user takes.
+4. Problems with the road data (points outside the loaded map, sections with
+   no road) SHALL stay in the panel, not behind Details.
+5. Duplicate and Delete SHALL be removed from the route panel, and Delete from
+   the track panel. Both stay in the library's context menu.
+6. Point editing SHALL open inside the profile drawer, under the chart. Points
+   selected in the table SHALL be shaded on the chart. Clicking the chart SHALL
+   select the nearest point in the table, and open the table if it is closed.
+   Shift-click SHALL extend the selection and Cmd-click SHALL toggle a point,
+   as they do in the table. THE drawer SHALL follow the selection: selecting
+   another route or track SHALL show that one, and selecting anything without
+   a profile SHALL close it.
+7. THE Waze hand-off SHALL be a small icon. For a route or track it SHALL offer
+   the start or the end, each as its own single-point hand-off, and each label
+   SHALL say which point it sends. ADR 0005 is amended to allow the start, and
+   there is still no whole-route action.
 
 ## Non-functional requirements
 

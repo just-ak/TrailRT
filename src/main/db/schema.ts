@@ -372,6 +372,68 @@ export const recentItems = sqliteTable(
   ],
 );
 
+/**
+ * Phase 10. A trip's dated plan; absent for a trip planned without dates.
+ * Only inputs are stored. The timeline is derived on read. ADR 0019 §2.
+ */
+export const itineraries = sqliteTable(
+  'itineraries',
+  {
+    tripId: text('trip_id')
+      .primaryKey()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    startDate: text('start_date').notNull(),
+    startTime: text('start_time').notNull(),
+    defaultDepart: text('default_depart').notNull().default('09:00'),
+    maxDriveMinutes: integer('max_drive_minutes'),
+    rangeKm: real('range_km'),
+    reservePct: integer('reserve_pct').notNull().default(20),
+    energy: text('energy').notNull().default('fuel'),
+    createdAt: integer('created_at').notNull().default(now),
+    updatedAt: integer('updated_at').notNull().default(now),
+  },
+  (t) => [
+    check('itineraries_energy_valid', sql`${t.energy} in ('fuel', 'electric')`),
+    check('itineraries_reserve_valid', sql`${t.reservePct} between 0 and 90`),
+  ],
+);
+
+/**
+ * Phase 10. Stops in order. `waypointId` and `legRouteId` are plain ids with
+ * no foreign key, so undoing a waypoint or route deletion heals the link.
+ */
+export const itineraryStops = sqliteTable(
+  'itinerary_stops',
+  {
+    id: text('id').primaryKey(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => itineraries.tripId, { onDelete: 'cascade' }),
+    seq: integer('seq').notNull(),
+    waypointId: text('waypoint_id').notNull(),
+    legRouteId: text('leg_route_id'),
+    /** `road`, `route` or `other`. Phase 10 feedback, design §15.1. */
+    legMode: text('leg_mode').notNull().default('road'),
+    legTransport: text('leg_transport'),
+    legMinutes: integer('leg_minutes'),
+    legLabel: text('leg_label'),
+    durationKind: text('duration_kind').notNull().default('hours'),
+    durationMinutes: integer('duration_minutes'),
+    durationDays: integer('duration_days'),
+    departTime: text('depart_time'),
+    arriveBy: text('arrive_by'),
+    departAt: text('depart_at'),
+    notes: text('notes'),
+    createdAt: integer('created_at').notNull().default(now),
+    updatedAt: integer('updated_at').notNull().default(now),
+  },
+  (t) => [
+    index('idx_itinerary_stops_trip').on(t.tripId, t.seq),
+    index('idx_itinerary_stops_waypoint').on(t.waypointId),
+    check('itinerary_stops_kind_valid', sql`${t.durationKind} in ('hours', 'days')`),
+  ],
+);
+
 export type FolderRow = typeof folders.$inferSelect;
 export type TripRow = typeof trips.$inferSelect;
 export type SettingsRow = typeof settings.$inferSelect;

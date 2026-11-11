@@ -725,7 +725,8 @@ test.describe('non-contiguous track point deletion', () => {
 
 test.describe('the point table for a route', () => {
   test.beforeAll(async () => {
-    await makeRoutes(harness.page, tripId, 1, 'Tabled');
+    // Two, so switching between them can be tested.
+    await makeRoutes(harness.page, tripId, 2, 'Tabled');
   });
 
   /*
@@ -741,7 +742,9 @@ test.describe('the point table for a route', () => {
     await page.getByRole('treeitem', { name: /^Tabled 1/ }).click();
 
     if ((await page.getByRole('grid', { name: 'Route point list' }).count()) === 0) {
-      await page.getByRole('button', { name: 'Points…' }).first().click();
+      // Points are edited in the profile drawer, under the chart.
+      await page.getByRole('button', { name: 'Profile and points' }).click();
+      await page.getByRole('button', { name: 'Edit points', exact: true }).click();
     }
     await page
       .getByRole('grid', { name: 'Route point list' })
@@ -830,6 +833,55 @@ test.describe('the point table for a route', () => {
     await expect(page.getByText(/at least one point/i).first()).toBeVisible();
   });
 
+  test('a click on the profile selects the nearest point, and shades it', async () => {
+    const { page } = harness;
+    const grid = page.getByRole('grid', { name: 'Route point list' });
+    const chart = page
+      .getByRole('region', { name: 'Route profile' })
+      .getByRole('img', { name: /^Route profile/ });
+    const box = await chart.boundingBox();
+    expect(box).not.toBeNull();
+    if (box === null) return;
+
+    // The far right of the plot is the end of the route: the last point.
+    await chart.click({ position: { x: box.width * 0.97, y: 4 } });
+    await expect(grid.getByRole('row').nth(2)).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(grid.getByRole('row').nth(1)).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    // The table's selection is drawn back onto the chart.
+    await expect(chart.locator('[data-selected-range]')).toHaveCount(1);
+
+    // The left edge is the start.
+    await chart.click({ position: { x: box.width * 0.07, y: 4 } });
+    await expect(grid.getByRole('row').nth(1)).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+  });
+
+  test('follows the selection to another route, keeping the points open', async () => {
+    const { page } = harness;
+    const drawer = page.getByRole('region', { name: 'Route profile' });
+    const owner = drawer.getByTestId('profile-owner');
+    await expect(owner).toHaveText('Tabled 1');
+
+    // Reported by the owner: picking another route left the drawer on the
+    // first one.
+    await page.getByRole('treeitem', { name: /^Tabled 2/ }).click();
+    await expect(owner).toHaveText('Tabled 2');
+    await expect(page.getByRole('grid', { name: 'Route point list' })).toBeVisible();
+
+    // Something with no profile closes the drawer rather than leaving it
+    // describing a route that is no longer selected.
+    await page.getByRole('treeitem', { name: /^Objects Trip/ }).click();
+    await expect(drawer).toHaveCount(0);
+  });
+
   test('closes, and reopening carries no highlight over', async () => {
     const { page } = harness;
     const grid = page.getByRole('grid', { name: 'Route point list' });
@@ -840,7 +892,7 @@ test.describe('the point table for a route', () => {
       'true',
     );
 
-    await page.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'Hide points', exact: true }).click();
     await expect(grid).toHaveCount(0);
 
     /*
@@ -851,13 +903,13 @@ test.describe('the point table for a route', () => {
      * pane children would report a highlight that is no longer drawn.
      * Requirement 5.6 is about state, and the rows are where state shows.
      */
-    await page.getByRole('button', { name: 'Points…' }).first().click();
+    await page.getByRole('button', { name: 'Edit points', exact: true }).click();
     await grid.waitFor({ timeout: 20_000 });
     await expect(grid.locator('[role="row"][aria-selected="true"]')).toHaveCount(
       0,
     );
 
-    await page.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'Close profile' }).click();
   });
 });
 
@@ -876,7 +928,8 @@ test.describe('the point table for a track', () => {
       .first()
       .click();
 
-    await page.getByRole('button', { name: 'Points…' }).first().click();
+    await page.getByRole('button', { name: 'Profile and points' }).click();
+    await page.getByRole('button', { name: 'Edit points', exact: true }).click();
 
     const table = page.getByRole('grid', { name: 'Track point list' });
     await expect(table).toBeVisible();
@@ -914,7 +967,7 @@ test.describe('the point table for a track', () => {
 
   test('closes the table', async () => {
     const { page } = harness;
-    await page.getByRole('button', { name: 'Close' }).click();
+    await page.getByRole('button', { name: 'Hide points', exact: true }).click();
     await expect(
       page.getByRole('grid', { name: 'Track point list' }),
     ).toHaveCount(0);

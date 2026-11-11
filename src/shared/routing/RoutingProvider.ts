@@ -35,6 +35,10 @@ export type TransportMode = (typeof TRANSPORT_MODES)[number];
 
 export const DEFAULT_TRANSPORT_MODE: TransportMode = 'auto';
 
+export function isTransportMode(value: unknown): value is TransportMode {
+  return (TRANSPORT_MODES as readonly unknown[]).includes(value);
+}
+
 /**
  * Road classification, in descending order of significance.
  *

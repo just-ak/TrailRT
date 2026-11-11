@@ -1,7 +1,8 @@
-import type { RoutePoint, TrackPoint } from '@shared/domain/types';
+import { isWaypointSource, type RoutePoint, type TrackPoint } from '@shared/domain/types';
 import type { Db } from '../db/client';
 import { ServiceError } from './errors';
 import * as folderService from './folderService';
+import * as itineraryService from './itineraryService';
 import type { Mutation } from './folderService';
 import * as routeService from './routeService';
 import type { ControlInput } from '../db/repositories/routeControlPoints';
@@ -80,7 +81,20 @@ export type CommandKind =
   | 'track:deleteRange'
   | 'track:restorePointsAt'
   | 'track:deletePointsAt'
-  | 'track:editPoint';
+  | 'track:editPoint'
+  /*
+   * Phase 10 itinerary. Every structural change carries the leg links it
+   * displaced in `restoreLinks`, so undo puts them back exactly. ADR 0019.
+   */
+  | 'itinerary:remove'
+  | 'itinerary:restore'
+  | 'itinerary:update'
+  | 'itinerary:removeStop'
+  | 'itinerary:restoreStop'
+  | 'itinerary:moveStop'
+  | 'itinerary:updateStop'
+  | 'itinerary:linkLeg'
+  | 'itinerary:setLegMode';
 
 export interface Command {
   kind: string;
@@ -125,6 +139,16 @@ const LABELS: Record<CommandKind, string> = {
   'track:restorePointsAt': 'point deletion',
   'track:deletePointsAt': 'point restore',
   'track:editPoint': 'point edit',
+  // Named for the action the user took, which is what undoing reverses.
+  'itinerary:remove': 'plan by date',
+  'itinerary:restore': 'remove itinerary',
+  'itinerary:update': 'itinerary edit',
+  'itinerary:removeStop': 'add stop',
+  'itinerary:restoreStop': 'remove stop',
+  'itinerary:moveStop': 'stop move',
+  'itinerary:updateStop': 'stop edit',
+  'itinerary:linkLeg': 'leg route',
+  'itinerary:setLegMode': 'leg travel',
 };
 
 export function labelFor(kind: string): string {
@@ -196,6 +220,16 @@ function points(payload: Record<string, unknown>): RoutePoint[] {
 
 function source(payload: Record<string, unknown>): 'user' | 'import' {
   return payload.source === 'import' ? 'import' : 'user';
+}
+
+/** An inverse's metadata object, or undefined when it carried none. */
+function metadataOf(payload: Record<string, unknown>): Record<string, unknown> | undefined {
+  const value = payload.metadata;
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new ServiceError('UNKNOWN', 'An undo step was malformed and was not applied.', 'bad metadata');
+  }
+  return value as Record<string, unknown>;
 }
 
 function malformed(detail: string): ServiceError {
@@ -306,6 +340,63 @@ function commandList(payload: Record<string, unknown>): Command[] {
 
 const HANDLERS: Record<CommandKind, Handler> = {
   none: () => ({ result: null, inverse: { kind: 'none', payload: {} } }),
+
+  'itinerary:remove': (db, p) => itineraryService.remove(db, str(p, 'tripId')),
+
+  'itinerary:restore': (db, p) => itineraryService.restore(db, itineraryService.readSnapshot(p)),
+
+  'itinerary:update': (db, p) => {
+    const patch: Record<string, unknown> = { ...p };
+    delete patch.tripId;
+    return itineraryService.update(db, str(p, 'tripId'), patch);
+  },
+
+  'itinerary:removeStop': (db, p) =>
+    itineraryService.removeStop(db, {
+      id: str(p, 'id'),
+      restoreLinks: itineraryService.readLinks(p.restoreLinks),
+    }),
+
+  'itinerary:restoreStop': (db, p) =>
+    itineraryService.restoreStop(db, {
+      stop: itineraryService.readStop(p.stop),
+      index: num(p, 'index'),
+      restoreLinks: itineraryService.readLinks(p.restoreLinks) ?? {},
+    }),
+
+  'itinerary:moveStop': (db, p) =>
+    itineraryService.moveStop(db, {
+      id: str(p, 'id'),
+      toIndex: num(p, 'toIndex'),
+      restoreLinks: itineraryService.readLinks(p.restoreLinks),
+    }),
+
+  'itinerary:updateStop': (db, p) => {
+    const patch: Record<string, unknown> = { ...p };
+    delete patch.id;
+    return itineraryService.updateStop(db, str(p, 'id'), patch);
+  },
+
+  'itinerary:linkLeg': (db, p) =>
+    itineraryService.linkLeg(db, {
+      id: str(p, 'id'),
+      routeId: strOrNull(p, 'routeId'),
+      mode: p.mode === 'road' || p.mode === 'route' || p.mode === 'other' ? p.mode : undefined,
+    }),
+
+  'itinerary:setLegMode': (db, p) => {
+    const mode = p.mode;
+    if (mode !== 'road' && mode !== 'route' && mode !== 'other') throw malformed('bad leg mode');
+    const transport = strOrNull(p, 'transport');
+    return itineraryService.setLegMode(db, {
+      id: str(p, 'id'),
+      mode,
+      transport: transport as 'ferry' | 'train' | 'flight' | 'other' | null,
+      minutes: numOrNull(p, 'minutes'),
+      label: strOrNull(p, 'label'),
+      routeId: strOrNull(p, 'routeId'),
+    });
+  },
 
   /**
    * Applies several commands as one.
@@ -437,6 +528,7 @@ const HANDLERS: Record<CommandKind, Handler> = {
       colour: strOrNull(p, 'colour'),
       source: source(p),
       points: points(p),
+      metadata: metadataOf(p),
     }),
 
   'waypoint:update': (db, p) =>
@@ -481,7 +573,8 @@ const HANDLERS: Record<CommandKind, Handler> = {
       symbol: str(p, 'symbol'),
       notes: strOrNull(p, 'notes'),
       groupId: strOrNull(p, 'groupId'),
-      source: source(p),
+      source: isWaypointSource(p.source) ? p.source : 'user',
+      metadata: metadataOf(p),
     }),
 
   // ----------------------------------------------------------- tracks

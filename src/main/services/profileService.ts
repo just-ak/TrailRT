@@ -196,6 +196,7 @@ export function profileFor(
   const full: ProfileSample[] = points.map((point, index) => {
     const previous = index > 0 ? points[index - 1] : undefined;
     return {
+      index,
       distanceM: distances[index] ?? 0,
       lat: point.lat,
       lon: point.lon,

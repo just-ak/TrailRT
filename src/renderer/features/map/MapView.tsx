@@ -52,6 +52,11 @@ import { useSnapOverlay } from "./useSnapOverlay";
 import { useSnapRouting } from "./useSnapRouting";
 import { useTrackLayers } from "./useTrackLayers";
 import { useWaypointLayers } from "./useWaypointLayers";
+import { usePoiLayer } from "./usePoiLayer";
+import { SearchBox } from "../search/SearchBox";
+import { PanelToggles } from "./PanelToggles";
+import type { PoiHit } from "@shared/poi/PoiProvider";
+import { usePoiStore } from "../../stores/poiStore";
 
 /**
  * The centre workspace: base map plus the selected trip's routes and waypoints.
@@ -70,6 +75,7 @@ import { useWaypointLayers } from "./useWaypointLayers";
 const NO_ROUTES: readonly RouteWithPoints[] = [];
 const NO_TRACKS: readonly Track[] = [];
 const NO_WAYPOINTS: readonly Waypoint[] = [];
+const NO_POI_HITS: readonly PoiHit[] = [];
 /** Stable identity, so a hand-drawn route does not re-run the handles effect. */
 const NO_CONTROL_POINTS: readonly { lat: number; lon: number }[] = [];
 const NO_PLANNED: readonly PlannedControl[] = [];
@@ -421,6 +427,13 @@ export function MapView(): ReactNode {
       },
     },
     { showPoints },
+  );
+
+  // Phase 10: points of interest found along a route, while the panel is open.
+  const poiHits = usePoiStore((s) => (s.scope === null ? null : (s.result?.hits ?? null)));
+  const poiFocus = usePoiStore((s) => s.focusedId);
+  usePoiLayer(map, visibility.pois === false ? NO_POI_HITS : (poiHits ?? NO_POI_HITS), poiFocus, (id) =>
+    usePoiStore.getState().focus(id),
   );
 
   useWaypointLayers(
@@ -805,6 +818,10 @@ export function MapView(): ReactNode {
       {/* oxlint-disable-next-line react/refs */}
       <div ref={handle.containerRef} className="absolute inset-0" />
 
+      {/* Phase 10: postcode and place search, answered on this machine. */}
+      <SearchBox />
+      <PanelToggles />
+
       {dragOver && (
         <div className="pointer-events-none absolute inset-4 z-[700] flex items-center justify-center rounded-xl border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-surface)]/80">
           <p className="text-[14px] font-semibold text-[var(--color-text-primary)]">
@@ -1177,6 +1194,7 @@ export function MapView(): ReactNode {
                   ["routes", "Routes"],
                   ["tracks", "Tracks"],
                   ["waypoints", "Waypoints"],
+                  ["pois", "Points of interest"],
                 ] as const
               ).map(([key, label]) => (
                 <label
@@ -1185,7 +1203,7 @@ export function MapView(): ReactNode {
                 >
                   <input
                     type="checkbox"
-                    checked={visibility[key]}
+                    checked={visibility[key] !== false}
                     onChange={(event) =>
                       void useSettingsStore.getState().set({
                         key: "layerVisibility",
@@ -1241,7 +1259,7 @@ export function MapView(): ReactNode {
       {!providerUsable && (
         <div
           role="status"
-          className="absolute top-3 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
+          className="absolute top-14 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
         >
           The custom tile source has no URL yet, so no map tiles are being
           drawn. Add one in Settings, or pick a different base map.
@@ -1251,7 +1269,7 @@ export function MapView(): ReactNode {
       {offline && providerUsable && (
         <div
           role="status"
-          className="absolute top-3 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
+          className="absolute top-14 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
         >
           Map tiles unavailable — your trips are still fully editable offline.
         </div>

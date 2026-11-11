@@ -25,7 +25,10 @@ import type {
   ImportReport,
   SkippedItem,
 } from '../io/types';
+import type { Itinerary, ItineraryStop, ItineraryView } from '../domain/itinerary';
 import type { SpeedDistribution } from '../geo/speedBands';
+import type { SearchOutcome, SearchStatus } from '../search/PlaceSearchProvider';
+import type { AlongResult, DetourEstimate, PlaceDataState, Poi } from '../poi/PoiProvider';
 import type { MatchedEdge } from '../routing/RoutingProvider';
 import type {
   AttributeStatus,
@@ -151,6 +154,47 @@ export interface TrailRtApi {
     duplicate(req: Req<typeof S.routeDuplicateRequest>): Promise<Result<Route>>;
     move(req: Req<typeof S.routeMoveRequest>): Promise<Result<Route>>;
     delete(req: Req<typeof S.routeDeleteRequest>): Promise<Result<{ id: string }>>;
+  };
+  /** Phase 10: points of interest, from local place data only. */
+  places: {
+    status(): Promise<Result<PlaceDataState>>;
+    rebuild(): Promise<Result<LoadedRegion>>;
+    along(req: Req<typeof S.placesAlongRequest>): Promise<Result<AlongResult>>;
+    cancel(req: Req<typeof S.placesCancelRequest>): Promise<Result<null>>;
+    detour(req: Req<typeof S.placesDetourRequest>): Promise<Result<DetourEstimate>>;
+    get(req: Req<typeof S.placesGetRequest>): Promise<Result<Poi | null>>;
+    addWaypoint(req: Req<typeof S.placesAddWaypointRequest>): Promise<Result<Waypoint>>;
+  };
+  /** Phase 10: postcode and place search. Nothing leaves the machine. */
+  search: {
+    query(req: Req<typeof S.searchQueryRequest>): Promise<Result<SearchOutcome>>;
+    status(): Promise<Result<SearchStatus>>;
+  };
+  /** Phase 10: Code-Point Open. `update` is the only network call search makes. */
+  postcodes: {
+    listing(): Promise<Result<PostcodeRelease>>;
+    update(): Promise<Result<PostcodeRelease>>;
+    cancel(): Promise<Result<null>>;
+  };
+  /** Phase 10: a trip's dated plan. `get` resolves to null for a trip without one. */
+  itinerary: {
+    get(req: Req<typeof S.itineraryGetRequest>): Promise<Result<ItineraryView | null>>;
+    create(req: Req<typeof S.itineraryCreateRequest>): Promise<Result<Itinerary>>;
+    remove(req: Req<typeof S.itineraryRemoveRequest>): Promise<Result<{ tripId: string }>>;
+    update(req: Req<typeof S.itineraryUpdateRequest>): Promise<Result<Itinerary>>;
+    addStop(req: Req<typeof S.itineraryAddStopRequest>): Promise<Result<ItineraryStop>>;
+    removeStop(req: Req<typeof S.itineraryStopRequest>): Promise<Result<{ id: string }>>;
+    moveStop(req: Req<typeof S.itineraryMoveStopRequest>): Promise<Result<ItineraryStop>>;
+    updateStop(req: Req<typeof S.itineraryUpdateStopRequest>): Promise<Result<ItineraryStop>>;
+    linkLeg(req: Req<typeof S.itineraryLinkLegRequest>): Promise<Result<ItineraryStop>>;
+    setLegMode(req: Req<typeof S.itinerarySetLegModeRequest>): Promise<Result<ItineraryStop>>;
+    planAll(req: Req<typeof S.itineraryGetRequest>): Promise<Result<null>>;
+    addPoiStop(
+      req: Req<typeof S.itineraryAddPoiStopRequest>,
+    ): Promise<Result<{ waypoint: Waypoint; stop: ItineraryStop }>>;
+    planLeg(req: Req<typeof S.itineraryStopRequest>): Promise<Result<{ route: Route; stop: ItineraryStop }>>;
+    planAround(req: Req<typeof S.itineraryStopRequest>): Promise<Result<{ routes: Route[] }>>;
+    exportIcs(req: Req<typeof S.itineraryExportIcsRequest>): Promise<Result<IcsExportResult>>;
   };
   waypoints: {
     listForTrip(
@@ -406,7 +450,29 @@ export interface TrailRtApi {
     onRegionJobProgress(
       listener: (progress: RegionJobProgress) => void,
     ): () => void;
+    onPostcodeProgress(listener: (progress: PostcodeProgress) => void): () => void;
   };
+}
+
+/** What an iCalendar export wrote. */
+export type IcsExportResult =
+  | { cancelled: true; fileName: null }
+  | { cancelled: false; fileName: string; eventCount: number; omitted: string[] };
+
+/** A Code-Point Open release: what is offered, or what was installed. */
+export interface PostcodeRelease {
+  release: string;
+  /** Download size, before fetching. Null once installed. */
+  sizeBytes: number | null;
+  /** Installed only. */
+  date: string | null;
+  count: number | null;
+}
+
+export interface PostcodeProgress {
+  stage: 'downloading' | 'reading';
+  receivedBytes: number;
+  totalBytes: number;
 }
 
 /**

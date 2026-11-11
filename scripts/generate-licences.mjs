@@ -19,7 +19,13 @@ const SHIPPED = new Set([
   'better-sqlite3',
   'drizzle-orm',
   'electron',
+  // Read GPX, KML, KMZ, TCX and FIT, and Code-Point Open's ZIP, at run time.
+  'fast-xml-parser',
+  'fit-file-parser',
+  'jszip',
   'leaflet',
+  // Phase 10 feedback: the icon set, bundled into the renderer.
+  'lucide-react',
   'react',
   'react-dom',
   'zod',

@@ -345,7 +345,8 @@ engine would return its preferred route again and silently undo the choice.
 
 - **Place search and geocoding.** "Two places" means two points placed on the
   map, as today. A geocoder would be a network dependency for a core feature,
-  which ADR 0007 rules out without an offline source.
+  which ADR 0007 rules out without an offline source. An offline one is now
+  specified as Phase 10 Requirement 11.
 - **Alternatives across more than two points at once.** The engine does not
   offer them (see the investigation). Alternatives are per leg.
 - **Ranking candidates by twistiness or scenery.** That is Phase 7. Its

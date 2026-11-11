@@ -81,7 +81,7 @@ attribution, and the pinned tag in `scripts/build-valhalla.sh` plus the public
 repository identifies exactly what was built. The GPL-3.0 obligation is met by
 publishing TrailRT's source together with that pin.
 
-## Data downloaded at runtime (ADR 0018)
+## Data downloaded at runtime (ADRs 0018, 0019)
 
 Not code, and not shipped in the app: fetched at the user's choice, cached in
 their data directory, and attributed in the About window.
@@ -91,3 +91,14 @@ their data directory, and attributed in the About window.
 | Road graph extracts | Geofabrik (`download.geofabrik.de`) | © OpenStreetMap contributors, ODbL 1.0 |
 | UK boundary (`src/shared/geo/ukBoundary.ts`, 150 points, generated) | Geofabrik region index | © OpenStreetMap contributors, ODbL 1.0 |
 | Terrain elevation tiles | Terrain Tiles, AWS Registry of Open Data (`elevation-tiles-prod.s3.amazonaws.com`) | Open data, derived from SRTM (NASA, public domain) and other sources listed at <https://github.com/tilezen/joerd/blob/master/docs/attribution.md>. Attribution required; given in the About window |
+| Place data: POIs, place and street names, addressed buildings (`places.sqlite`) | Built on the user's machine from the same Geofabrik extracts, during the region build | © OpenStreetMap contributors, ODbL 1.0. A Derivative Database used on the user's own machine and not publicly distributed, so share-alike is not triggered; attribution shown with every search result and POI list, and in the About window |
+| Postcodes (`postcodes.sqlite`) | Ordnance Survey Code-Point Open (`api.os.uk`, one redirect to OS's Azure storage), fetched from Settings | Open Government Licence v3.0. Requires: "Contains OS data © Crown copyright and database right", "Contains Royal Mail data © Royal Mail copyright and database right", "Contains National Statistics data © Crown copyright and database right", with the release's year; shown beside postcode results and in the About window |
+
+### Test fixtures with third-party data (Phase 10)
+
+Committed to the repository, so distributed with the source.
+
+| Fixture | Source | Terms |
+| --- | --- | --- |
+| `test-data/places-excerpt/` (`buxton.geojsonseq`, `tiny.osm`) | Geofabrik Derbyshire extract, data of 2026-11-08 | © OpenStreetMap contributors. Published under ODbL 1.0, as a distributed Derivative Database must be; see its README |
+| `test-data/codepoint/` (279 postcodes, licence and metadata files) | Code-Point Open release 2026-11 | Open Government Licence v3.0, with the statements above; see its README |

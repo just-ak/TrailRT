@@ -14,6 +14,7 @@ import { api, callOr } from "../../lib/client";
 import { useRoutingStore } from "../../stores/routingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
+import { PlaceDataStatus, PostcodeSection } from "./PlaceDataSettings";
 
 const TRANSPORT_LABELS: Record<TransportMode, string> = {
   auto: "Car",
@@ -106,6 +107,7 @@ function MapRegionSection(): ReactNode {
             file replaces it.
           </p>
         )}
+        {!regionImporting && <PlaceDataStatus />}
       </div>
     </section>
   );
@@ -268,6 +270,7 @@ export function SettingsDialog(): ReactNode {
         map data, so the prerequisite comes before the preferences.
       */}
       <MapRegionSection />
+      <PostcodeSection />
       <RoutingSettings />
 
       <div className="my-3 h-px bg-[var(--color-border-subtle)]" />

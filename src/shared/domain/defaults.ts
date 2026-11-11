@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   routeAlternatives: true,
   ukDefaultSpeedLimits: true,
   showScaleBar: true,
-  layerVisibility: { routes: true, tracks: true, waypoints: true },
+  layerVisibility: { routes: true, tracks: true, waypoints: true, pois: true },
   backupIntervalHours: 24,
   backupRetention: 7,
   planningSpeedKmh: 4.5,
@@ -34,6 +34,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
     propertiesWidth: 320,
     libraryVisible: true,
     propertiesVisible: true,
+    drawerHeight: 300,
+    drawerVisible: true,
   },
   windowGeometry: null,
   // Centred on the Alps at a zoom that shows useful terrain rather than ocean.

@@ -10,7 +10,11 @@ import type { Db } from '../db/client';
 import * as routeRepo from '../db/repositories/routes';
 import * as trackRepo from '../db/repositories/tracks';
 import * as waypointRepo from '../db/repositories/waypoints';
+import { itineraryTreeChildren, tripSummary } from '@shared/itinerary/treeSummary';
+import type { ItineraryView } from '@shared/domain/itinerary';
 import * as folderService from './folderService';
+import * as itineraryService from './itineraryService';
+import * as settingsService from './settingsService';
 import * as tripService from './tripService';
 
 /**
@@ -120,8 +124,26 @@ function tripNode(
   routes: readonly Route[],
   tracks: readonly { id: string; name: string; distanceM: number | null }[],
   waypoints: readonly Waypoint[],
+  plan: ItineraryView | null,
 ): TreeNode {
   const path = `trip:${trip.id}`;
+  // Phase 10: a dated trip is shown as a summary of its plan (Requirement
+  // 14). An undated one takes the path below, exactly as before.
+  if (plan !== null) {
+    return {
+      id: path,
+      ref: { kind: 'trip', id: trip.id },
+      kind: 'trip',
+      name: trip.name,
+      status: trip.status,
+      detail: tripSummary(plan),
+      children: itineraryTreeChildren(plan, { routes, tracks, waypoints }, path, {
+        route: (route, at) => routeNode(route as Route, at),
+        track: (track, at) => trackNode(track, at),
+        waypoint: (waypoint, at) => waypointNode(waypoint as Waypoint, at),
+      }),
+    };
+  }
   return {
     id: path,
     ref: { kind: 'trip', id: trip.id },
@@ -177,12 +199,26 @@ export function tree(
     else bucket.push(waypoint);
   }
 
+  // Settings are read only when some trip is scheduled; the end date needs the
+  // timeline, which needs the planning speeds.
+  const itineraries = itineraryService.listAll(db);
+  const plans = new Map<string, ItineraryView>();
+  if (itineraries.size > 0) {
+    const settings = settingsService.all(db);
+    const planning = { walkingSpeedKmh: settings.planningSpeedKmh, transportMode: settings.transportMode };
+    for (const tripId of itineraries.keys()) {
+      const view = itineraryService.get(db, tripId, planning);
+      if (view !== null) plans.set(tripId, view);
+    }
+  }
+
   const buildTrip = (trip: TripWithCounts): TreeNode =>
     tripNode(
       trip,
       routesByTrip.get(trip.id) ?? [],
       tracksByTrip.get(trip.id) ?? [],
       waypointsByTrip.get(trip.id) ?? [],
+      plans.get(trip.id) ?? null,
     );
 
   const foldersByParent = new Map<string | null, Folder[]>();

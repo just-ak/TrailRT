@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="2800" viewBox="0 0 1840 2800" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="3240" viewBox="0 0 1840 3240" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
   <title>TrailRT implementation progress</title>
-  <desc>Mindmap tracking implementation status across nine phases. Leaf nodes carry data-status attributes: done, in-progress, todo, investigation, blocked. Leaves correspond one-to-one with the task lists in .kiro/specs.</desc>
+  <desc>Mindmap tracking implementation status across eleven phases. Leaf nodes carry data-status attributes: done, in-progress, todo, investigation, blocked. Leaves correspond one-to-one with the task lists in .kiro/specs.</desc>
 
   <style>
     .leaf      { font-size: 15px; fill: #334155; }
@@ -15,20 +15,20 @@
     .pct       { font-size: 13px; font-weight: 600; fill: #475569; }
   </style>
 
-  <rect width="1840" height="2800" fill="#f8fafc"/>
+  <rect width="1840" height="3240" fill="#f8fafc"/>
 
   <!-- ============ header band ============ -->
   <text class="hdr" x="48" y="46">TrailRT — Implementation Progress</text>
-  <text class="sub" x="48" y="72">Garmin BaseCamp replacement · macOS · Electron + React · GPL-3.0 · 9 phases · 143 tracked tasks</text>
+  <text class="sub" x="48" y="72">Garmin BaseCamp replacement · macOS · Electron + React · GPL-3.0 · 11 phases · 185 tracked tasks</text>
 
   <rect x="48" y="86" width="420" height="9" rx="4.5" fill="#e2e8f0"/>
-  <rect x="48" y="86" width="379" height="9" rx="4.5" fill="#16a34a"/>
-  <text class="pct" x="482" y="95">129 / 143 verified complete (90%) — Phase 7 shipped: UK county regions, roads by default, altitude &amp; twisty score</text>
+  <rect x="48" y="86" width="363" height="9" rx="4.5" fill="#16a34a"/>
+  <text class="pct" x="482" y="95">160 / 185 verified complete (86%) — Phase 10 complete; Phase 8 next</text>
 
   <g class="legend">
-    <circle cx="1012" cy="54" r="5" fill="#16a34a"/><text x="1026" y="59">Done (129)</text>
+    <circle cx="1012" cy="54" r="5" fill="#16a34a"/><text x="1026" y="59">Done (160)</text>
     <circle cx="1130" cy="54" r="5" fill="#f59e0b"/><text x="1144" y="59">In progress (0)</text>
-    <circle cx="1280" cy="54" r="5" fill="#94a3b8"/><text x="1294" y="59">Not started (10)</text>
+    <circle cx="1280" cy="54" r="5" fill="#94a3b8"/><text x="1294" y="59">Not started (21)</text>
     <circle cx="1440" cy="54" r="5" fill="#8b5cf6"/><text x="1454" y="59">Investigation (4)</text>
     <circle cx="1604" cy="54" r="5" fill="#dc2626"/><text x="1618" y="59">Blocked (0)</text>
   </g>
@@ -53,6 +53,8 @@
     <path class="link" stroke="#7c3aed" d="M800 860 C758 860, 758 1985, 715 1985"/>
     <path class="link" stroke="#65a30d" d="M1040 860 C1082 860, 1082 1990, 1125 1990"/>
     <path class="link" stroke="#0d9488" d="M1040 860 C1082 860, 1082 2440, 1125 2440"/>
+    <path class="link" stroke="#4f46e5" d="M800 860 C758 860, 758 2540, 715 2540"/>
+    <path class="link" stroke="#b45309" d="M1040 860 C1082 860, 1082 2920, 1125 2920"/>
 
     <!-- ============ PHASE 1 — Foundation (right, complete) ============ -->
     <rect x="1125" y="249" width="210" height="52" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.5"/>
@@ -226,7 +228,7 @@
     <!-- ============ Phase 7 · Regions &amp; Profile (right) ============ -->
     <rect x="1125" y="2414" width="210" height="52" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.5"/>
     <text class="phase" x="1230" y="2437" fill="#16a34a">Phase 7 · Regions &amp; Profile</text>
-    <text class="count" x="1230" y="2456">15 / 15 complete</text>
+    <text class="count" x="1230" y="2456">16 / 16 complete</text>
 
     <path class="link" stroke="#0d9488" d="M1335 2440 C1367 2440, 1367 2260, 1400 2260"/>
     <path class="link" stroke="#0d9488" d="M1335 2440 C1367 2440, 1367 2290, 1400 2290"/>
@@ -243,6 +245,7 @@
     <path class="link" stroke="#0d9488" d="M1335 2440 C1367 2440, 1367 2620, 1400 2620"/>
     <path class="link" stroke="#0d9488" d="M1335 2440 C1367 2440, 1367 2650, 1400 2650"/>
     <path class="link" stroke="#0d9488" d="M1335 2440 C1367 2440, 1367 2680, 1400 2680"/>
+    <path class="link" stroke="#0d9488" d="M1335 2440 C1367 2440, 1367 2710, 1400 2710"/>
 
     <circle data-status="done" cx="1400" cy="2260" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2260" dy="0.35em">Spec, ADR 0018 &amp; renumbering</text>
     <circle data-status="done" cx="1400" cy="2290" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2290" dy="0.35em">Twisty score (shared/geo)</text>
@@ -259,6 +262,36 @@
     <circle data-status="done" cx="1400" cy="2620" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2620" dy="0.35em">End-to-end &amp; verification pass</text>
     <circle data-status="done" cx="1400" cy="2650" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2650" dy="0.35em">Fix: Enter / double-click finish</text>
     <circle data-status="done" cx="1400" cy="2680" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2680" dy="0.35em">Fix: blank map after base-map switch</text>
+    <circle data-status="done" cx="1400" cy="2710" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2710" dy="0.35em">Feedback: plainer route panel</text>
+
+    <!-- ============ Phase 11 · Photos (right) ============ -->
+    <rect x="1125" y="2894" width="210" height="52" rx="10" fill="#ffffff" stroke="#b45309" stroke-width="2"/>
+    <text class="phase" x="1230" y="2917" fill="#b45309">Phase 11 · Photos</text>
+    <text class="count" x="1230" y="2936">0 / 11 tasks</text>
+
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2770, 1400 2770"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2800, 1400 2800"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2830, 1400 2830"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2860, 1400 2860"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2890, 1400 2890"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2920, 1400 2920"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2950, 1400 2950"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 2980, 1400 2980"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 3010, 1400 3010"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 3040, 1400 3040"/>
+    <path class="link" stroke="#b45309" d="M1335 2920 C1367 2920, 1367 3070, 1400 3070"/>
+
+    <circle data-status="todo" cx="1400" cy="2770" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2770" dy="0.35em">Link a folder to a trip</text>
+    <circle data-status="todo" cx="1400" cy="2800" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2800" dy="0.35em">Read GPS &amp; time (EXIF)</text>
+    <circle data-status="todo" cx="1400" cy="2830" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2830" dy="0.35em">Keep in step with the folder</text>
+    <circle data-status="todo" cx="1400" cy="2860" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2860" dy="0.35em">Photos in the library</text>
+    <circle data-status="todo" cx="1400" cy="2890" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2890" dy="0.35em">Photo layer &amp; clustering</text>
+    <circle data-status="todo" cx="1400" cy="2920" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2920" dy="0.35em">Preview box (bottom left)</text>
+    <circle data-status="todo" cx="1400" cy="2950" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2950" dy="0.35em">Photo → waypoint</text>
+    <circle data-status="todo" cx="1400" cy="2980" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="2980" dy="0.35em">Read-only, privacy &amp; security</text>
+    <circle data-status="todo" cx="1400" cy="3010" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3010" dy="0.35em">Scale &amp; responsiveness</text>
+    <circle data-status="todo" cx="1400" cy="3040" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3040" dy="0.35em">Backups &amp; another Mac</text>
+    <circle data-status="todo" cx="1400" cy="3070" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3070" dy="0.35em">Fixtures, unit &amp; e2e tests</text>
 
     <!-- ============ Groundwork (left) ============ -->
     <rect x="505" y="324" width="210" height="52" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.5"/>
@@ -282,9 +315,9 @@
     <circle data-status="done" cx="440" cy="305" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="305" dy="0.35em">Source spec reviewed</text>
     <circle data-status="done" cx="440" cy="335" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="335" dy="0.35em">GPL-3.0 licence set</text>
     <circle data-status="done" cx="440" cy="365" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="365" dy="0.35em">Licence audit: 0 incompatible</text>
-    <circle data-status="done" cx="440" cy="395" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="395" dy="0.35em">ADRs 0001–0018</text>
-    <circle data-status="done" cx="440" cy="425" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="425" dy="0.35em">Phase 1–7 specs: design, tasks</text>
-    <circle data-status="done" cx="440" cy="455" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="455" dy="0.35em">Phase 8–9 requirements</text>
+    <circle data-status="done" cx="440" cy="395" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="395" dy="0.35em">ADRs 0001–0019</text>
+    <circle data-status="done" cx="440" cy="425" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="425" dy="0.35em">Phase 1–7, 10 specs: design, tasks</text>
+    <circle data-status="done" cx="440" cy="455" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="455" dy="0.35em">Phase 8–10 requirements</text>
     <circle data-status="done" cx="440" cy="485" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="485" dy="0.35em">Test geography: Buxton loop</text>
 
     <!-- ============ Phase 4 · Mapping (left) ============ -->
@@ -410,6 +443,73 @@
     <circle data-status="investigation" cx="440" cy="1985" r="5" fill="#8b5cf6"/><text class="leaf ll" x="424" y="1985" dy="0.35em">Device transfer investigation</text>
     <circle data-status="todo" cx="440" cy="2015" r="5" fill="#94a3b8"/><text class="leaf ll" x="424" y="2015" dy="0.35em">Expanded import / export</text>
     <circle data-status="todo" cx="440" cy="2045" r="5" fill="#94a3b8"/><text class="leaf ll" x="424" y="2045" dy="0.35em">Compatibility testing</text>
+
+    <!-- ============ Phase 10 · Road Trips (left) ============ -->
+    <rect x="505" y="2514" width="210" height="52" rx="10" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+    <text class="phase" x="610" y="2537" fill="#4f46e5">Phase 10 · Road Trips</text>
+    <text class="count" x="610" y="2556">30 / 30 tasks</text>
+
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2105, 440 2105"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2135, 440 2135"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2165, 440 2165"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2195, 440 2195"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2225, 440 2225"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2255, 440 2255"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2285, 440 2285"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2315, 440 2315"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2345, 440 2345"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2375, 440 2375"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2405, 440 2405"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2435, 440 2435"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2465, 440 2465"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2495, 440 2495"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2525, 440 2525"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2555, 440 2555"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2585, 440 2585"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2615, 440 2615"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2645, 440 2645"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2675, 440 2675"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2705, 440 2705"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2735, 440 2735"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2765, 440 2765"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2795, 440 2795"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2825, 440 2825"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2855, 440 2855"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2885, 440 2885"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2915, 440 2915"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2945, 440 2945"/>
+    <path class="link" stroke="#4f46e5" d="M505 2540 C473 2540, 473 2975, 440 2975"/>
+
+    <circle data-status="done" cx="440" cy="2105" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2105" dy="0.35em">Spec, ADR 0019 &amp; out-of-order build</text>
+    <circle data-status="done" cx="440" cy="2135" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2135" dy="0.35em">Zoned time &amp; offline time zones</text>
+    <circle data-status="done" cx="440" cy="2165" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2165" dy="0.35em">Itinerary types &amp; timeline</text>
+    <circle data-status="done" cx="440" cy="2195" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2195" dy="0.35em">Corridor geometry &amp; range check</text>
+    <circle data-status="done" cx="440" cy="2225" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2225" dy="0.35em">POI categories &amp; opening hours</text>
+    <circle data-status="done" cx="440" cy="2255" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2255" dy="0.35em">Postcodes, OSGB &amp; search text</text>
+    <circle data-status="done" cx="440" cy="2285" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2285" dy="0.35em">iCalendar writer</text>
+    <circle data-status="done" cx="440" cy="2315" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2315" dy="0.35em">Itinerary storage (migration 0004)</text>
+    <circle data-status="done" cx="440" cy="2345" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2345" dy="0.35em">Itinerary service &amp; commands</text>
+    <circle data-status="done" cx="440" cy="2375" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2375" dy="0.35em">Itinerary IPC &amp; tree dates</text>
+    <circle data-status="done" cx="440" cy="2405" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2405" dy="0.35em">Place data: extract &amp; ingest</text>
+    <circle data-status="done" cx="440" cy="2435" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2435" dy="0.35em">Postcode data (Code-Point Open)</text>
+    <circle data-status="done" cx="440" cy="2465" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2465" dy="0.35em">Search service</text>
+    <circle data-status="done" cx="440" cy="2495" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2495" dy="0.35em">POI search &amp; range service</text>
+    <circle data-status="done" cx="440" cy="2525" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2525" dy="0.35em">POI to waypoint / stop; plan legs</text>
+    <circle data-status="done" cx="440" cy="2555" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2555" dy="0.35em">Export: GPX order &amp; .ics</text>
+    <circle data-status="done" cx="440" cy="2585" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2585" dy="0.35em">Itinerary editor</text>
+    <circle data-status="done" cx="440" cy="2615" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2615" dy="0.35em">Calendar drawer</text>
+    <circle data-status="done" cx="440" cy="2645" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2645" dy="0.35em">Along-the-route panel &amp; POI layer</text>
+    <circle data-status="done" cx="440" cy="2675" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2675" dy="0.35em">Map search box</text>
+    <circle data-status="done" cx="440" cy="2705" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2705" dy="0.35em">Settings, About &amp; register</text>
+    <circle data-status="done" cx="440" cy="2735" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2735" dy="0.35em">End-to-end tests &amp; verification</text>
+    <circle data-status="done" cx="440" cy="2765" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2765" dy="0.35em">Feedback spec (Reqs 14–17)</text>
+    <circle data-status="done" cx="440" cy="2795" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2795" dy="0.35em">Leg modes: road, route, other</text>
+    <circle data-status="done" cx="440" cy="2825" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2825" dy="0.35em">Automatic leg planning</text>
+    <circle data-status="done" cx="440" cy="2855" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2855" dy="0.35em">Leg modes in the editor</text>
+    <circle data-status="done" cx="440" cy="2885" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2885" dy="0.35em">Trip summary in the library</text>
+    <circle data-status="done" cx="440" cy="2915" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2915" dy="0.35em">Resizable, hideable panels</text>
+    <circle data-status="done" cx="440" cy="2945" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2945" dy="0.35em">Icon buttons with hints</text>
+    <circle data-status="done" cx="440" cy="2975" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="2975" dy="0.35em">Feedback e2e &amp; verification</text>
 
   </g>
 </svg>

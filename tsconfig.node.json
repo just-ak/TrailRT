@@ -8,6 +8,7 @@
     "electron.vite.config.ts",
     "drizzle.config.ts",
     "vitest.config.ts",
+    "tests/seed/**/*",
     "scripts/**/*"
   ],
   "compilerOptions": {

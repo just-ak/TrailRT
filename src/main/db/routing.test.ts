@@ -48,7 +48,7 @@ afterEach(() => {
 describe('migration 0002', () => {
   it('is applied, and 0003 is the current schema version', () => {
     expect(handle.migration.schemaVersion).toBe(expectedSchemaVersion());
-    expect(expectedSchemaVersion()).toBe(4);
+    expect(expectedSchemaVersion()).toBe(6);
   });
 
   it('applies on top of a Phase 3 database without losing data', () => {
@@ -128,7 +128,8 @@ describe('migration 0003', () => {
     sqlite.close();
 
     const upgraded = createDatabase({ file });
-    expect(upgraded.migration.applied).toEqual([4]);
+    // 0004 (Phase 10) follows on the same upgrade; it touches no route table.
+    expect(upgraded.migration.applied).toEqual([4, 5, 6]);
     expect(control.listControlRows(upgraded.db, route.id)).toEqual([
       { lat: 53.2588, lon: -1.911, role: 'via', shapeIndex: null },
       { lat: 53.2602, lon: -2.1255, role: 'via', shapeIndex: null },

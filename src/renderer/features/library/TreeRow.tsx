@@ -74,6 +74,7 @@ function Icon({ node }: { node: TreeNode }): ReactNode {
   // A recorded track, distinguishable from a drawn route at a glance.
   if (node.kind === "track") return <span aria-hidden="true">📈</span>;
   if (node.kind === "waypoint") return <span aria-hidden="true">📍</span>;
+  if (node.kind === "group") return <span aria-hidden="true">{node.glyph ?? "▫️"}</span>;
   return <span aria-hidden="true">🔖</span>;
 }
 

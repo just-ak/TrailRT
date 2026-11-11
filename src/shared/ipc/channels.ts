@@ -47,6 +47,52 @@ export const CHANNELS = {
     move: 'routes:move',
     delete: 'routes:delete',
   },
+  /** Phase 10: postcode and place search, answered on this machine. */
+  search: {
+    query: 'search:query',
+    status: 'search:status',
+  },
+  /** Phase 10: points of interest from the region build's place data. */
+  places: {
+    status: 'places:status',
+    /** Rebuilds the loaded regions, which also rebuilds their place data. */
+    rebuild: 'places:rebuild',
+    along: 'places:along',
+    cancel: 'places:cancel',
+    detour: 'places:detour',
+    get: 'places:get',
+    /** Adds a POI to a trip as a waypoint. */
+    addWaypoint: 'places:addWaypoint',
+  },
+  /** Phase 10: Code-Point Open, fetched once on request. */
+  postcodes: {
+    listing: 'postcodes:listing',
+    update: 'postcodes:update',
+    cancel: 'postcodes:cancel',
+  },
+  itinerary: {
+    get: 'itinerary:get',
+    create: 'itinerary:create',
+    remove: 'itinerary:remove',
+    update: 'itinerary:update',
+    addStop: 'itinerary:addStop',
+    removeStop: 'itinerary:removeStop',
+    moveStop: 'itinerary:moveStop',
+    updateStop: 'itinerary:updateStop',
+    linkLeg: 'itinerary:linkLeg',
+    /** By road (planned automatically) or other transport ("don't link"). */
+    setLegMode: 'itinerary:setLegMode',
+    /** Plans every by-road leg that has no route: a retry. */
+    planAll: 'itinerary:planAll',
+    /** A POI as a stop: waypoint and stop in one undoable step. */
+    addPoiStop: 'itinerary:addPoiStop',
+    /** Routes the leg arriving at a stop, saves the route and links it. */
+    planLeg: 'itinerary:planLeg',
+    /** Routes the legs into and out of a stop inserted between two others. */
+    planAround: 'itinerary:planAround',
+    /** Saves the itinerary as an iCalendar file the user picks. */
+    exportIcs: 'itinerary:exportIcs',
+  },
   waypoints: {
     listForTrip: 'waypoints:listForTrip',
     listAll: 'waypoints:listAll',
@@ -215,6 +261,8 @@ export const EVENTS = {
   regionProgress: 'event:regionProgress',
   /** Download-and-build progress for an automatically fetched region. */
   regionJobProgress: 'event:regionJobProgress',
+  /** Phase 10: the postcode download. */
+  postcodeProgress: 'event:postcodeProgress',
 } as const;
 
 /**

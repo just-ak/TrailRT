@@ -57,6 +57,8 @@ export interface EmbeddedPaths {
   mergeTool: string;
   /** Downloaded terrain tiles, gzipped HGT. ADR 0018. */
   terrainDir: string;
+  /** Postcode data, which is not tied to the routing regions. Phase 10. */
+  gazetteerDir: string;
 }
 
 /**
@@ -81,6 +83,7 @@ export function embeddedPaths(
     downloadDir: join(userDataDir, 'valhalla', 'downloads'),
     mergeTool: join(root, 'bin', 'osmium'),
     terrainDir: join(userDataDir, 'terrain'),
+    gazetteerDir: join(userDataDir, 'gazetteer'),
   };
 }
 

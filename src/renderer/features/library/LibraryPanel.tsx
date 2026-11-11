@@ -1026,7 +1026,7 @@ export function LibraryPanel(): ReactNode {
           */}
           <button
             type="button"
-            // A distinct name from the trip panel's "Import…", so assistive
+            // A distinct name from the trip panel’s import icon, so assistive
             // technology and tests can tell the two apart.
             aria-label="Import files"
             onClick={() => void actions.chooseFilesToImport()}

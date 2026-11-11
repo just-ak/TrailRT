@@ -441,7 +441,7 @@ test.describe('road data and profile', () => {
       .getByRole('treeitem', { name: /Route/ })
       .first()
       .click();
-    await page.getByRole('button', { name: 'Profile' }).click();
+    await page.getByRole('button', { name: 'Profile and points' }).click();
 
     const drawer = page.getByRole('region', { name: 'Route profile' });
     await expect(drawer).toBeVisible();
@@ -489,7 +489,7 @@ test.describe('road data and profile', () => {
 });
 
 test.describe('Waze hand-off', () => {
-  test('offers one destination and says it is the end point', async () => {
+  test('offers the start or the end, one destination each', async () => {
     const { page } = harness;
 
     await page
@@ -497,12 +497,19 @@ test.describe('Waze hand-off', () => {
       .first()
       .click();
 
-    const button = page.getByRole('button', { name: 'End point in Waze' });
-    await expect(button).toBeVisible();
+    // A small icon now, not a full-width button.
+    await page.getByRole('button', { name: 'Navigate in Waze' }).click();
+    const items = page.getByRole('menuitem');
+    await expect(items).toHaveText([
+      'Navigate to start in Waze',
+      'Navigate to end in Waze',
+    ]);
     // No whole-route action exists anywhere, because Waze cannot accept one.
-    await expect(
-      page.getByRole('button', { name: /whole route/i }),
-    ).toHaveCount(0);
+    await expect(page.getByText(/whole route/i)).toHaveCount(0);
+
+    // Not chosen: the tests never open an external link.
+    await page.keyboard.press('Escape');
+    await expect(items).toHaveCount(0);
   });
 
   test('builds a link the main process will accept', async () => {
@@ -542,7 +549,7 @@ test.describe('the snap routing tool', () => {
     await expect(page.getByRole('button', { name: 'Snap routing' })).toHaveCount(0);
 
     await page.getByRole('treeitem', { name: /Phase Four Trip/ }).click();
-    await page.getByRole('button', { name: 'New Route', exact: true }).click();
+    await page.getByRole('button', { name: 'New route', exact: true }).click();
     await expect(page.getByText(/no map region loaded yet/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add map regions…' })).toBeVisible();
 

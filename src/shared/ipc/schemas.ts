@@ -1,5 +1,8 @@
 import { z } from 'zod';
+import { MAX_ITINERARY_STOPS, MAX_OTHER_MINUTES, MAX_STAY_DAYS, MAX_STOP_MINUTES } from '../domain/itinerary';
+import { POI_CATEGORY_IDS } from '../poi/categories';
 import { checkRoutingOrigin } from '../net/origin';
+import { isValidDate, isValidTime } from '../time/zoned';
 
 /**
  * Request schemas for every IPC channel. The main process validates against
@@ -35,6 +38,7 @@ export const layerVisibilitySchema = z
     routes: z.boolean(),
     tracks: z.boolean(),
     waypoints: z.boolean(),
+    pois: z.boolean().optional(),
   })
   .strict();
 
@@ -153,6 +157,8 @@ export const panelLayoutSchema = z
     propertiesWidth: z.number().int().min(0).max(2000),
     libraryVisible: z.boolean(),
     propertiesVisible: z.boolean(),
+    drawerHeight: z.number().int().min(0).max(4000).optional(),
+    drawerVisible: z.boolean().optional(),
   })
   .strict();
 
@@ -1010,3 +1016,157 @@ export const routingRegionSizesRequest = z
 export type RoutingSuggestRegionsRequest = z.infer<
   typeof routingSuggestRegionsRequest
 >;
+
+// --------------------------------------------------------- Phase 10: search
+
+export const searchQueryRequest = z
+  .object({
+    text: z.string().max(200),
+    lat: latSchema,
+    lon: lonSchema,
+    limit: z.number().int().min(1).max(50).optional(),
+  })
+  .strict();
+
+// --------------------------------------------------------- Phase 10: places
+
+export const poiCategorySchema = z.enum(POI_CATEGORY_IDS);
+
+export const alongScopeSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('route'), routeId: idSchema }).strict(),
+  z.object({ kind: z.literal('itinerary'), tripId: idSchema }).strict(),
+]);
+
+const distanceAlongSchema = z.number().finite().min(0).max(10_000_000);
+
+export const alongSectionSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('all') }).strict(),
+  z.object({ kind: z.literal('range'), fromM: distanceAlongSchema, toM: distanceAlongSchema }).strict(),
+  z
+    .object({ kind: z.literal('near'), lat: latSchema, lon: lonSchema, radiusM: z.number().min(100).max(50_000) })
+    .strict(),
+  // A local date of the itinerary; validated as a real date below.
+  z.object({ kind: z.literal('day'), date: z.string().max(10) }).strict(),
+]);
+
+export const placesAlongRequest = z
+  .object({
+    requestId: z.string().min(1).max(64),
+    scope: alongScopeSchema,
+    categories: z.array(poiCategorySchema).min(1).max(POI_CATEGORY_IDS.length),
+    widthM: z.number().min(100).max(10_000),
+    section: alongSectionSchema,
+  })
+  .strict();
+
+export const placesCancelRequest = z.object({ requestId: z.string().min(1).max(64) }).strict();
+
+export const placesDetourRequest = z
+  .object({ scope: alongScopeSchema, poiId: z.number().int().positive() })
+  .strict();
+
+export const placesGetRequest = z.object({ poiId: z.number().int().positive() }).strict();
+
+export const placesAddWaypointRequest = z
+  .object({ poiId: z.number().int().positive(), tripId: idSchema })
+  .strict();
+
+// ------------------------------------------------------ Phase 10: itinerary
+
+/** A real calendar date, `YYYY-MM-DD`. A pattern alone would let 2026-02-30 through. */
+export const dateSchema = z.string().refine(isValidDate, { message: 'Expected a real date, YYYY-MM-DD' });
+
+/** `HH:mm`, 00:00 to 23:59. */
+export const timeSchema = z.string().refine(isValidTime, { message: 'Expected a time from 00:00 to 23:59' });
+
+export const durationKindSchema = z.enum(['hours', 'days']);
+const stopMinutesSchema = z.number().int().min(0).max(MAX_STOP_MINUTES);
+const stayDaysSchema = z.number().int().min(1).max(MAX_STAY_DAYS);
+
+export const itineraryGetRequest = z.object({ tripId: idSchema }).strict();
+
+export const itineraryCreateRequest = z
+  .object({ tripId: idSchema, startDate: dateSchema, startTime: timeSchema })
+  .strict();
+
+export const itineraryRemoveRequest = z.object({ tripId: idSchema }).strict();
+
+export const itineraryUpdateRequest = z
+  .object({
+    tripId: idSchema,
+    startDate: dateSchema.optional(),
+    startTime: timeSchema.optional(),
+    defaultDepart: timeSchema.optional(),
+    maxDriveMinutes: z.number().int().min(30).max(24 * 60).nullable().optional(),
+    rangeKm: z.number().finite().positive().max(5000).nullable().optional(),
+    reservePct: z.number().int().min(0).max(90).optional(),
+    energy: z.enum(['fuel', 'electric']).optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).some((k) => k !== 'tripId'), {
+    message: 'At least one field must be provided',
+  });
+
+export const itineraryAddStopRequest = z
+  .object({
+    tripId: idSchema,
+    waypointId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+    durationKind: durationKindSchema.optional(),
+    durationMinutes: stopMinutesSchema.nullable().optional(),
+    durationDays: stayDaysSchema.nullable().optional(),
+    notes: optionalTextSchema.optional(),
+  })
+  .strict();
+
+export const itineraryStopRequest = z.object({ id: idSchema }).strict();
+
+export const itineraryMoveStopRequest = z
+  .object({ id: idSchema, toIndex: z.number().int().min(0).max(MAX_ITINERARY_STOPS - 1) })
+  .strict();
+
+export const itineraryUpdateStopRequest = z
+  .object({
+    id: idSchema,
+    durationKind: durationKindSchema.optional(),
+    durationMinutes: stopMinutesSchema.nullable().optional(),
+    durationDays: stayDaysSchema.nullable().optional(),
+    departTime: timeSchema.nullable().optional(),
+    arriveBy: timeSchema.nullable().optional(),
+    departAt: timeSchema.nullable().optional(),
+    notes: optionalTextSchema.optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).some((k) => k !== 'id'), {
+    message: 'At least one field must be provided',
+  });
+
+export const itineraryLinkLegRequest = z
+  .object({ id: idSchema, routeId: idSchema.nullable() })
+  .strict();
+
+export const itineraryAddPoiStopRequest = z
+  .object({
+    poiId: z.number().int().positive(),
+    tripId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+  })
+  .strict();
+
+export const itineraryExportIcsRequest = z
+  .object({ tripId: idSchema, includeLegs: z.boolean() })
+  .strict();
+
+/**
+ * A chosen route is set with `itineraryLinkLegRequest`, which carries the
+ * route; this sets the other two modes.
+ */
+export const itinerarySetLegModeRequest = z
+  .object({
+    id: idSchema,
+    mode: z.enum(['road', 'other']),
+    transport: z.enum(['ferry', 'train', 'flight', 'other']).nullable().optional(),
+    minutes: z.number().int().min(1).max(MAX_OTHER_MINUTES).nullable().optional(),
+    label: z.string().trim().max(200).nullable().optional(),
+  })
+  .strict();

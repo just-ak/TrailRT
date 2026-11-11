@@ -1,13 +1,15 @@
+import { Download, MapPinPlus, Route, Upload } from "lucide-react";
+import { IconButton } from "../../components/IconButton";
 import { useState, type ReactNode } from "react";
 import { formatTimestamp } from "@shared/geo/units";
 import type { Folder, TripWithCounts } from "@shared/domain/types";
-import { Button } from "../../components/Button";
 import { api, call, describeError } from "../../lib/client";
 import * as actions from "../../lib/actions";
 import { useLibraryStore } from "../../stores/libraryStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
+import { ItinerarySection } from "../itinerary/ItinerarySection";
 import { RouteProperties } from "./RouteProperties";
 import { TrackProperties } from "./TrackProperties";
 import { WaypointProperties } from "./WaypointProperties";
@@ -160,23 +162,25 @@ function TripDetails({ trip }: { trip: TripWithCounts }): ReactNode {
           Tracks are recorded GPS files. Import GPX, KML, KMZ, TCX, FIT or CSV
           to add them.
         </p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Button onClick={() => void actions.startDrawingRoute()}>New Route</Button>
-          <Button onClick={() => actions.startPlacingWaypoint()}>
-            New Waypoint
-          </Button>
-          <Button onClick={() => void actions.chooseFilesToImport()}>
-            Import…
-          </Button>
-          <Button
-            onClick={() =>
-              actions.openExportDialog({ kind: "trips", tripIds: [trip.id] })
-            }
-          >
-            Export…
-          </Button>
+        <div className="mt-2 flex flex-wrap gap-1.5" data-testid="trip-actions">
+          <IconButton hint="New route" onClick={() => void actions.startDrawingRoute()}>
+            <Route size={16} aria-hidden="true" />
+          </IconButton>
+          <IconButton hint="New waypoint" onClick={() => actions.startPlacingWaypoint()}>
+            <MapPinPlus size={16} aria-hidden="true" />
+          </IconButton>
+          <IconButton hint="Import GPX, KML or other files" onClick={() => void actions.chooseFilesToImport()}>
+            <Upload size={16} aria-hidden="true" />
+          </IconButton>
+          <IconButton hint="Export the trip" onClick={() => actions.openExportDialog({ kind: "trips", tripIds: [trip.id] })}>
+            <Download size={16} aria-hidden="true" />
+          </IconButton>
         </div>
       </Field>
+
+      <ItinerarySection tripId={trip.id} />
+
+      <div className="my-4 h-px bg-[var(--color-border-subtle)]" />
 
       <Field label="Created">
         <ReadOnly value={formatTimestamp(trip.createdAt)} />

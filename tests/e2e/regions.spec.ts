@@ -48,7 +48,7 @@ test.describe('the region picker', () => {
 
     // Reached the way a first-time user reaches it: New Route, no map yet.
     await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
-    await page.getByRole('button', { name: 'New Route', exact: true }).click();
+    await page.getByRole('button', { name: 'New route', exact: true }).click();
     await page.getByRole('button', { name: 'Add map regions…' }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Map regions for road routing' });
@@ -156,7 +156,7 @@ test.describe('the twisty score', () => {
     await page.waitForSelector('[role="tree"]');
     await page.getByRole('treeitem', { name: new RegExp(TRIP) }).dblclick();
     await page.getByRole('treeitem', { name: /Winding/ }).first().click();
-    await page.getByRole('button', { name: 'Profile' }).click();
+    await page.getByRole('button', { name: 'Profile and points' }).click();
 
     const drawer = page.getByRole('region', { name: 'Route profile' });
     await expect(drawer.getByText(/Twisty score \d+\.\d \/ 10/)).toBeVisible();

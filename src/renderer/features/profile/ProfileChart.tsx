@@ -89,6 +89,9 @@ function speedFill(value: unknown): string {
   return typeof value === "number" ? speedColour(value) : "#94a3b8";
 }
 
+/** Stable default, so an absent selection does not change identity per render. */
+const NO_RANGES: readonly { startM: number; endM: number }[] = [];
+
 /** The hatch drawn over assumed speed limits. Defined once per chart. */
 const ASSUMED_PATTERN_ID = "profile-assumed-hatch";
 
@@ -117,6 +120,8 @@ export function ProfileChart({
   onHover,
   onDownloadTerrain,
   terrainBusy = false,
+  selectedRanges = NO_RANGES,
+  onSelect,
 }: {
   profile: Profile;
   units: UnitSystem;
@@ -127,6 +132,16 @@ export function ProfileChart({
   /** Offered when terrain heights would be available after a download. */
   onDownloadTerrain?: () => void;
   terrainBusy?: boolean;
+  /**
+   * Distance ranges of the points selected in the point table, shaded on the
+   * chart so the two views agree on what is selected.
+   */
+  selectedRanges?: readonly { startM: number; endM: number }[];
+  /** A click on the chart, at a distance. Selects the nearest point. */
+  onSelect?: (
+    distanceM: number,
+    modifiers: { metaKey: boolean; shiftKey: boolean },
+  ) => void;
 }): ReactNode {
   const total = profile.totalDistanceM;
 
@@ -243,19 +258,23 @@ export function ProfileChart({
     bands.length * (BAND_HEIGHT + BAND_GAP + 12) +
     8;
 
-  const handlePointer = (
+  /** The distance under the pointer, or null outside the plot. */
+  const distanceAt = (
     event: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>,
-  ): void => {
+  ): number | null => {
     const rect = event.currentTarget.getBoundingClientRect();
     // The SVG scales to its container, so the client x has to be mapped back
     // through the viewBox rather than used directly.
     const ratio = (event.clientX - rect.left) / rect.width;
     const svgX = ratio * WIDTH;
-    if (svgX < PAD_LEFT || svgX > WIDTH - PAD_RIGHT) {
-      onHover(null);
-      return;
-    }
-    onHover(((svgX - PAD_LEFT) / PLOT_WIDTH) * total);
+    if (svgX < PAD_LEFT || svgX > WIDTH - PAD_RIGHT) return null;
+    return ((svgX - PAD_LEFT) / PLOT_WIDTH) * total;
+  };
+
+  const handlePointer = (
+    event: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>,
+  ): void => {
+    onHover(distanceAt(event));
   };
 
   return (
@@ -272,7 +291,16 @@ export function ProfileChart({
         }
         onPointerMove={handlePointer}
         onPointerLeave={() => onHover(null)}
-        className="touch-none select-none"
+        onClick={(event) => {
+          if (onSelect === undefined) return;
+          const distanceM = distanceAt(event);
+          if (distanceM === null) return;
+          onSelect(distanceM, {
+            metaKey: event.metaKey,
+            shiftKey: event.shiftKey,
+          });
+        }}
+        className={`touch-none select-none ${onSelect === undefined ? "" : "cursor-crosshair"}`}
       >
         <defs>
           <pattern
@@ -377,6 +405,29 @@ export function ProfileChart({
                 }),
               )}
             </g>
+          );
+        })}
+
+        {/* Points selected in the table. Widened to 3px so a single point
+            is visible at all on a long route. */}
+        {selectedRanges.map((range) => {
+          const left = x(range.startM);
+          const width = Math.max(3, x(range.endM) - left);
+          return (
+            <rect
+              key={`sel-${range.startM}-${range.endM}`}
+              data-selected-range="true"
+              x={left - (width === 3 ? 1.5 : 0)}
+              y={PAD_TOP}
+              width={width}
+              height={svgHeight - PAD_TOP - 8}
+              fill="var(--color-accent)"
+              fillOpacity={0.22}
+              stroke="var(--color-accent)"
+              strokeOpacity={0.6}
+              strokeWidth={1}
+              pointerEvents="none"
+            />
           );
         })}
 

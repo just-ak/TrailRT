@@ -75,6 +75,7 @@ peer conflicts. Treat this as the baseline; re-verify before changing any line.
 | Language        | typescript                      | 7.0.2                 |
 | Styling         | tailwindcss + @tailwindcss/vite | 4.3.4                 |
 | Mapping         | leaflet                         | 1.9.4                 |
+| Icons           | lucide-react (ISC)              | 1.72.0                |
 | XML parsing     | fast-xml-parser                 | 5.12.0                |
 | KMZ (zip)       | jszip                           | 3.10.2                |
 | FIT             | fit-file-parser                 | 6.2.7                 |

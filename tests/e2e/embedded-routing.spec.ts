@@ -366,7 +366,7 @@ test.describe('embedded routing engine', () => {
     await expect(page.getByRole('button', { name: 'Snap routing' })).toHaveCount(0);
 
     await page.getByRole('treeitem', { name: 'Embedded Routing Trip' }).click();
-    await page.getByRole('button', { name: 'New Route', exact: true }).click();
+    await page.getByRole('button', { name: 'New route', exact: true }).click();
     // The direct answer to "is the UI wired to the engine": the road tool,
     // not straight lines.
     await expect(page.getByText(/Click to extend along the roads/)).toBeVisible();
@@ -399,14 +399,25 @@ test.describe('embedded routing engine', () => {
     // Already following roads: it re-routes itself when edited, so there is no
     // button to press (ADR 0018).
     await page.getByRole('treeitem', { name: /To snap/ }).first().click();
-    await expect(page.getByText(/Built-in engine/i)).toBeVisible();
-    await expect(page.getByText(/nothing is sent anywhere/i)).toBeVisible();
-    await expect(page.getByText(/Snapped with valhalla-embedded/)).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Snap to roads' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Follow roads' })).toHaveCount(0);
+
+    // Looked up on selection with no button pressed: the engine is local, so
+    // there is no consent to ask for. Phase 7 Requirement 6.
+    await expect(
+      page.getByRole('img', { name: /Share of distance by speed band/ }),
+    ).toBeVisible({ timeout: 30_000 });
+
+    // The engine and the provenance are in the Details popup.
+    await page.getByRole('button', { name: 'Route details' }).click();
+    const details = page.getByRole('dialog');
+    await expect(details.getByText(/Built-in engine/i)).toBeVisible();
+    await expect(details.getByText(/nothing is sent anywhere/i)).toBeVisible();
+    await expect(details.getByText(/made with valhalla-embedded/)).toBeVisible();
+    await details.getByRole('button', { name: 'Done' }).click();
 
     // Straight lines: the one place converting to roads is offered.
     await page.getByRole('treeitem', { name: /Still straight/ }).first().click();
-    await expect(page.getByRole('button', { name: 'Snap to roads' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Follow roads' })).toBeEnabled();
   });
 });
 

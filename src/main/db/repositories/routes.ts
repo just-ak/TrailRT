@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, desc, eq, sql } from 'drizzle-orm';
 import type {
   GeometrySource,
   Route,
@@ -75,6 +75,32 @@ export function listPoints(db: Db, routeId: string): RoutePoint[] {
       symbol: p.symbol ?? null,
       notes: p.notes ?? null,
     }));
+}
+
+/**
+ * A route's first and last points, without reading the rest. Phase 10 uses
+ * them to check that a leg's route actually joins its two stops.
+ */
+export function routeEndpoints(
+  db: Db,
+  routeId: string,
+): { first: { lat: number; lon: number }; last: { lat: number; lon: number } } | null {
+  const pick = { lat: routePoints.lat, lon: routePoints.lon };
+  const first = db
+    .select(pick)
+    .from(routePoints)
+    .where(eq(routePoints.routeId, routeId))
+    .orderBy(asc(routePoints.seq))
+    .limit(1)
+    .get();
+  const last = db
+    .select(pick)
+    .from(routePoints)
+    .where(eq(routePoints.routeId, routeId))
+    .orderBy(desc(routePoints.seq))
+    .limit(1)
+    .get();
+  return first === undefined || last === undefined ? null : { first, last };
 }
 
 export function findRouteWithPoints(

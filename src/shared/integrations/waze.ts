@@ -13,9 +13,10 @@ import type { LatLon } from '../geo/distance';
  * Consequently:
  *
  * - A waypoint hands off its own position.
- * - A route or track hands off its **end point**, and every label says so. Not
- *   its start: the user is planning to travel the route, so the useful
- *   destination is where it finishes.
+ * - A route or track offers its **start** and its **end**, as two separate
+ *   hand-offs, and every label says which one is being sent. The start is for
+ *   driving to where the route begins; the end is for heading straight to where
+ *   it finishes. Either way it is one point per hand-off.
  * - There is no "send whole route to Waze" action anywhere, because there is no
  *   way to implement one.
  *
@@ -46,27 +47,29 @@ export function wazeNavigateUrl(point: LatLon): string {
 }
 
 /**
- * Resolves what a selection hands off, or null when it cannot.
+ * Resolves what a selection can hand off: one target for a waypoint, the start
+ * and the end for a route or track, in that order.
  *
- * Returns the reason in `label` rather than throwing: the caller is a button
- * that needs to be disabled with an explanation, not an error path.
+ * An empty array when there is no geometry, so the caller can disable its
+ * control with a reason rather than handle an error.
  */
-export function wazeTargetFor(
+export function wazeTargetsFor(
   selection:
     | { kind: 'waypoint'; name: string; point: LatLon }
     | { kind: 'route' | 'track'; name: string; points: readonly LatLon[] },
-): WazeTarget | null {
+): WazeTarget[] {
   if (selection.kind === 'waypoint') {
-    return { label: selection.name, point: selection.point };
+    return [{ label: selection.name, point: selection.point }];
   }
 
+  const start = selection.points.at(0);
   const end = selection.points.at(-1);
-  if (end === undefined) return null;
+  if (start === undefined || end === undefined) return [];
 
-  return {
-    // "end point" appears in the label itself, so the user cannot mistake this
-    // for sending the whole route.
-    label: `${selection.name} — end point`,
-    point: { lat: end.lat, lon: end.lon },
-  };
+  return [
+    // Which end is in the label itself, so the user cannot mistake either for
+    // sending the whole route.
+    { label: 'Start', point: { lat: start.lat, lon: start.lon } },
+    { label: 'End', point: { lat: end.lat, lon: end.lon } },
+  ];
 }

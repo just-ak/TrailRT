@@ -9,6 +9,7 @@ import type {
   RegionMapEntry,
   RegionSize,
 } from '@shared/routing/results';
+import { buildPlacesOrWarn } from '../places/build';
 import { ServiceError } from '../services/errors';
 import type { TerrainStore } from '../terrain/terrainStore';
 import { mergeToolPresent, readLoadedRegion, type EmbeddedPaths } from './embedded';
@@ -198,6 +199,8 @@ export interface BuildSteps {
   merge: typeof mergeExtracts;
   build: typeof importRegion;
   mergeAvailable: (paths: EmbeddedPaths) => boolean;
+  /** Phase 10: POIs and place names from the same extract. Returns a warning or null. */
+  places: typeof buildPlacesOrWarn;
 }
 
 const REAL_STEPS: BuildSteps = {
@@ -206,6 +209,7 @@ const REAL_STEPS: BuildSteps = {
   merge: mergeExtracts,
   build: importRegion,
   mergeAvailable: mergeToolPresent,
+  places: buildPlacesOrWarn,
 };
 
 /**
@@ -308,6 +312,24 @@ export async function downloadAndBuild(
     });
 
     const names = chosen.map((region) => region.name);
+
+    // Before the extracts are deleted in `finally`: this is the only moment
+    // the POIs and place names exist on this machine. Design §5.1.
+    options.onProgress?.({
+      phase: 'building',
+      receivedBytes: null,
+      totalBytes: null,
+      stage: 'Reading places',
+    });
+    const placesWarning = await steps.places({
+      paths,
+      sources: extracts,
+      extract: source,
+      regions: chosen.map((region) => ({ name: region.name, rings: region.rings })),
+      regionName: joinRegionNames(names),
+      ...withSignal,
+    });
+
     let terrainWarning: string | null = null;
     if (options.terrain !== undefined && options.terrain !== null) {
       terrainWarning = await fetchTerrain(options.terrain, chosen, options);
@@ -320,6 +342,7 @@ export async function downloadAndBuild(
       regionName: joinRegionNames(names),
       regionIds: chosen.map((region) => region.id),
       terrainWarning,
+      placesWarning,
     };
   } finally {
     // Always, including on failure or cancellation: a partial download is

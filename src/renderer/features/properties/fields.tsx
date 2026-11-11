@@ -5,6 +5,15 @@ import type { ReactNode } from 'react';
 export const INPUT_CLASS =
   'w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-1 text-[13px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]';
 
+/**
+ * The input style at another width. Appending a width class to INPUT_CLASS
+ * does not work: Tailwind's stylesheet order decides between two width
+ * utilities, not their order on the element, and `w-full` wins.
+ */
+export function inputAt(width: string): string {
+  return INPUT_CLASS.replace('w-full', width);
+}
+
 export function Field({
   label,
   children,

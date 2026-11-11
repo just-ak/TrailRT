@@ -44,3 +44,15 @@ the Phase 4 spec rather than papered over.
 Turn-by-turn navigation along a planned multi-point route is out of scope for
 any external hand-off. If it is ever needed it requires a real routing provider
 plus in-app guidance, which is a different feature entirely.
+
+## Amendment (2026-11-10): start or end, behind an icon
+
+After owner feedback (Phase 7 Requirement 6), a route or track now offers
+**both** its start and its end. The start is for driving to where the route
+begins. The end is for heading straight to where it finishes. Each is a
+separate single-point hand-off, labelled "Navigate to start in Waze" or
+"Navigate to end in Waze", so the decision above still holds: one destination
+per link, and no whole-route action.
+
+The control is now a small icon that opens a two-item menu rather than a
+full-width button. The tooltip still states the one-destination limitation.

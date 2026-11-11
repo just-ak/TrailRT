@@ -19,6 +19,8 @@ instead.
 | [`phase-7-regions-profile/`](phase-7-regions-profile/)                 | Requirements, design and tasks. **Complete.**                                |
 | [`phase-8-windy-roads-routing/`](phase-8-windy-roads-routing/)         | Investigation complete; requirements written. Next to build.                 |
 | [`phase-9-garmin-compatibility/`](phase-9-garmin-compatibility/)       | Requirements only. Mostly investigation deliverables.                        |
+| [`phase-10-road-trip-planning/`](phase-10-road-trip-planning/)         | Requirements, design and tasks. **Complete**, including owner feedback (Reqs 14–17). |
+| [`phase-11-geotagged-photos/`](phase-11-geotagged-photos/)             | Requirements only. Photos from a linked folder, placed by their own GPS data. |
 
 Only the phases already built, and the next one, have a design and task
 breakdown. That is deliberate: section 20 of the source specification requires
@@ -75,6 +77,30 @@ build them, and why points per kilometre is not a twistiness measure. The twisty
 score is the windy-roads phase's scoring function, built early. See ADR 0018,
 which also amends ADR 0011's rule against country defaults.
 
+Phase 10 is road trip planning, from the owner's request. A trip gains an
+optional dated itinerary of stops, each with a duration in hours or days, shown
+as a calendar; and points of interest — hotels, fuel, food and the like — can be
+found along a route and added as stops. It needs only Phases 4 and 7, so it can
+be moved ahead of Phases 8 and 9 without rework. Its requirements record that
+the region pipeline deletes its OpenStreetMap extracts after building the
+graph, so offline POI search has to capture POIs during that build. It also
+carries offline postcode and place search, at the owner's request: postcodes
+from Ordnance Survey's open Code-Point Open data, and place and street names
+captured in the same region build. There is no online geocoder, even as an
+option. The owner asked for it to be built next, ahead of Phases 8 and 9, so it
+is, and it is complete. ADR 0019 records the decisions.
+
+Phase 11 is geotagged photos, from the owner's request. A folder of images is
+linked to a trip, never copied. Each photo is placed on the map from the
+location recorded in it. Selecting one shows it in a preview box in the
+bottom-left corner of the map. The app reads the folder and never writes to
+it. That is deliberately the opposite of the unused Phase 1 `attachments`
+model, which copies files into the app's own storage, so the design owes an
+ADR saying why both exist. It needs only Phases 1–3 and 10, so it can be moved
+ahead of Phases 8 and 9 without rework. Whether photos with no location should
+be placed by matching their time against a recorded track is left as an open
+question for the owner.
+
 ## Supporting documents
 
 - [`../../docs/adr/`](../../docs/adr/) — architectural decisions, including the
@@ -110,3 +136,4 @@ which also amends ADR 0011's rule against country defaults.
 | 0016 | Snapping reports points the graph cannot reach           |
 | 0017 | Per-leg alternatives, kept as shaping points; renumbering |
 | 0018 | UK county regions merged; terrain; twistiness; UK limits |
+| 0019 | Road trip itineraries; offline places, POIs and postcodes |

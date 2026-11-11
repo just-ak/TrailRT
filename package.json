@@ -35,14 +35,16 @@
     "verify:valhalla:remote": "TRAILRT_LIVE_VALHALLA=${TRAILRT_LIVE_VALHALLA:-https://valhalla1.openstreetmap.de} vitest run src/main/routing/valhalla.live.test.ts",
     "verify:geofabrik": "TRAILRT_LIVE_GEOFABRIK=1 vitest run src/main/routing/geofabrik.live.test.ts",
     "verify:shaping": "TRAILRT_LIVE_EMBEDDED=${TRAILRT_LIVE_EMBEDDED:-1} vitest run src/main/routing/shaping.live.test.ts",
-    "verify:regions": "TRAILRT_LIVE_REGIONS=1 vitest run src/main/routing/regions.live.test.ts"
+    "verify:regions": "TRAILRT_LIVE_REGIONS=1 vitest run src/main/routing/regions.live.test.ts",
+    "verify:search": "vitest run src/main/places/search.live.test.ts"
   },
   "dependencies": {
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.4",
     "fast-xml-parser": "^5.12.0",
     "fit-file-parser": "^6.2.7",
-    "jszip": "^3.10.2"
+    "jszip": "^3.10.2",
+    "lucide-react": "1.72.0"
   },
   "devDependencies": {
     "@electron/rebuild": "4.2.1",

@@ -7,6 +7,9 @@
     "src/shared/**/*",
     "test-data/**/*.ts"
   ],
+  // The seed builder runs the main process's ingest code under vitest, so it
+  // is type-checked with the main process, in tsconfig.node.json.
+  "exclude": ["tests/seed/**/*"],
   "compilerOptions": {
     // End-to-end specs run in Node, but `page.evaluate` callbacks are
     // serialised into the renderer, so their bodies need DOM types.

@@ -57,6 +57,9 @@ interface LibraryState {
 
 let expandedTimer: ReturnType<typeof setTimeout> | undefined;
 
+/** Default-expanded rows already opened once this session. */
+const offeredExpansion = new Set<string>();
+
 function persistExpanded(ids: Set<string>): void {
   clearTimeout(expandedTimer);
   expandedTimer = setTimeout(() => {
@@ -103,6 +106,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         }),
       );
       set({ tree, loading: false });
+      // Rows marked to open by default (a dated trip's days) open the first
+      // time they appear; collapsing one afterwards is respected.
+      const fresh: string[] = [];
+      const walk = (node: TreeNode): void => {
+        if (node.defaultExpanded === true && !offeredExpansion.has(node.id)) fresh.push(node.id);
+        for (const child of node.children) walk(child);
+      };
+      walk(tree);
+      if (fresh.length > 0) {
+        for (const id of fresh) offeredExpansion.add(id);
+        const next = new Set(get().expanded);
+        for (const id of fresh) next.add(id);
+        set({ expanded: next });
+      }
     } catch (cause) {
       set({
         loading: false,

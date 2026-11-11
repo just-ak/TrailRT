@@ -30,7 +30,11 @@ import {
 import { usePointRows } from "./usePointRows";
 
 /**
- * The point table: a drawer under the map listing one object's points.
+ * The point table: one object's points, listed under its profile chart.
+ *
+ * Rendered inside the profile drawer, which owns opening and closing it, so a
+ * point selected here is shaded on the chart and a click on the chart selects
+ * a row here.
  *
  * One component for routes and tracks over a normalised row model, because the
  * interaction is the same even though the storage is not. What differs is
@@ -167,7 +171,6 @@ interface Props {
 }
 
 export function PointTable({ ownerType, ownerId }: Props): ReactNode {
-  const closePointTable = useUiStore((s) => s.closePointTable);
   const showToast = useUiStore((s) => s.showToast);
   const setHighlightedPoints = useUiStore((s) => s.setHighlightedPoints);
   const highlighted = useUiStore((s) => s.highlightedPoints);
@@ -503,7 +506,7 @@ export function PointTable({ ownerType, ownerId }: Props): ReactNode {
   return (
     <section
       aria-label={`${isRoute ? "Route" : "Track"} points`}
-      className="flex h-[300px] shrink-0 flex-col border-t border-[var(--color-border-subtle)] bg-[var(--color-surface)]"
+      className="flex h-[260px] shrink-0 flex-col border-t border-[var(--color-border-subtle)] bg-[var(--color-surface)]"
     >
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border-subtle)] px-2 py-1.5">
         <h2 className="text-[12px] font-semibold text-[var(--color-text-primary)]">
@@ -568,7 +571,6 @@ export function PointTable({ ownerType, ownerId }: Props): ReactNode {
               ? `Delete ${selected.size} points`
               : "Delete point"}
           </Button>
-          <Button onClick={closePointTable}>Close</Button>
         </div>
       </header>
 

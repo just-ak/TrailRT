@@ -327,6 +327,21 @@ export function startStraightLineRoute(): void {
   useEditorStore.getState().startDrawRoute(tripId, 'chosen');
 }
 
+/**
+ * Starts a New Route with its first point at a place, as a search result's
+ * "Start a New Route here" does. Phase 10 Requirement 11.2. The route tool
+ * then carries on as if the user had clicked there.
+ */
+export async function startRouteAt(point: { lat: number; lon: number }): Promise<void> {
+  await startDrawingRoute();
+  const editor = useEditorStore.getState();
+  if (editor.mode === 'snapRoute') {
+    useSnapRoutingStore.getState().appendPoint({ lat: point.lat, lon: point.lon });
+  } else if (editor.mode === 'drawRoute') {
+    editor.appendPending({ lat: point.lat, lon: point.lon, ele: null, name: null, symbol: null, notes: null });
+  }
+}
+
 export function startPlacingWaypoint(): void {
   const tripId = currentTripId();
   if (tripId === null) {
@@ -897,7 +912,12 @@ export async function createRouteFromDrawnPoints(
 export async function matchRoads(
   ownerType: 'route' | 'track',
   ownerId: string,
-  options: { force?: boolean } = {},
+  /**
+   * `quiet` is for the automatic lookup on selection: no toast either way.
+   * A message on every click would be noise, and the panel shows the outcome
+   * inline, including a failure with a retry.
+   */
+  options: { force?: boolean; quiet?: boolean } = {},
 ): Promise<boolean> {
   const routing = useRoutingStore.getState();
   routing.setBusy(ownerType, ownerId, true);
@@ -911,8 +931,28 @@ export async function matchRoads(
       ),
     );
 
+    /*
+     * Provenance is kept through the invalidation. A match never changes it,
+     * and only a change of selection would otherwise reload it. Dropping it
+     * left the route with no control points: the map lost its unmatched legs,
+     * dragging the line could not add a shaping point, and the panel forgot
+     * the route was straight. With the lookup now automatic on selection, that
+     * happened every time a route was clicked.
+     */
+    const kept =
+      ownerType === 'route'
+        ? useRoutingStore.getState().provenance[ownerId]
+        : undefined;
     routing.invalidate(ownerType, ownerId);
+    if (kept !== undefined) {
+      useRoutingStore.setState((state) => ({
+        provenance: { ...state.provenance, [ownerId]: kept },
+      }));
+    }
     await Promise.all([
+      ...(ownerType === 'route'
+        ? [useRoutingStore.getState().loadProvenance(ownerId)]
+        : []),
       useRoutingStore.getState().loadAttributes(ownerType, ownerId),
       useRoutingStore.getState().loadProfile(ownerType, ownerId),
       useRoutingStore
@@ -920,7 +960,9 @@ export async function matchRoads(
         .loadDistribution(ownerType, ownerId, 'posted'),
     ]);
 
-    if (status.unmatchedPointCount > 0) {
+    if (options.quiet === true) {
+      // Reported inline by the panel instead.
+    } else if (status.unmatchedPointCount > 0) {
       toast(
         `Matched ${status.edgeCount} road segments. ${status.unmatchedPointCount.toLocaleString()} points matched no road and are counted as unknown.`,
       );
@@ -929,7 +971,7 @@ export async function matchRoads(
     }
     return true;
   } catch (cause) {
-    routingFailure(cause);
+    if (options.quiet !== true) routingFailure(cause);
     return false;
   } finally {
     useRoutingStore.getState().setBusy(ownerType, ownerId, false);
@@ -948,9 +990,9 @@ export async function clearRoadAttributes(
 /**
  * Hands a single point to Waze.
  *
- * One destination only, because that is all the Waze deep link accepts. The
- * label the caller built already says "end point" for a route or track, so the
- * user is not left thinking the whole route went across.
+ * One destination only, because that is all the Waze deep link accepts. For a
+ * route or track the caller offers the start and the end as separate items, each
+ * labelled, so the user is not left thinking the whole route went across.
  */
 export async function openInWaze(point: {
   lat: number;

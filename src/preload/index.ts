@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { CHANNELS, EVENTS, type MenuAction } from '@shared/ipc/channels';
-import type { TrailRtApi } from '@shared/ipc/api';
+import type { PostcodeProgress, TrailRtApi } from '@shared/ipc/api';
 import type { UndoState } from '@shared/domain/types';
 import type { ImportProgress } from '@shared/io/types';
 import type {
@@ -84,6 +84,41 @@ const api: TrailRtApi = {
     duplicate: (req) => call(CHANNELS.routes.duplicate, req),
     move: (req) => call(CHANNELS.routes.move, req),
     delete: (req) => call(CHANNELS.routes.delete, req),
+  },
+  places: {
+    status: () => call(CHANNELS.places.status),
+    rebuild: () => call(CHANNELS.places.rebuild),
+    along: (req) => call(CHANNELS.places.along, req),
+    cancel: (req) => call(CHANNELS.places.cancel, req),
+    detour: (req) => call(CHANNELS.places.detour, req),
+    get: (req) => call(CHANNELS.places.get, req),
+    addWaypoint: (req) => call(CHANNELS.places.addWaypoint, req),
+  },
+  search: {
+    query: (req) => call(CHANNELS.search.query, req),
+    status: () => call(CHANNELS.search.status),
+  },
+  postcodes: {
+    listing: () => call(CHANNELS.postcodes.listing),
+    update: () => call(CHANNELS.postcodes.update),
+    cancel: () => call(CHANNELS.postcodes.cancel),
+  },
+  itinerary: {
+    get: (req) => call(CHANNELS.itinerary.get, req),
+    create: (req) => call(CHANNELS.itinerary.create, req),
+    remove: (req) => call(CHANNELS.itinerary.remove, req),
+    update: (req) => call(CHANNELS.itinerary.update, req),
+    addStop: (req) => call(CHANNELS.itinerary.addStop, req),
+    removeStop: (req) => call(CHANNELS.itinerary.removeStop, req),
+    moveStop: (req) => call(CHANNELS.itinerary.moveStop, req),
+    updateStop: (req) => call(CHANNELS.itinerary.updateStop, req),
+    linkLeg: (req) => call(CHANNELS.itinerary.linkLeg, req),
+    setLegMode: (req) => call(CHANNELS.itinerary.setLegMode, req),
+    planAll: (req) => call(CHANNELS.itinerary.planAll, req),
+    addPoiStop: (req) => call(CHANNELS.itinerary.addPoiStop, req),
+    planLeg: (req) => call(CHANNELS.itinerary.planLeg, req),
+    planAround: (req) => call(CHANNELS.itinerary.planAround, req),
+    exportIcs: (req) => call(CHANNELS.itinerary.exportIcs, req),
   },
   waypoints: {
     listForTrip: (req) => call(CHANNELS.waypoints.listForTrip, req),
@@ -214,6 +249,8 @@ const api: TrailRtApi = {
       subscribe<[RegionProgressEvent]>(EVENTS.regionProgress, listener),
     onRegionJobProgress: (listener) =>
       subscribe<[RegionJobProgress]>(EVENTS.regionJobProgress, listener),
+    onPostcodeProgress: (listener) =>
+      subscribe<[PostcodeProgress]>(EVENTS.postcodeProgress, listener),
   },
 };
 

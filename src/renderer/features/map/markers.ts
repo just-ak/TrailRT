@@ -143,3 +143,43 @@ export function shapingIcon(colour: string, warning = false, busy = false): L.Di
       "></div>`,
   });
 }
+
+/**
+ * A point of interest from the place data. Square and dashed, so it is never
+ * mistaken for one of the trip's own waypoints, which are round.
+ */
+export function poiIcon(symbolId: string, focused: boolean): L.DivIcon {
+  const symbol = resolveSymbol(symbolId);
+  const size = focused ? 28 : 22;
+  return L.divIcon({
+    className: 'trailrt-poi-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="
+        width:${size}px;height:${size}px;
+        display:flex;align-items:center;justify-content:center;
+        border-radius:5px;
+        background:${symbol.colour};
+        border:2px dashed ${focused ? '#ffffff' : 'rgba(255,255,255,0.9)'};
+        box-shadow:0 1px 4px rgba(0,0,0,0.4);
+        color:#fff;font-size:${focused ? 14 : 12}px;line-height:1;
+      ">${escapeHtml(symbol.glyph)}</div>`,
+  });
+}
+
+/** Several points of interest that would overlap at this zoom. */
+export function poiClusterIcon(count: number): L.DivIcon {
+  const size = count < 10 ? 26 : count < 100 ? 32 : 38;
+  return L.divIcon({
+    className: 'trailrt-poi-cluster',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="
+        width:${size}px;height:${size}px;
+        display:flex;align-items:center;justify-content:center;
+        border-radius:6px;background:#475569;color:#fff;
+        border:2px dashed rgba(255,255,255,0.9);
+        font-size:12px;font-weight:600;
+      ">${count}</div>`,
+  });
+}

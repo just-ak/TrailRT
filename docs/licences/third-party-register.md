@@ -5,15 +5,15 @@ licensed GPL-3.0-or-later; every entry here must be inbound-compatible with that
 
 **GENERATED FILE** — regenerate with `npm run licences`.
 
-Generated 2026-11-09 from the installed dependency tree
-on Node v26.13.0. Packages examined: **372**. Incompatibilities: **0**.
+Generated 2026-11-11 from the installed dependency tree
+on Node v26.13.0. Packages examined: **373**. Incompatibilities: **0**.
 
 ## Licence distribution
 
 | Licence | Packages |
 | --- | --- |
 | MIT | 296 |
-| ISC | 26 |
+| ISC | 27 |
 | Apache-2.0 | 16 |
 | BSD-3-Clause | 11 |
 | BlueOak-1.0.0 | 6 |
@@ -38,7 +38,11 @@ Distributed to users, so these licences bind the combined work.
 | `better-sqlite3` | 13.0.3 | MIT |
 | `drizzle-orm` | 0.45.4 | Apache-2.0 |
 | `electron` | 45.2.3 | MIT |
+| `fast-xml-parser` | 5.12.0 | MIT |
+| `fit-file-parser` | 6.2.7 | MIT |
+| `jszip` | 3.10.2 | (MIT OR GPL-3.0-or-later) |
 | `leaflet` | 1.9.4 | BSD-2-Clause |
+| `lucide-react` | 1.72.0 | ISC |
 | `react` | 19.3.1 | MIT |
 | `react-dom` | 19.3.1 | MIT |
 | `zod` | 4.6.7 | MIT |
@@ -56,7 +60,7 @@ Distributed to users, so these licences bind the combined work.
 ## Full dependency list
 
 <details>
-<summary>All 372 packages</summary>
+<summary>All 373 packages</summary>
 
 | Package | Version | Licence |
 | --- | --- | --- |
@@ -303,6 +307,7 @@ Distributed to users, so these licences bind the combined work.
 | `lodash` | 4.18.1 | MIT |
 | `lowercase-keys` | 2.0.0 | MIT |
 | `lru-cache` | 5.1.1 | ISC |
+| `lucide-react` | 1.72.0 | ISC |
 | `magic-string` | 1.4.5 | MIT |
 | `magicast` | 0.5.5 | MIT |
 | `matcher` | 3.0.0 | MIT |
@@ -518,7 +523,7 @@ attribution, and the pinned tag in `scripts/build-valhalla.sh` plus the public
 repository identifies exactly what was built. The GPL-3.0 obligation is met by
 publishing TrailRT's source together with that pin.
 
-## Data downloaded at runtime (ADR 0018)
+## Data downloaded at runtime (ADRs 0018, 0019)
 
 Not code, and not shipped in the app: fetched at the user's choice, cached in
 their data directory, and attributed in the About window.
@@ -528,3 +533,14 @@ their data directory, and attributed in the About window.
 | Road graph extracts | Geofabrik (`download.geofabrik.de`) | © OpenStreetMap contributors, ODbL 1.0 |
 | UK boundary (`src/shared/geo/ukBoundary.ts`, 150 points, generated) | Geofabrik region index | © OpenStreetMap contributors, ODbL 1.0 |
 | Terrain elevation tiles | Terrain Tiles, AWS Registry of Open Data (`elevation-tiles-prod.s3.amazonaws.com`) | Open data, derived from SRTM (NASA, public domain) and other sources listed at <https://github.com/tilezen/joerd/blob/master/docs/attribution.md>. Attribution required; given in the About window |
+| Place data: POIs, place and street names, addressed buildings (`places.sqlite`) | Built on the user's machine from the same Geofabrik extracts, during the region build | © OpenStreetMap contributors, ODbL 1.0. A Derivative Database used on the user's own machine and not publicly distributed, so share-alike is not triggered; attribution shown with every search result and POI list, and in the About window |
+| Postcodes (`postcodes.sqlite`) | Ordnance Survey Code-Point Open (`api.os.uk`, one redirect to OS's Azure storage), fetched from Settings | Open Government Licence v3.0. Requires: "Contains OS data © Crown copyright and database right", "Contains Royal Mail data © Royal Mail copyright and database right", "Contains National Statistics data © Crown copyright and database right", with the release's year; shown beside postcode results and in the About window |
+
+### Test fixtures with third-party data (Phase 10)
+
+Committed to the repository, so distributed with the source.
+
+| Fixture | Source | Terms |
+| --- | --- | --- |
+| `test-data/places-excerpt/` (`buxton.geojsonseq`, `tiny.osm`) | Geofabrik Derbyshire extract, data of 2026-11-08 | © OpenStreetMap contributors. Published under ODbL 1.0, as a distributed Derivative Database must be; see its README |
+| `test-data/codepoint/` (279 postcodes, licence and metadata files) | Code-Point Open release 2026-11 | Open Government Licence v3.0, with the statements above; see its README |
