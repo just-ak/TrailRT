@@ -7,34 +7,99 @@ Start with the review — it records where the source specification is internall
 inconsistent or technically unachievable as written, and what was decided
 instead.
 
-| Document                                                         | Purpose                                                                      |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [`spec-review.md`](spec-review.md)                               | Findings against the source specification, plus open questions for the owner |
-| [`phase-1-foundation/`](phase-1-foundation/)                     | Requirements, design and tasks. **Complete.**                      |
-| [`phase-2-routes-waypoints/`](phase-2-routes-waypoints/)         | Requirements, design and tasks. **Complete.**                                       |
-| [`phase-3-tracks-import-export/`](phase-3-tracks-import-export/) | Requirements, design and tasks. **Complete.**                                |
-| [`phase-4-advanced-mapping/`](phase-4-advanced-mapping/)         | Requirements only. Unblocked; re-scoped with snap-to-road and speed profiling |
-| [`phase-5-windy-roads-routing/`](phase-5-windy-roads-routing/)   | Investigation complete; requirements written. Blocked on Phase 4.            |
-| [`phase-6-garmin-compatibility/`](phase-6-garmin-compatibility/) | Requirements only. Mostly investigation deliverables.                        |
+| Document                                                               | Purpose                                                                      |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| [`spec-review.md`](spec-review.md)                                     | Findings against the source specification, plus open questions for the owner |
+| [`phase-1-foundation/`](phase-1-foundation/)                           | Requirements, design and tasks. **Complete.**                                |
+| [`phase-2-routes-waypoints/`](phase-2-routes-waypoints/)               | Requirements, design and tasks. **Complete.**                                |
+| [`phase-3-tracks-import-export/`](phase-3-tracks-import-export/)       | Requirements, design and tasks. **Complete.**                                |
+| [`phase-4-advanced-mapping/`](phase-4-advanced-mapping/)               | Requirements, design and tasks. **Complete.**                                |
+| [`phase-5-object-point-management/`](phase-5-object-point-management/) | Requirements, design and tasks. **Complete.**                                |
+| [`phase-6-route-alternatives-shaping/`](phase-6-route-alternatives-shaping/) | Requirements, design and tasks. **Complete.**                            |
+| [`phase-7-regions-profile/`](phase-7-regions-profile/)                 | Requirements, design and tasks. **Complete.**                                |
+| [`phase-8-windy-roads-routing/`](phase-8-windy-roads-routing/)         | Investigation complete; requirements written. Next to build.                 |
+| [`phase-9-garmin-compatibility/`](phase-9-garmin-compatibility/)       | Requirements only. Mostly investigation deliverables.                        |
+| [`phase-10-road-trip-planning/`](phase-10-road-trip-planning/)         | Requirements, design and tasks. **Complete**, including owner feedback (Reqs 14–17). |
+| [`phase-11-geotagged-photos/`](phase-11-geotagged-photos/)             | Requirements only. Photos from a linked folder, placed by their own GPS data. |
 
-Only the built phases have a design and task breakdown. That is deliberate:
-section 20 of the source specification requires that later phases are not
-designed or implemented until the previous one is built and tested. Designing
-Phase 3's import subsystem before Phase 2 existed would have meant guessing at
-interfaces that had not yet settled.
+Only the phases already built, and the next one, have a design and task
+breakdown. That is deliberate: section 20 of the source specification requires
+that later phases are not designed or implemented until the previous one is
+built and tested. Designing Phase 3's import subsystem before Phase 2 existed
+would have meant guessing at interfaces that had not yet settled.
 
 Phase 4's requirements were revised after Phase 3 shipped, adding snap-to-road,
 a combined route profile, and speed identification with a percentage-of-route
 breakdown. The reasoning behind the awkward parts — why a posted speed limit and
 a recorded speed are never the same series, and why "unknown" has to be a
-visible band — is in ADR 0011.
+visible band — is in ADR 0011. The phase then grew past its own brief: the
+routing engine is now embedded in-process rather than called over the network,
+with one-press region download driven by the visible map area. ADR 0013 records
+that, and the arm64-only consequence.
 
-Phase 5 (windy-roads routing) was then inserted ahead of the Garmin work, which
-moved to Phase 6. That phase carries an extra document,
-[`investigation.md`](phase-5-windy-roads-routing/investigation.md), because its
+Windy-roads routing was inserted ahead of the Garmin work, then pushed back by
+object and point management, again by route alternatives and shaping, and once
+more by UK regions and the fuller profile. It is now Phase 8, and Garmin is
+Phase 9. It carries an extra document,
+[`investigation.md`](phase-8-windy-roads-routing/investigation.md), because its
 brief required a codebase assessment before any architectural decision — and
-that assessment found the feature's three stated prerequisites do not exist yet.
-ADR 0012 records what the finding settles and what it defers.
+that assessment found the feature's three stated prerequisites did not exist at
+the time. ADR 0012 records what the finding settles and what it defers.
+
+Phase 5 is object and point management: multi-select move and delete across the
+library, and a point table for a single route or track with the selected points
+highlighted on the map. It sits before windy roads on purpose — that phase
+generates routes with thousands of points, and inspecting or trimming them
+needed to exist first.
+
+Its investigation also surfaced a live bug, now fixed: no `track:*` command
+handler was registered, so `record()` silently discarded every track inverse
+and no track mutation could be undone at all. Task 1 registered the five
+handlers whose inverses are bounded and left `track:delete` and `track:join`
+honestly non-undoable. See ADR 0014.
+
+Phase 6 is route alternatives and shaping. When a route is made between two
+points, the routes the engine can offer between them are shown and one can be
+chosen. The route can then be shaped by dragging the line, dragging its
+points, and adding or removing points. It sits before windy roads because that
+phase's output is exactly what a user will want to compare and then adjust. Its
+investigation found a live defect: clicking the line of a snapped route inserts
+a raw vertex into the derived geometry, and the next re-snap discards it. It
+also found that Phase 4 Requirement 3.3's "re-snap only the affected legs" was
+never built, because leg boundaries are not stored. See ADR 0017.
+
+Phase 7 came from the owner's feedback on Phase 6. Map regions are picked from
+a UK county map, several at once. Following roads is the default way to make a
+route. Route profiles gain terrain altitude and a twisty score. A UK road with
+no posted limit is counted at the national default, labelled as assumed. The
+investigation measured why several regions need merging before Valhalla will
+build them, and why points per kilometre is not a twistiness measure. The twisty
+score is the windy-roads phase's scoring function, built early. See ADR 0018,
+which also amends ADR 0011's rule against country defaults.
+
+Phase 10 is road trip planning, from the owner's request. A trip gains an
+optional dated itinerary of stops, each with a duration in hours or days, shown
+as a calendar; and points of interest — hotels, fuel, food and the like — can be
+found along a route and added as stops. It needs only Phases 4 and 7, so it can
+be moved ahead of Phases 8 and 9 without rework. Its requirements record that
+the region pipeline deletes its OpenStreetMap extracts after building the
+graph, so offline POI search has to capture POIs during that build. It also
+carries offline postcode and place search, at the owner's request: postcodes
+from Ordnance Survey's open Code-Point Open data, and place and street names
+captured in the same region build. There is no online geocoder, even as an
+option. The owner asked for it to be built next, ahead of Phases 8 and 9, so it
+is, and it is complete. ADR 0019 records the decisions.
+
+Phase 11 is geotagged photos, from the owner's request. A folder of images is
+linked to a trip, never copied. Each photo is placed on the map from the
+location recorded in it. Selecting one shows it in a preview box in the
+bottom-left corner of the map. The app reads the folder and never writes to
+it. That is deliberately the opposite of the unused Phase 1 `attachments`
+model, which copies files into the app's own storage, so the design owes an
+ADR saying why both exist. It needs only Phases 1–3 and 10, so it can be moved
+ahead of Phases 8 and 9 without rework. Whether photos with no location should
+be placed by matching their time against a recorded track is left as an open
+question for the owner.
 
 ## Supporting documents
 
@@ -44,8 +109,10 @@ ADR 0012 records what the finding settles and what it defers.
   implementation status across all phases
 - [`../../docs/licences/third-party-register.md`](../../docs/licences/third-party-register.md)
   — dependency licence register, required by the GPL-3.0 policy
-- [`../steering/`](../steering/) — always-applied rules: toolchain, architecture
-  boundaries, licensing, progress tracking
+- [`../steering/`](../steering/) — always-applied rules: agent workflow,
+  toolchain, architecture boundaries, licensing, progress tracking. Kiro reads
+  them directly; Claude Code imports them through
+  [`../../CLAUDE.md`](../../CLAUDE.md)
 
 ## Decision index
 
@@ -63,3 +130,10 @@ ADR 0012 records what the finding settles and what it defers.
 | 0010 | Native module ABI and Electron binary delivery findings  |
 | 0011 | Posted limit and recorded speed are separate; snapping   |
 | 0012 | Windy-roads routing needs Phase 4; twistiness steers     |
+| 0013 | Valhalla embedded in-process; arm64-only distribution    |
+| 0014 | Batch undo, the track undo gap, point-level editing      |
+| 0015 | Test geography is a real loop around Buxton              |
+| 0016 | Snapping reports points the graph cannot reach           |
+| 0017 | Per-leg alternatives, kept as shaping points; renumbering |
+| 0018 | UK county regions merged; terrain; twistiness; UK limits |
+| 0019 | Road trip itineraries; offline places, POIs and postcodes |

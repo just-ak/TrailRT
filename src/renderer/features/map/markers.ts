@@ -95,3 +95,91 @@ export function pendingPointIcon(): L.DivIcon {
       "></div>`,
   });
 }
+
+/**
+ * A numbered via point on a snapped route: a place the route visits.
+ * Phase 6, Requirement 7.1.
+ */
+export function viaIcon(number: number, busy = false): L.DivIcon {
+  return L.divIcon({
+    className: 'trailrt-via-marker',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
+    html: `<div style="
+        width:18px;height:18px;
+        display:flex;align-items:center;justify-content:center;
+        border-radius:50%;
+        background:#ffffff;
+        border:2px solid #0f172a;
+        box-shadow:0 1px 3px rgba(0,0,0,0.35);
+        color:#0f172a;font-size:10px;font-weight:700;line-height:1;
+        opacity:${busy ? 0.5 : 1};
+        cursor:${busy ? 'progress' : 'grab'};
+      ">${Math.trunc(number)}</div>`,
+  });
+}
+
+/**
+ * A shaping point: only bends the route onto a road. Smaller, hollow and
+ * unnumbered so it cannot be mistaken for a place the route visits.
+ * `warning` rings it when the route turns back on itself there.
+ * Phase 6, Requirement 7.2 and design §5.
+ */
+export function shapingIcon(colour: string, warning = false, busy = false): L.DivIcon {
+  const size = warning ? 15 : 11;
+  return L.divIcon({
+    className: 'trailrt-shaping-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="
+        width:${size}px;height:${size}px;
+        box-sizing:border-box;
+        border-radius:50%;
+        background:rgba(255,255,255,0.9);
+        border:2.5px solid ${warning ? '#dc2626' : colour};
+        box-shadow:0 1px 2px rgba(0,0,0,0.3);
+        opacity:${busy ? 0.5 : 1};
+        cursor:${busy ? 'progress' : 'grab'};
+      "></div>`,
+  });
+}
+
+/**
+ * A point of interest from the place data. Square and dashed, so it is never
+ * mistaken for one of the trip's own waypoints, which are round.
+ */
+export function poiIcon(symbolId: string, focused: boolean): L.DivIcon {
+  const symbol = resolveSymbol(symbolId);
+  const size = focused ? 28 : 22;
+  return L.divIcon({
+    className: 'trailrt-poi-marker',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="
+        width:${size}px;height:${size}px;
+        display:flex;align-items:center;justify-content:center;
+        border-radius:5px;
+        background:${symbol.colour};
+        border:2px dashed ${focused ? '#ffffff' : 'rgba(255,255,255,0.9)'};
+        box-shadow:0 1px 4px rgba(0,0,0,0.4);
+        color:#fff;font-size:${focused ? 14 : 12}px;line-height:1;
+      ">${escapeHtml(symbol.glyph)}</div>`,
+  });
+}
+
+/** Several points of interest that would overlap at this zoom. */
+export function poiClusterIcon(count: number): L.DivIcon {
+  const size = count < 10 ? 26 : count < 100 ? 32 : 38;
+  return L.divIcon({
+    className: 'trailrt-poi-cluster',
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    html: `<div style="
+        width:${size}px;height:${size}px;
+        display:flex;align-items:center;justify-content:center;
+        border-radius:6px;background:#475569;color:#fff;
+        border:2px dashed rgba(255,255,255,0.9);
+        font-size:12px;font-weight:600;
+      ">${count}</div>`,
+  });
+}

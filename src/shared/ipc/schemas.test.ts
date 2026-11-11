@@ -14,6 +14,7 @@ import {
   tripSetStatusRequest,
   tripUpdateRequest,
 } from './schemas';
+import * as S from './schemas';
 
 const VALID_ID = '0190c3ae-1f2b-7c4d-9e8f-1a2b3c4d5e6f';
 
@@ -560,5 +561,82 @@ describe('importHistoryRequest', () => {
     expect(importHistoryRequest.safeParse({ limit: 100_000 }).success).toBe(
       false,
     );
+  });
+});
+
+describe('Phase 10 itinerary schemas', () => {
+  const tripId = '0190c3ae-1f2b-7c4d-9e8f-000000000001';
+  const id = '0190c3ae-1f2b-7c4d-9e8f-000000000002';
+
+  it('accepts a real date and time', () => {
+    expect(
+      S.itineraryCreateRequest.safeParse({ tripId, startDate: '2026-10-23', startTime: '16:00' }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['25:00', '2026-10-23'],
+    ['24:00', '2026-10-23'],
+    ['09:00', '2026-02-30'],
+    ['09:00', '23/10/2026'],
+  ])('refuses start time %s on %s', (startTime, startDate) => {
+    expect(S.itineraryCreateRequest.safeParse({ tripId, startDate, startTime }).success).toBe(false);
+  });
+
+  it('refuses a position past the 100-stop limit', () => {
+    expect(S.itineraryAddStopRequest.safeParse({ tripId, waypointId: id, index: 100 }).success).toBe(true);
+    expect(S.itineraryAddStopRequest.safeParse({ tripId, waypointId: id, index: 101 }).success).toBe(false);
+    expect(S.itineraryMoveStopRequest.safeParse({ id, toIndex: 100 }).success).toBe(false);
+  });
+
+  it('refuses a zero-day stay, an over-long hours stop and an empty update', () => {
+    expect(S.itineraryUpdateStopRequest.safeParse({ id, durationDays: 0 }).success).toBe(false);
+    expect(S.itineraryUpdateStopRequest.safeParse({ id, durationMinutes: 24 * 60 + 1 }).success).toBe(false);
+    expect(S.itineraryUpdateStopRequest.safeParse({ id }).success).toBe(false);
+    expect(S.itineraryUpdateRequest.safeParse({ tripId }).success).toBe(false);
+  });
+
+  it('refuses unknown fields', () => {
+    expect(S.itineraryLinkLegRequest.safeParse({ id, routeId: null, extra: 1 }).success).toBe(false);
+  });
+});
+
+describe('Phase 10 places and search schemas', () => {
+  const routeId = '0190c3ae-1f2b-7c4d-9e8f-000000000003';
+  const base = {
+    requestId: 'r1',
+    scope: { kind: 'route', routeId },
+    categories: ['fuel'],
+    widthM: 1000,
+    section: { kind: 'all' },
+  };
+
+  it('accepts a POI search and refuses widths, categories and sections it does not offer', () => {
+    expect(S.placesAlongRequest.safeParse(base).success).toBe(true);
+    expect(S.placesAlongRequest.safeParse({ ...base, widthM: 50_000 }).success).toBe(false);
+    expect(S.placesAlongRequest.safeParse({ ...base, categories: ['casino'] }).success).toBe(false);
+    expect(S.placesAlongRequest.safeParse({ ...base, categories: [] }).success).toBe(false);
+    expect(S.placesAlongRequest.safeParse({ ...base, section: { kind: 'near', lat: 53, lon: -2, radiusM: 5 } }).success).toBe(false);
+    expect(S.placesAlongRequest.safeParse({ ...base, scope: { kind: 'route', routeId: 'x' } }).success).toBe(false);
+  });
+
+  it('bounds search text and position', () => {
+    expect(S.searchQueryRequest.safeParse({ text: 'SK17 6AA', lat: 53.26, lon: -1.91 }).success).toBe(true);
+    expect(S.searchQueryRequest.safeParse({ text: 'x'.repeat(201), lat: 53.26, lon: -1.91 }).success).toBe(false);
+    expect(S.searchQueryRequest.safeParse({ text: 'Buxton', lat: 91, lon: 0 }).success).toBe(false);
+  });
+});
+
+describe('Phase 10 panel layout', () => {
+  const before = { libraryWidth: 280, propertiesWidth: 320, libraryVisible: true, propertiesVisible: true };
+
+  it('still accepts a layout saved before the bottom panel could be sized or hidden', () => {
+    expect(S.panelLayoutSchema.safeParse(before).success).toBe(true);
+  });
+
+  it('accepts the bottom panel’s height and visibility, and nothing else new', () => {
+    expect(S.panelLayoutSchema.safeParse({ ...before, drawerHeight: 300, drawerVisible: false }).success).toBe(true);
+    expect(S.panelLayoutSchema.safeParse({ ...before, drawerHeight: -1 }).success).toBe(false);
+    expect(S.panelLayoutSchema.safeParse({ ...before, topVisible: true }).success).toBe(false);
   });
 });

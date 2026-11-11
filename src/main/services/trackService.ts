@@ -3,12 +3,21 @@ import type {
   Bounds,
   Track,
   TrackGeometry,
+  TrackPoint,
+  TrackPointsPage,
   TrackSegment,
   TrackStats,
   TrackWithPoints,
 } from '@shared/domain/types';
 import { boundingBox, elevationStats, pathDistance } from '@shared/geo/distance';
 import { packPolyline, unpackPolyline } from '@shared/geo/packed';
+import {
+  breaksFromLengths,
+  breaksFromSegments,
+  insertAtIndices,
+  removeAtIndices,
+  splitAtBreaks,
+} from '@shared/geo/segments';
 import { simplify, toleranceForZoom } from '@shared/geo/simplify';
 import type { ParsedTrack } from '@shared/io/types';
 import type { Db } from '../db/client';
@@ -33,6 +42,16 @@ import type { Mutation } from './folderService';
 
 /** The zoom the render cache is built for. Low enough to be a big saving. */
 const CACHE_ZOOM = 12;
+
+/**
+ * How many removed points one undo entry will carry.
+ *
+ * Matched to the route point cap, so the two models agree on what "a bounded
+ * edit" means. Beyond it the deletion still happens but is reported as not
+ * undoable, and the retained original file is the way back — the same bargain
+ * `simplifyTrack` makes.
+ */
+export const MAX_UNDOABLE_POINT_EDITS = 10_000;
 
 function assertTripExists(db: Db, tripId: string): void {
   if (tripRepo.findTrip(db, tripId) === null) throw notFound('That trip');
@@ -535,7 +554,20 @@ export function join(
   };
 }
 
-/** Deletes a contiguous run of points, counted across all segments. */
+/**
+ * Deletes a contiguous run of points, counted across all segments.
+ *
+ * Deliberately **collapses the track to one segment**. That is right for what
+ * this operation is — trimming a bad tail or head off a recording — and wrong
+ * for picking scattered samples out of the middle, which is what
+ * `deletePointsAt` exists for. Both behaviours are wanted; one function cannot
+ * have both.
+ *
+ * The inverse carries the pre-delete segment breaks as well as the removed
+ * points, so undoing a trim puts the structure back rather than silently
+ * leaving the collapse behind. Breaks are one integer per segment, so this
+ * stays bounded by the number of segments rather than the number of points.
+ */
 export function deletePointRange(
   db: Db,
   id: string,
@@ -556,6 +588,7 @@ export function deletePointRange(
 
   const removed = all.slice(start, end + 1);
   const kept = [...all.slice(0, start), ...all.slice(end + 1)];
+  const breaks = breaksFromSegments(current.segments);
 
   return {
     result: setSegments(db, id, [{ points: kept }]),
@@ -563,7 +596,7 @@ export function deletePointRange(
     // real inverse — unlike a whole-track snapshot.
     inverse: {
       kind: 'track:restorePoints',
-      payload: { id, index: start, points: removed },
+      payload: { id, index: start, points: removed, breaks },
     },
   };
 }
@@ -574,7 +607,9 @@ export function restorePoints(
   input: {
     id: string;
     index: number;
-    points: readonly { lat: number; lon: number; ele: number | null; time: number | null }[];
+    points: readonly TrackPoint[];
+    /** Segment breaks to restore. Absent means a single segment. */
+    breaks?: readonly number[] | undefined;
   },
 ): Mutation<TrackWithPoints> {
   const current = get(db, input.id);
@@ -586,8 +621,13 @@ export function restorePoints(
     ...all.slice(index),
   ];
 
+  const segments =
+    input.breaks === undefined
+      ? [{ points: restored }]
+      : splitAtBreaks(restored, input.breaks).map((points) => ({ points }));
+
   return {
-    result: setSegments(db, input.id, [{ points: restored }]),
+    result: setSegments(db, input.id, segments),
     inverse: {
       kind: 'track:deleteRange',
       payload: {
@@ -596,6 +636,206 @@ export function restorePoints(
         to: index + input.points.length - 1,
       },
     },
+  };
+}
+
+/**
+ * Deletes points at arbitrary, possibly non-contiguous, flat indices.
+ *
+ * The operation the point table needs: a GPS spike is two or three scattered
+ * samples, not a run. Segment structure survives, because the filtering
+ * happens per segment rather than on a flattened array — see
+ * `shared/geo/segments.ts` for why that distinction matters.
+ *
+ * The inverse carries the removed points with the indices they came from, so
+ * it is bounded by **how many were deleted** rather than by the size of the
+ * track. Above `MAX_UNDOABLE_POINT_EDITS` it reports 'none' and the caller
+ * says so before acting, following `simplifyTrack`'s precedent.
+ */
+export function deletePointsAt(
+  db: Db,
+  id: string,
+  indices: readonly number[],
+): Mutation<TrackWithPoints> {
+  const current = get(db, id);
+  const all = current.segments.flatMap((s) => s.points);
+
+  const wanted = [...new Set(indices)]
+    .filter((index) => Number.isInteger(index) && index >= 0 && index < all.length)
+    .toSorted((a, b) => a - b);
+
+  if (wanted.length === 0) {
+    throw new ServiceError(
+      'INVALID_REQUEST',
+      'None of those points exist in this track.',
+    );
+  }
+
+  if (all.length - wanted.length < 1) {
+    throw new ServiceError(
+      'INVALID_REQUEST',
+      'That would remove every point. Delete the track instead.',
+    );
+  }
+
+  const removed = wanted.map((index) => {
+    const point = all[index];
+    if (point === undefined) {
+      throw new ServiceError(
+        'UNKNOWN',
+        'A point index could not be resolved, so nothing was deleted.',
+        `index ${index} of ${all.length}`,
+      );
+    }
+    return { index, ...point };
+  });
+
+  const kept = removeAtIndices(current.segments, wanted);
+  const breaks = breaksFromSegments(current.segments);
+
+  return {
+    result: setSegments(db, id, kept.map((points) => ({ points }))),
+    inverse:
+      wanted.length > MAX_UNDOABLE_POINT_EDITS
+        ? { kind: 'none', payload: {} }
+        : {
+            kind: 'track:restorePointsAt',
+            payload: { id, points: removed, breaks },
+          },
+  };
+}
+
+/** Puts points back at the flat indices they came from. Reached through undo. */
+export function restorePointsAt(
+  db: Db,
+  input: {
+    id: string;
+    points: readonly { index: number; lat: number; lon: number; ele: number | null; time: number | null }[];
+    breaks: readonly number[];
+  },
+): Mutation<TrackWithPoints> {
+  const current = get(db, input.id);
+  const all = current.segments.flatMap((s) => s.points);
+
+  const entries = input.points
+    .toSorted((a, b) => a.index - b.index)
+    .map(({ index, ...point }) => ({ index, point }));
+
+  const restored = insertAtIndices(all, entries);
+  const segments = splitAtBreaks(restored, input.breaks).map((points) => ({
+    points,
+  }));
+
+  return {
+    result: setSegments(db, input.id, segments),
+    inverse: {
+      kind: 'track:deletePointsAt',
+      payload: { id: input.id, indices: entries.map((e) => e.index) },
+    },
+  };
+}
+
+/**
+ * Corrects one recorded sample.
+ *
+ * Editing measured data is a real decision, not an obvious one — see the open
+ * question in the Phase 5 requirements. What makes it defensible is that the
+ * imported original is retained, so the recording as it arrived is always
+ * recoverable. The UI says as much where this is offered.
+ *
+ * Segment structure is untouched: this replaces a point in place.
+ */
+export function editPointAt(
+  db: Db,
+  input: {
+    id: string;
+    index: number;
+    lat: number;
+    lon: number;
+    ele: number | null;
+    time: number | null;
+  },
+): Mutation<TrackWithPoints> {
+  const current = get(db, input.id);
+  const lengths = current.segments.map((s) => s.points.length);
+  const all = current.segments.flatMap((s) => s.points);
+  const before = all[input.index];
+
+  if (before === undefined) {
+    throw new ServiceError(
+      'INVALID_REQUEST',
+      `That track has ${all.length} point${all.length === 1 ? '' : 's'}, so point ${input.index + 1} does not exist.`,
+    );
+  }
+
+  const breaks = breaksFromLengths(lengths);
+  const edited = all.map((point, index) =>
+    index === input.index
+      ? {
+          lat: input.lat,
+          lon: input.lon,
+          ele: input.ele,
+          time: input.time,
+        }
+      : point,
+  );
+
+  return {
+    result: setSegments(
+      db,
+      input.id,
+      splitAtBreaks(edited, breaks).map((points) => ({ points })),
+    ),
+    // One point either way, so the inverse is as cheap as it gets.
+    inverse: {
+      kind: 'track:editPoint',
+      payload: {
+        id: input.id,
+        index: input.index,
+        lat: before.lat,
+        lon: before.lon,
+        ele: before.ele,
+        time: before.time,
+      },
+    },
+  };
+}
+
+/**
+ * A window of a track's points, plus what the table needs around it.
+ *
+ * A 200,000-point track cannot be sent to the renderer whole for a table that
+ * shows forty rows at a time. `total` lets the table size its scrollbar
+ * without holding the data, and `segmentBreaks` is **global** rather than
+ * window-local because the renderer cannot infer a break from a window that
+ * does not contain one.
+ *
+ * Reads exact points, never the render cache: an index from a simplified
+ * payload would not identify the sample the user is looking at.
+ */
+export function pointsPage(
+  db: Db,
+  input: { id: string; offset: number; limit: number },
+): TrackPointsPage {
+  requireTrack(db, input.id);
+
+  const lengths = repo.segmentLengths(db, input.id);
+  const total = lengths.reduce((sum, length) => sum + length, 0);
+  const offset = Math.max(0, Math.min(input.offset, Math.max(0, total - 1)));
+
+  const rows = repo.listTrackPointsPage(db, input.id, offset, input.limit);
+
+  return {
+    trackId: input.id,
+    total,
+    offset,
+    segmentBreaks: breaksFromLengths(lengths),
+    points: rows.map((row) => ({
+      lat: row.lat,
+      lon: row.lon,
+      ele: row.eleM,
+      time: row.recordedAt,
+    })),
   };
 }
 

@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { ArrowLeftRight, ChartArea, Download } from "lucide-react";
 import type { TrackWithPoints, UnitSystem } from "@shared/domain/types";
 import { ROUTE_COLOURS } from "@shared/domain/symbols";
 import {
@@ -11,8 +12,10 @@ import {
 import * as actions from "../../lib/actions";
 import { api, callOr } from "../../lib/client";
 import { Button } from "../../components/Button";
-import { Field, INPUT_CLASS, ReadOnly } from "./fields";
-import { RoadDataSection } from "./RoadDataSection";
+import { Dialog } from "../../components/Dialog";
+import { IconButton, InfoIcon } from "../../components/IconButton";
+import { Field, INPUT_CLASS, inputAt, ReadOnly } from "./fields";
+import { RoadDetails, RoadSummary } from "./roadData";
 import { WazeButton } from "./WazeButton";
 
 /**
@@ -130,7 +133,7 @@ function TrimSection({ track }: { track: TrackWithPoints }): ReactNode {
           max={Math.max(0, total - 1)}
           value={from}
           onChange={(event) => setFrom(Number(event.target.value))}
-          className={`${INPUT_CLASS} w-24`}
+          className={inputAt('w-24')}
         />
         <span className="text-[12px] text-[var(--color-text-muted)]">to</span>
         <input
@@ -140,7 +143,7 @@ function TrimSection({ track }: { track: TrackWithPoints }): ReactNode {
           max={Math.max(0, total - 1)}
           value={to}
           onChange={(event) => setTo(Number(event.target.value))}
-          className={`${INPUT_CLASS} w-24`}
+          className={inputAt('w-24')}
         />
       </div>
       <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
@@ -222,6 +225,9 @@ export function TrackProperties({
   units: UnitSystem;
 }): ReactNode {
   const [name, setName] = useState(track.name);
+  const [roadDetailsOpen, setRoadDetailsOpen] = useState(false);
+  // Stable, because the dialog re-opens itself whenever its onClose changes.
+  const closeRoadDetails = useCallback(() => setRoadDetailsOpen(false), []);
 
   const all = track.segments.flatMap((segment) => segment.points);
   const first = all.at(0) ?? null;
@@ -377,43 +383,60 @@ export function TrackProperties({
         <ReadOnly value={formatTimestamp(track.updatedAt)} />
       </Field>
 
-      <RoadDataSection
-        ownerType="track"
-        ownerId={track.id}
-        units={units}
-        pointCount={track.pointCount}
-      />
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button onClick={() => void actions.reverseTrack(track.id)}>
-          Reverse
-        </Button>
-        <Button onClick={() => actions.openProfile("track", track.id)}>
-          Profile
-        </Button>
-        <WazeButton
-          selection={{
-            kind: "track",
-            name: track.name,
-            points: track.segments.flatMap((segment) =>
-              segment.points.map((p) => ({ lat: p.lat, lon: p.lon })),
-            ),
-          }}
+      <div className="mt-4">
+        <RoadSummary
+          ownerType="track"
+          ownerId={track.id}
+          units={units}
+          pointCount={track.pointCount}
         />
-        <Button
-          onClick={() =>
-            actions.openExportDialog({ kind: "track", id: track.id })
-          }
-        >
-          Export…
-        </Button>
-        <Button
-          variant="danger"
-          onClick={() => void actions.deleteTrack(track.id)}
-        >
-          Delete
-        </Button>
       </div>
+
+      {/* Delete is in the library's context menu, with its confirmation. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <IconButton hint="Profile and points" onClick={() => actions.openProfile("track", track.id)}>
+          <ChartArea size={16} aria-hidden="true" />
+        </IconButton>
+        <IconButton hint="Reverse the track" onClick={() => void actions.reverseTrack(track.id)}>
+          <ArrowLeftRight size={16} aria-hidden="true" />
+        </IconButton>
+        <IconButton hint="Export the track" onClick={() => actions.openExportDialog({ kind: "track", id: track.id })}>
+          <Download size={16} aria-hidden="true" />
+        </IconButton>
+        <div className="ml-auto flex items-center gap-1.5">
+          <WazeButton
+            selection={{
+              kind: "track",
+              name: track.name,
+              points: track.segments.flatMap((segment) =>
+                segment.points.map((p) => ({ lat: p.lat, lon: p.lon })),
+              ),
+            }}
+          />
+          <IconButton
+            hint="Road data details"
+            onClick={() => setRoadDetailsOpen(true)}
+          >
+            <InfoIcon />
+          </IconButton>
+        </div>
+      </div>
+
+      {roadDetailsOpen && (
+        <Dialog
+          title={`${track.name} — road data`}
+          onClose={closeRoadDetails}
+          width={480}
+          footer={<Button onClick={closeRoadDetails}>Done</Button>}
+        >
+          <RoadDetails
+            ownerType="track"
+            ownerId={track.id}
+            units={units}
+            pointCount={track.pointCount}
+          />
+        </Dialog>
+      )}
     </div>
   );
 }

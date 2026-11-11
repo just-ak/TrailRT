@@ -217,6 +217,9 @@ export function moveToTrip(
  */
 export function remove(db: Db, id: string): Mutation<{ id: string }> {
   const snapshot = get(db, id);
+  // Read before the row goes: imported extras and the itinerary's
+  // "planned by" marker live here, and an undo must not drop them.
+  const metadata = repo.readMetadata(db, id);
   repo.deleteRoute(db, id);
 
   return {
@@ -230,6 +233,7 @@ export function remove(db: Db, id: string): Mutation<{ id: string }> {
         colour: snapshot.colour,
         source: snapshot.source,
         points: snapshot.points,
+        metadata,
       },
     },
   };
@@ -245,6 +249,7 @@ export function restore(
     colour: string | null;
     source: 'user' | 'import';
     points: readonly RoutePoint[];
+    metadata?: Record<string, unknown> | undefined;
   },
 ): Mutation<Route> {
   if (repo.findRoute(db, input.id) !== null) {

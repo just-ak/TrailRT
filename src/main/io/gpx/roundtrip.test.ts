@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { readGpx } from './read';
@@ -293,5 +293,100 @@ describe('detectFormat', () => {
     const result = detectFormat('notes.txt', bytes('just some words'));
     expect(result.kind).toBe('unknown');
     if (result.kind === 'unknown') expect(result.reason).toMatch(/gpx/);
+  });
+});
+
+/**
+ * The Buxton loop, which is the only fixture west of Greenwich.
+ *
+ * Every other fixture here sits in the Alps, so every longitude is positive —
+ * and a positive longitude round-trips through a dropped minus sign unchanged.
+ * These assertions are the ones that would catch it, in the parser, the writer
+ * and the format sniffer alike.
+ *
+ * Generated rather than committed, from `test-data/places.json`, so the shared
+ * test geography and this fixture cannot drift apart. Skipped with a reason if
+ * `npm run fixtures` has not been run.
+ */
+describe('GPX round trip, west of Greenwich', () => {
+  const path = join(
+    process.cwd(),
+    'test-data/generated/peak-district-loop.gpx',
+  );
+  const present = existsSync(path);
+
+  it.runIf(present)('preserves negative longitudes exactly', () => {
+    const original = readGpx(readFileSync(path, 'utf8'), 'peak-district-loop.gpx');
+
+    // Four corners as waypoints, the square as a route, one track segment per
+    // leg of the ride.
+    expect(original.waypoints.map((w) => w.name)).toEqual([
+      'Buxton',
+      'Macclesfield',
+      'Leek',
+      'Ashbourne',
+    ]);
+    expect(original.routes[0]?.points).toHaveLength(5);
+    expect(original.tracks[0]?.segments).toHaveLength(4);
+
+    // Every longitude negative on the way in.
+    const lons = [
+      ...original.waypoints.map((w) => w.lon),
+      ...(original.routes[0]?.points ?? []).map((p) => p.lon),
+      ...(original.tracks[0]?.segments ?? []).flatMap((s) =>
+        s.points.map((p) => p.lon),
+      ),
+    ];
+    expect(lons.length).toBeGreaterThan(20);
+    expect(lons.every((lon) => lon < 0)).toBe(true);
+
+    const written = writeGpx({
+      name: 'Peak District round trip',
+      waypoints: original.waypoints.map((w) => ({
+        name: w.name,
+        lat: w.lat,
+        lon: w.lon,
+        eleM: w.ele,
+        description: w.description,
+        symbol: w.symbol,
+        notes: w.notes,
+        time: w.time,
+      })),
+      routes: original.routes.map((r) => ({ name: r.name, points: r.points })),
+      tracks: original.tracks.map((t) => ({
+        name: t.name,
+        segments: t.segments.map((s) => ({
+          points: s.points.map((p) => ({
+            lat: p.lat,
+            lon: p.lon,
+            ele: p.ele,
+            time: p.time,
+          })),
+        })),
+      })),
+    });
+
+    const reread = readGpx(written, 'written.gpx');
+
+    // Exact, not close: GPX is text and can carry a double verbatim.
+    expect(reread.waypoints.map((w) => [w.lat, w.lon])).toEqual(
+      original.waypoints.map((w) => [w.lat, w.lon]),
+    );
+    expect(reread.routes[0]?.points.map((p) => p.lon)).toEqual(
+      original.routes[0]?.points.map((p) => p.lon),
+    );
+    // Segment structure survives, so the four legs stay four legs.
+    expect(reread.tracks[0]?.segments).toHaveLength(4);
+    expect(
+      reread.tracks[0]?.segments.map((s) => s.points.map((p) => p.lon)),
+    ).toEqual(original.tracks[0]?.segments.map((s) => s.points.map((p) => p.lon)));
+  });
+
+  it.runIf(present)('sniffs it as GPX despite the leading comment', () => {
+    // The generator writes a provenance comment before the root element, which
+    // a naive sniffer that checks only the first tag would miss.
+    expect(
+      detectFormat('peak-district-loop.gpx', bytes(readFileSync(path, 'utf8'))),
+    ).toMatchObject({ kind: 'supported', format: 'gpx' });
   });
 });

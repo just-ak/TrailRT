@@ -24,9 +24,29 @@ export const THIRD_PARTY_LICENCES: readonly LicenceEntry[] = [
     "licence": "MIT"
   },
   {
+    "name": "fast-xml-parser",
+    "version": "5.12.0",
+    "licence": "MIT"
+  },
+  {
+    "name": "fit-file-parser",
+    "version": "6.2.7",
+    "licence": "MIT"
+  },
+  {
+    "name": "jszip",
+    "version": "3.10.2",
+    "licence": "(MIT OR GPL-3.0-or-later)"
+  },
+  {
     "name": "leaflet",
     "version": "1.9.4",
     "licence": "BSD-2-Clause"
+  },
+  {
+    "name": "lucide-react",
+    "version": "1.72.0",
+    "licence": "ISC"
   },
   {
     "name": "react",

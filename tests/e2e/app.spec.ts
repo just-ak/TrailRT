@@ -83,16 +83,30 @@ test.describe('security posture', () => {
     expect(api.namespaces).toEqual([
       'app',
       'backup',
+      // Phase 5. Multi-object move and delete, kept out of the per-kind
+      // namespaces because a batch is one undo entry rather than N.
+      'batch',
       'events',
       'exporting',
       'folders',
       'geometry',
       'importing',
+      // Phase 10. A trip's dated plan.
+      'itinerary',
       'library',
+      // Phase 10. Points of interest from local place data. Its road-detour
+      // estimate goes through the routing provider, under routing's consent.
+      'places',
+      // Phase 10. Code-Point Open. `update` downloads it from Ordnance Survey,
+      // only when the user presses Download in Settings; nothing else here
+      // touches the network.
+      'postcodes',
       'routes',
-      // Phase 4. The only namespace that can cause an outbound request, and
-      // every call in it is gated on an explicitly configured, consented host.
+      // Phase 4. Every call that sends route geometry out is gated on an
+      // explicitly configured, consented host.
       'routing',
+      // Phase 10. Postcode and place search, answered on this machine only.
+      'search',
       'settings',
       'tracks',
       'trips',

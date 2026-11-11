@@ -7,6 +7,7 @@ import {
   formatElevation,
   formatSpeed,
 } from "@shared/geo/units";
+import { levelFor, LEVELS, type TwistinessLevel } from "@shared/geo/twistiness";
 import type { RoadClass } from "@shared/routing/RoutingProvider";
 import type { Profile } from "@shared/routing/results";
 
@@ -70,6 +71,30 @@ function speedColour(mps: number): string {
   return SPEED_STOPS.find((stop) => mps < stop.maxMps)?.colour ?? "#b91c1c";
 }
 
+/**
+ * Twistiness colours, a sequential ramp from pale to hot.
+ *
+ * Sequential because the levels are ordered: a reader should see "the middle
+ * third is the twisty bit" without consulting the key.
+ */
+const TWIST_COLOURS: Record<TwistinessLevel, string> = {
+  straight: "#e2e8f0",
+  gentle: "#fde68a",
+  winding: "#fbbf24",
+  twisty: "#f97316",
+  "very-twisty": "#dc2626",
+};
+
+function speedFill(value: unknown): string {
+  return typeof value === "number" ? speedColour(value) : "#94a3b8";
+}
+
+/** Stable default, so an absent selection does not change identity per render. */
+const NO_RANGES: readonly { startM: number; endM: number }[] = [];
+
+/** The hatch drawn over assumed speed limits. Defined once per chart. */
+const ASSUMED_PATTERN_ID = "profile-assumed-hatch";
+
 function AbsentBand({
   label,
   reason,
@@ -93,6 +118,10 @@ export function ProfileChart({
   units,
   hoverDistanceM,
   onHover,
+  onDownloadTerrain,
+  terrainBusy = false,
+  selectedRanges = NO_RANGES,
+  onSelect,
 }: {
   profile: Profile;
   units: UnitSystem;
@@ -100,6 +129,19 @@ export function ProfileChart({
   hoverDistanceM: number | null;
   /** Null when the pointer leaves. Drives the map's cursor marker. */
   onHover: (distanceM: number | null) => void;
+  /** Offered when terrain heights would be available after a download. */
+  onDownloadTerrain?: () => void;
+  terrainBusy?: boolean;
+  /**
+   * Distance ranges of the points selected in the point table, shaded on the
+   * chart so the two views agree on what is selected.
+   */
+  selectedRanges?: readonly { startM: number; endM: number }[];
+  /** A click on the chart, at a distance. Selects the nearest point. */
+  onSelect?: (
+    distanceM: number,
+    modifiers: { metaKey: boolean; shiftKey: boolean },
+  ) => void;
 }): ReactNode {
   const total = profile.totalDistanceM;
 
@@ -115,6 +157,7 @@ export function ProfileChart({
   );
 
   const elevation = profile.elevation;
+  const terrain = profile.elevationSource === "terrain";
 
   /*
    * The elevation path.
@@ -154,25 +197,58 @@ export function ProfileChart({
 
   const bands: {
     label: string;
-    spans: ProfileSpan<unknown>[];
-    colour: (value: unknown) => string;
+    layers: {
+      spans: ProfileSpan<unknown>[];
+      colour: (value: unknown) => string;
+      /** Drawn faded and hatched: inferred, not in the data. ADR 0018. */
+      assumed: boolean;
+    }[];
   }[] = [];
-  if (profile.postedSpeedSpans !== null) {
+  if (profile.postedSpeedSpans !== null || profile.assumedSpeedSpans !== null) {
     bands.push({
-      label: "Posted speed limit",
-      spans: profile.postedSpeedSpans,
-      colour: (value) =>
-        typeof value === "number" ? speedColour(value) : "#94a3b8",
+      label:
+        profile.assumedSpeedSpans === null
+          ? "Posted speed limit"
+          : "Speed limit (hatched: assumed UK default, none posted)",
+      layers: [
+        { spans: profile.postedSpeedSpans ?? [], colour: speedFill, assumed: false },
+        { spans: profile.assumedSpeedSpans ?? [], colour: speedFill, assumed: true },
+      ],
     });
   }
   if (profile.roadClassSpans !== null) {
     bands.push({
       label: "Road class",
-      spans: profile.roadClassSpans,
-      colour: (value) =>
-        typeof value === "string"
-          ? (ROAD_CLASS_COLOURS[value as RoadClass] ?? "#94a3b8")
-          : "#94a3b8",
+      layers: [
+        {
+          spans: profile.roadClassSpans,
+          colour: (value) =>
+            typeof value === "string"
+              ? (ROAD_CLASS_COLOURS[value as RoadClass] ?? "#94a3b8")
+              : "#94a3b8",
+          assumed: false,
+        },
+      ],
+    });
+  }
+  const twist = profile.twistiness;
+  if (twist !== null) {
+    bands.push({
+      label: "Twistiness, per kilometre",
+      layers: [
+        {
+          spans: twist.windows.map((window) => ({
+            startM: (window.startM / twist.lengthM) * total,
+            endM: (window.endM / twist.lengthM) * total,
+            value: window.score,
+          })),
+          colour: (value) =>
+            typeof value === "number"
+              ? TWIST_COLOURS[levelFor(value).level]
+              : "#94a3b8",
+          assumed: false,
+        },
+      ],
     });
   }
 
@@ -182,19 +258,23 @@ export function ProfileChart({
     bands.length * (BAND_HEIGHT + BAND_GAP + 12) +
     8;
 
-  const handlePointer = (
+  /** The distance under the pointer, or null outside the plot. */
+  const distanceAt = (
     event: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>,
-  ): void => {
+  ): number | null => {
     const rect = event.currentTarget.getBoundingClientRect();
     // The SVG scales to its container, so the client x has to be mapped back
     // through the viewBox rather than used directly.
     const ratio = (event.clientX - rect.left) / rect.width;
     const svgX = ratio * WIDTH;
-    if (svgX < PAD_LEFT || svgX > WIDTH - PAD_RIGHT) {
-      onHover(null);
-      return;
-    }
-    onHover(((svgX - PAD_LEFT) / PLOT_WIDTH) * total);
+    if (svgX < PAD_LEFT || svgX > WIDTH - PAD_RIGHT) return null;
+    return ((svgX - PAD_LEFT) / PLOT_WIDTH) * total;
+  };
+
+  const handlePointer = (
+    event: React.PointerEvent<SVGSVGElement> | React.MouseEvent<SVGSVGElement>,
+  ): void => {
+    onHover(distanceAt(event));
   };
 
   return (
@@ -207,12 +287,33 @@ export function ProfileChart({
         aria-label={
           elevation === null
             ? "Route profile. No elevation data."
-            : `Route profile over ${formatDistance(total, units)}. Elevation from ${formatElevation(elevation.minM, units)} to ${formatElevation(elevation.maxM, units)}.`
+            : `Route profile over ${formatDistance(total, units)}. ${terrain ? "Terrain elevation, modelled," : "Elevation"} from ${formatElevation(elevation.minM, units)} to ${formatElevation(elevation.maxM, units)}.`
         }
         onPointerMove={handlePointer}
         onPointerLeave={() => onHover(null)}
-        className="touch-none select-none"
+        onClick={(event) => {
+          if (onSelect === undefined) return;
+          const distanceM = distanceAt(event);
+          if (distanceM === null) return;
+          onSelect(distanceM, {
+            metaKey: event.metaKey,
+            shiftKey: event.shiftKey,
+          });
+        }}
+        className={`touch-none select-none ${onSelect === undefined ? "" : "cursor-crosshair"}`}
       >
+        <defs>
+          <pattern
+            id={ASSUMED_PATTERN_ID}
+            patternUnits="userSpaceOnUse"
+            width="5"
+            height="5"
+            patternTransform="rotate(-45)"
+          >
+            <line x1="0" y1="0" x2="0" y2="5" stroke="#ffffff" strokeWidth="2" strokeOpacity="0.75" />
+          </pattern>
+        </defs>
+
         {elevationPath !== null && elevation !== null && (
           <g>
             {/* Two gridlines and their labels: the extremes are the two numbers
@@ -268,21 +369,65 @@ export function ProfileChart({
               >
                 {band.label}
               </text>
-              {band.spans.map((span) => {
-                const left = x(span.startM);
-                const width = Math.max(1, x(span.endM) - left);
-                return (
-                  <rect
-                    key={`${span.startM}-${span.endM}`}
-                    x={left}
-                    y={y}
-                    width={width}
-                    height={BAND_HEIGHT}
-                    fill={band.colour(span.value)}
-                  />
-                );
-              })}
+              {band.layers.flatMap((layer) =>
+                layer.spans.map((span) => {
+                  const left = x(span.startM);
+                  const width = Math.max(1, x(span.endM) - left);
+                  const key = `${layer.assumed ? "a" : "p"}-${span.startM}-${span.endM}`;
+                  return layer.assumed ? (
+                    <g key={key} data-assumed="true">
+                      <rect
+                        x={left}
+                        y={y}
+                        width={width}
+                        height={BAND_HEIGHT}
+                        fill={layer.colour(span.value)}
+                        fillOpacity={0.55}
+                      />
+                      <rect
+                        x={left}
+                        y={y}
+                        width={width}
+                        height={BAND_HEIGHT}
+                        fill={`url(#${ASSUMED_PATTERN_ID})`}
+                      />
+                    </g>
+                  ) : (
+                    <rect
+                      key={key}
+                      x={left}
+                      y={y}
+                      width={width}
+                      height={BAND_HEIGHT}
+                      fill={layer.colour(span.value)}
+                    />
+                  );
+                }),
+              )}
             </g>
+          );
+        })}
+
+        {/* Points selected in the table. Widened to 3px so a single point
+            is visible at all on a long route. */}
+        {selectedRanges.map((range) => {
+          const left = x(range.startM);
+          const width = Math.max(3, x(range.endM) - left);
+          return (
+            <rect
+              key={`sel-${range.startM}-${range.endM}`}
+              data-selected-range="true"
+              x={left - (width === 3 ? 1.5 : 0)}
+              y={PAD_TOP}
+              width={width}
+              height={svgHeight - PAD_TOP - 8}
+              fill="var(--color-accent)"
+              fillOpacity={0.22}
+              stroke="var(--color-accent)"
+              strokeOpacity={0.6}
+              strokeWidth={1}
+              pointerEvents="none"
+            />
           );
         })}
 
@@ -299,12 +444,54 @@ export function ProfileChart({
         )}
       </svg>
 
+      {twist !== null && (
+        <p
+          className="mt-1 text-[12px] text-[var(--color-text-primary)]"
+          aria-label={`Twisty score ${twist.score.toFixed(1)} out of 10, ${twist.label}`}
+        >
+          <span
+            className="mr-1.5 inline-block h-2.5 w-2.5 rounded-sm align-middle"
+            style={{ background: TWIST_COLOURS[twist.level] }}
+          />
+          <strong>Twisty score {twist.score.toFixed(1)} / 10</strong> ·{" "}
+          {twist.label}
+          <span className="ml-2 text-[11px] text-[var(--color-text-secondary)]">
+            {Math.round(twist.degPerKm)}°/km of bends ·{" "}
+            {twist.bendsPerKm.toFixed(1)} bends/km · {twist.tightCount} tight
+            {twist.hairpinCount > 0 && <> · {twist.hairpinCount} hairpin{twist.hairpinCount === 1 ? "" : "s"}</>}
+          </span>
+          <span className="ml-2 text-[10px] text-[var(--color-text-muted)]">
+            {LEVELS.map((entry) => (
+              <span key={entry.level} className="mr-2 whitespace-nowrap">
+                <span
+                  className="mr-0.5 inline-block h-2 w-2 rounded-sm align-middle"
+                  style={{ background: TWIST_COLOURS[entry.level] }}
+                />
+                {entry.label}
+              </span>
+            ))}
+          </span>
+        </p>
+      )}
+
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[11px] text-[var(--color-text-secondary)]">
         <span>{formatDistance(total, units)} total</span>
         {elevation !== null && (
           <>
-            <span>Gain {formatElevation(elevation.gainM, units)}</span>
-            <span>Loss {formatElevation(elevation.lossM, units)}</span>
+            {/* "≈" for a model: its gain is an estimate, not a measurement. */}
+            <span>
+              Gain {terrain ? "≈ " : ""}
+              {formatElevation(elevation.gainM, units)}
+            </span>
+            <span>
+              Loss {terrain ? "≈ " : ""}
+              {formatElevation(elevation.lossM, units)}
+            </span>
+            {terrain && (
+              <span className="text-[var(--color-text-muted)]">
+                Terrain elevation (model, about 30 m) — not measured on this route
+              </span>
+            )}
           </>
         )}
         {hovered !== undefined && hovered !== null && (
@@ -328,6 +515,23 @@ export function ProfileChart({
 
       {profile.elevationAbsentBecause !== null && (
         <AbsentBand label="Elevation" reason={profile.elevationAbsentBecause} />
+      )}
+      {profile.terrainMissing !== null && onDownloadTerrain !== undefined && (
+        <button
+          type="button"
+          disabled={terrainBusy}
+          onClick={onDownloadTerrain}
+          className="mt-1 rounded-md border border-[var(--color-border-subtle)] px-2 py-1 text-[11px] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)] disabled:opacity-50"
+        >
+          {terrainBusy
+            ? "Downloading terrain…"
+            : `Download terrain heights (${profile.terrainMissing.tileCount} tile${
+                profile.terrainMissing.tileCount === 1 ? "" : "s"
+              }, about ${Math.round(profile.terrainMissing.approxBytes / 1024 ** 2)} MB)`}
+        </button>
+      )}
+      {profile.twistinessUnknownBecause !== null && (
+        <AbsentBand label="Twisty score" reason={profile.twistinessUnknownBecause} />
       )}
       {profile.postedSpeedAbsentBecause !== null && (
         <AbsentBand

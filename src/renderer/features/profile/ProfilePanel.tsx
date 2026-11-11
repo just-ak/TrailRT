@@ -1,13 +1,16 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import type { AttributeOwnerType } from "@shared/routing/results";
 import { Button } from "../../components/Button";
 import { api, call, describeError } from "../../lib/client";
 import { getMapInstance, useMapInstance } from "../map/mapInstance";
+import { PointTable } from "../points/PointTable";
 import { useRoutingStore, routingKey } from "../../stores/routingStore";
+import { useSelectionStore } from "../../stores/selectionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
 import { ProfileChart } from "./ProfileChart";
+import { indexForDistance, selectionRanges } from "./profilePoints";
 
 /**
  * The profile panel: a drawer under the map for the selected route or track.
@@ -19,6 +22,14 @@ import { ProfileChart } from "./ProfileChart";
  *
  * Hover works in both directions (Requirement 5.5): moving along the chart
  * drops a marker on the map, and the same state drives the chart's crosshair.
+ *
+ * ## Points live here too
+ *
+ * The point table opens inside this drawer, under the chart, rather than as a
+ * drawer of its own (Phase 7 Requirement 6). Points selected in the table are
+ * shaded on the chart, and clicking the chart selects the nearest point in the
+ * table, opening it if need be. Shift-click extends the selection and
+ * Cmd-click toggles a point, as they do in the table.
  */
 
 /** Marker shown on the map at the hovered distance. */
@@ -73,6 +84,25 @@ export function ProfilePanel({
 }): ReactNode {
   const units = useSettingsStore((s) => s.settings.units);
   const showToast = useUiStore((s) => s.showToast);
+  const pointTable = useUiStore((s) => s.pointTable);
+  const highlighted = useUiStore((s) => s.highlightedPoints);
+  const openPointTable = useUiStore((s) => s.openPointTable);
+  const closePointTable = useUiStore((s) => s.closePointTable);
+  const setHighlightedPoints = useUiStore((s) => s.setHighlightedPoints);
+  // Named in the header, so it is plain which geometry the drawer describes.
+  const name = useSelectionStore((s) =>
+    ownerType === "route"
+      ? s.route?.id === ownerId
+        ? s.route.name
+        : null
+      : s.track?.id === ownerId
+        ? s.track.name
+        : null,
+  );
+  const pointsOpen =
+    pointTable !== null &&
+    pointTable.ownerType === ownerType &&
+    pointTable.ownerId === ownerId;
   const map = useMapInstance();
 
   const profile = useRoutingStore(
@@ -82,6 +112,34 @@ export function ProfilePanel({
 
   const [hoverDistanceM, setHoverDistanceM] = useState<number | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
+  const [terrainBusy, setTerrainBusy] = useState(false);
+
+  /**
+   * Fetches the terrain tiles this geometry needs, then redraws.
+   *
+   * The tiles are kept, so this is a one-off per area: the next route there
+   * draws its elevation straight away, offline.
+   */
+  const downloadTerrain = async (): Promise<void> => {
+    setTerrainBusy(true);
+    try {
+      const outcome = await call(
+        api().routing.downloadTerrain({ ownerType, ownerId }),
+      );
+      if (outcome.failed > 0) {
+        showToast(
+          `${outcome.failed} terrain tile${outcome.failed === 1 ? "" : "s"} could not be downloaded. Check your connection and try again.`,
+          "error",
+        );
+      }
+      useRoutingStore.getState().invalidate(ownerType, ownerId);
+      await loadProfile(ownerType, ownerId);
+    } catch (cause) {
+      showToast(describeError(cause), "error");
+    } finally {
+      setTerrainBusy(false);
+    }
+  };
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   /*
@@ -106,6 +164,49 @@ export function ProfilePanel({
       : nearestSample(profile.samples, hoverDistanceM);
 
   useHoverMarker(map, hovered);
+
+  const samples = profile?.samples;
+  const ranges = useMemo(
+    () =>
+      samples === undefined || !pointsOpen
+        ? []
+        : selectionRanges(samples, highlighted),
+    [samples, highlighted, pointsOpen],
+  );
+
+  /** A click on the chart selects the nearest point, as a row click would. */
+  const selectAtDistance = (
+    distanceM: number,
+    modifiers: { metaKey: boolean; shiftKey: boolean },
+  ): void => {
+    if (samples === undefined) return;
+    const index = indexForDistance(samples, distanceM);
+    if (index === null) return;
+
+    if (!pointsOpen) {
+      openPointTable(ownerType, ownerId);
+      setHighlightedPoints([index]);
+      return;
+    }
+
+    const anchor = highlighted[0];
+    if (modifiers.shiftKey && anchor !== undefined) {
+      const from = Math.min(anchor, index);
+      const to = Math.max(anchor, index);
+      setHighlightedPoints(
+        Array.from({ length: to - from + 1 }, (_, i) => from + i),
+      );
+      return;
+    }
+    if (modifiers.metaKey) {
+      const next = new Set(highlighted);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      setHighlightedPoints([...next].toSorted((a, b) => a - b));
+      return;
+    }
+    setHighlightedPoints([index]);
+  };
 
   /**
    * Exports the chart as a PNG.
@@ -135,13 +236,38 @@ export function ProfilePanel({
   return (
     <section
       aria-label="Route profile"
-      className="border-t border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-3"
+      className="h-full overflow-y-auto bg-[var(--color-surface)]"
     >
+      <div className="p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+        <h2 className="min-w-0 truncate text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
           Profile
+          {name !== null && (
+            <span
+              data-testid="profile-owner"
+              className="ml-2 font-medium tracking-normal text-[var(--color-text-primary)] normal-case"
+            >
+              {name}
+            </span>
+          )}
         </h2>
         <div className="flex items-center gap-2">
+          <Button
+            aria-pressed={pointsOpen}
+            title={
+              pointsOpen
+                ? "Hide the point list"
+                : "List and edit the points. Click the chart to pick one."
+            }
+            onClick={() =>
+              pointsOpen
+                ? closePointTable()
+                : openPointTable(ownerType, ownerId)
+            }
+            className={pointsOpen ? "ring-1 ring-[var(--color-accent)]" : ""}
+          >
+            {pointsOpen ? "Hide points" : "Edit points"}
+          </Button>
           <Button onClick={() => void exportImage()}>Export image…</Button>
           <button
             type="button"
@@ -175,6 +301,10 @@ export function ProfilePanel({
             profile={profile}
             units={units}
             hoverDistanceM={hoverDistanceM}
+            onDownloadTerrain={() => void downloadTerrain()}
+            terrainBusy={terrainBusy}
+            selectedRanges={ranges}
+            onSelect={selectAtDistance}
             onHover={(distanceM) => {
               setHoverDistanceM(distanceM);
               // Keep the map centred only when the user drags past the edge;
@@ -190,6 +320,18 @@ export function ProfilePanel({
             }}
           />
         </div>
+      )}
+      </div>
+
+      {pointsOpen && (
+        <PointTable
+          // Remount on a change of geometry: indices only mean anything
+          // against the object they came from, so carrying row selection
+          // across would highlight arbitrary points on something else.
+          key={`${ownerType}:${ownerId}`}
+          ownerType={ownerType}
+          ownerId={ownerId}
+        />
       )}
     </section>
   );

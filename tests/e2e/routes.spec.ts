@@ -154,9 +154,9 @@ test.describe('route geometry and statistics', () => {
     const tripId = await selectedTripId(page);
 
     const points = [
-      { lat: 46.1234567, lon: 8.7654321, ele: 1500.5 },
-      { lat: 46.2, lon: 8.8, ele: null },
-      { lat: 46.3, lon: 8.9, ele: 2100 },
+      { lat: 53.2588123, lon: -1.9110456, ele: 300.5 },
+      { lat: 53.2533, lon: -1.9343, ele: null },
+      { lat: 53.2578, lon: -2.0327, ele: 515 },
     ];
 
     const result = await page.evaluate(
@@ -176,9 +176,10 @@ test.describe('route geometry and statistics', () => {
     // Exact round trip: no rounding, no re-sampling, nulls preserved.
     expect(result?.points.map((p) => p.lat)).toEqual(points.map((p) => p.lat));
     expect(result?.points.map((p) => p.lon)).toEqual(points.map((p) => p.lon));
-    expect(result?.points.map((p) => p.ele)).toEqual([1500.5, null, 2100]);
-    // Points with no elevation are skipped, so the gain is 2100 - 1500.5.
-    expect(result?.elevGainM).toBeCloseTo(599.5, 6);
+    expect(result?.points.map((p) => p.ele)).toEqual([300.5, null, 515]);
+    // Points with no elevation are skipped, so the gain is 515 - 300.5 —
+    // Buxton to the top of the Cat and Fiddle, ignoring Burbage in between.
+    expect(result?.elevGainM).toBeCloseTo(214.5, 6);
   });
 
   test('recomputes statistics when geometry changes', async () => {
@@ -289,8 +290,8 @@ test.describe('waypoints', () => {
         await window.trailrt.waypoints.create({
           tripId: id,
           name: 'Survivor',
-          lat: 46.5,
-          lon: 8.5,
+          lat: 53.1043,
+          lon: -2.0221,
           eleM: 1234,
           symbol: 'summit',
         });

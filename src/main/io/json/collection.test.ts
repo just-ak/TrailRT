@@ -11,6 +11,7 @@ import { ParseError } from '@shared/io/types';
 import { createDatabase, type Db, type DbHandle } from '../../db/client';
 import * as folderService from '../../services/folderService';
 import * as routeService from '../../services/routeService';
+import * as routingService from '../../services/routingService';
 import * as trackService from '../../services/trackService';
 import * as tripService from '../../services/tripService';
 import * as waypointService from '../../services/waypointService';
@@ -576,5 +577,97 @@ describe('applyCollection as a merge', () => {
     const result = applyCollection(target, collection);
     expect(result.warnings.join(' ')).toMatch(/placed at the top level/);
     expect(buildCollection(target).trips[0]?.folderId).toBeNull();
+  });
+});
+
+// ------------------------------------------- Phase 6: snapped routes stay editable
+
+const mid = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) => ({
+  lat: (a.lat + b.lat) / 2,
+  lon: (a.lon + b.lon) / 2,
+});
+
+const importedRoute = () => {
+  const route = buildCollection(target).trips[0]?.routes[0];
+  if (route === undefined) throw new Error('no route imported');
+  return route;
+};
+
+describe('snapped routes in the collection (Phase 6)', () => {
+  const BUX = { lat: 53.2588, lon: -1.9115 };
+  const CAT = { lat: 53.2578, lon: -2.0327 };
+  const MAC = { lat: 53.2602, lon: -2.1255 };
+
+  function shapedRoute(): string {
+    const trip = tripService.create(db, {
+      name: 'Peak loop',
+      folderId: null,
+      description: null,
+      notes: null,
+    }).result;
+    return routingService.createSnappedRoute(db, {
+      tripId: trip.id,
+      name: 'Cat and Fiddle',
+      colour: null,
+      controlPoints: [BUX, CAT, MAC],
+      legs: [
+        { matched: true, shape: [BUX, mid(BUX, CAT), CAT], distanceM: 1, displacementM: null },
+        { matched: true, shape: [CAT, mid(CAT, MAC), MAC], distanceM: 1, displacementM: null },
+      ],
+      roles: ['via', 'shaping', 'via'],
+      mode: 'motorcycle',
+      provider: 'valhalla-embedded',
+    }).result.id;
+  }
+
+  it('round-trips control points, roles, boundaries and provenance', () => {
+    shapedRoute();
+    const result = applyCollection(target, parseCollection(writeCollection(buildCollection(db))));
+    expect(result.warnings).toEqual([]);
+
+    const route = importedRoute();
+    expect(route.control).toEqual([
+      { ...BUX, role: 'via', shapeIndex: 0 },
+      { ...CAT, role: 'shaping', shapeIndex: 2 },
+      { ...MAC, role: 'via', shapeIndex: 4 },
+    ]);
+    expect(route.routing).toEqual({ provider: 'valhalla-embedded', transportMode: 'motorcycle' });
+  });
+
+  it('imports a file from before Phase 6 exactly as before: a hand-drawn route', () => {
+    shapedRoute();
+    const collection = buildCollection(db);
+    for (const trip of collection.trips) {
+      for (const route of trip.routes) {
+        delete route.control;
+        delete route.routing;
+      }
+    }
+    const result = applyCollection(target, parseCollection(writeCollection(collection)));
+    expect(result.warnings).toEqual([]);
+    expect(importedRoute().control).toBeUndefined();
+  });
+
+  it('imports a route whose control points do not fit its shape as hand-drawn, and says so', () => {
+    shapedRoute();
+    const collection = buildCollection(db);
+    const route = collection.trips[0]?.routes[0];
+    if (route?.control?.[1] !== undefined) route.control[1].shapeIndex = 99;
+
+    const result = applyCollection(target, parseCollection(writeCollection(collection)));
+    expect(result.warnings).toHaveLength(1);
+    expect(result.warnings[0]).toMatch(/imported as a hand-drawn route/);
+    expect(importedRoute().control).toBeUndefined();
+    expect(importedRoute().points).toHaveLength(5);
+  });
+
+  it('accepts a route snapped before boundaries existed, with all of them unknown', () => {
+    shapedRoute();
+    const collection = buildCollection(db);
+    for (const c of collection.trips[0]?.routes[0]?.control ?? []) c.shapeIndex = null;
+
+    const result = applyCollection(target, parseCollection(writeCollection(collection)));
+    expect(result.warnings).toEqual([]);
+    expect(importedRoute().control?.map((c) => c.shapeIndex)).toEqual([null, null, null]);
   });
 });

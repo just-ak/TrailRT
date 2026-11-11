@@ -11,8 +11,10 @@ import type { UnitSystem } from '../domain/types';
  *    point-count percentage would systematically over-weight exactly the slow
  *    sections it claims to measure.
  * 2. **Unknown is a band.** Distance whose speed could not be determined is
- *    reported at its true size, never redistributed across the known bands and
- *    never inferred from road class. Given that OpenStreetMap speed-limit
+ *    reported at its true size, never redistributed across the known bands.
+ *    ADR 0018 allows one exception, decided by the caller: a UK road with a
+ *    known class may carry the statutory default, marked `assumed`, and every
+ *    band then reports how much of it is assumed. Given that OpenStreetMap speed-limit
  *    coverage is partial, this band is often the largest, and that is the
  *    correct answer rather than an embarrassing one.
  * 3. **Posted limit and recorded speed are separate series.** This module does
@@ -72,6 +74,13 @@ export interface SpeedSample {
   distanceM: number;
   /** Metres per second, or null when undeterminable. Never 0 as a stand-in. */
   speedMps: number | null;
+  /**
+   * True when the speed is a UK default limit inferred for a road with no
+   * posted limit, rather than a limit in the data (ADR 0018). Counted in its
+   * band, and reported separately within it, so it is never mistaken for a
+   * posted limit.
+   */
+  assumed?: boolean;
 }
 
 export interface BandShare {
@@ -79,6 +88,9 @@ export interface BandShare {
   distanceM: number;
   /** Share of total distance, 0–100. */
   percent: number;
+  /** Of `distanceM`, how much was assumed rather than posted. */
+  assumedDistanceM: number;
+  assumedPercent: number;
 }
 
 export interface SpeedDistribution {
@@ -87,6 +99,8 @@ export interface SpeedDistribution {
   bands: BandShare[];
   /** Always present, even at zero, so its absence can never be mistaken. */
   unknown: BandShare;
+  /** Total assumed distance across every band. Zero unless defaults applied. */
+  assumed: { distanceM: number; percent: number };
   /** True when nothing at all could be determined. */
   allUnknown: boolean;
 }
@@ -117,7 +131,9 @@ export function speedDistribution(
 ): SpeedDistribution {
   const bands = bandsFor(units);
   const distances: number[] = Array.from({ length: bands.length }, () => 0);
+  const assumedDistances: number[] = Array.from({ length: bands.length }, () => 0);
   let unknownDistance = 0;
+  let assumedDistance = 0;
   let total = 0;
 
   for (const sample of samples) {
@@ -140,6 +156,10 @@ export function speedDistribution(
       continue;
     }
     distances[index] = (distances[index] ?? 0) + sample.distanceM;
+    if (sample.assumed === true) {
+      assumedDistances[index] = (assumedDistances[index] ?? 0) + sample.distanceM;
+      assumedDistance += sample.distanceM;
+    }
   }
 
   const share = (metres: number): number =>
@@ -152,12 +172,17 @@ export function speedDistribution(
       label: band.label,
       distanceM: distances[index] ?? 0,
       percent: share(distances[index] ?? 0),
+      assumedDistanceM: assumedDistances[index] ?? 0,
+      assumedPercent: share(assumedDistances[index] ?? 0),
     })),
     unknown: {
       label: 'Unknown',
       distanceM: unknownDistance,
       percent: share(unknownDistance),
+      assumedDistanceM: 0,
+      assumedPercent: 0,
     },
+    assumed: { distanceM: assumedDistance, percent: share(assumedDistance) },
     allUnknown: total > 0 && unknownDistance === total,
   };
 }

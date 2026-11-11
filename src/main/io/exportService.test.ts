@@ -6,6 +6,7 @@ import { EXPORT_FORMATS, IMPORT_FORMATS } from '@shared/io/types';
 import { createDatabase, type Db, type DbHandle } from '../db/client';
 import { ServiceError } from '../services/errors';
 import * as routeService from '../services/routeService';
+import * as routingService from '../services/routingService';
 import * as trackService from '../services/trackService';
 import * as tripService from '../services/tripService';
 import * as waypointService from '../services/waypointService';
@@ -492,5 +493,49 @@ describe('export round trips', () => {
 
     expect(result.plan.omitted.routes).toBe(1);
     expect(result.plan.losses.length).toBeGreaterThan(0);
+  });
+});
+
+// ------------------------------------------------- Phase 6: exports unchanged
+
+/** Timestamps in the GPX metadata are the only thing allowed to differ. */
+const stripTimes = (text: string | undefined) =>
+  (text ?? '').replaceAll(/<time>[^<]*<\/time>/g, '');
+
+describe('GPX export of a shaped route (Requirement 7.5)', () => {
+  it('is exactly the export of the same shape drawn by hand', async () => {
+    const BUX = { lat: 53.2588, lon: -1.9115 };
+    const CAT = { lat: 53.2578, lon: -2.0327 };
+    const MAC = { lat: 53.2602, lon: -2.1255 };
+    const trip = tripService.create(db, {
+      name: 'Peak',
+      folderId: null,
+      description: null,
+      notes: null,
+    }).result;
+
+    const shaped = routingService.createSnappedRoute(db, {
+      tripId: trip.id,
+      name: 'Cat and Fiddle',
+      colour: null,
+      controlPoints: [BUX, CAT, MAC],
+      legs: [
+        { matched: true, shape: [BUX, CAT], distanceM: null, displacementM: null },
+        { matched: true, shape: [CAT, MAC], distanceM: null, displacementM: null },
+      ],
+      roles: ['via', 'shaping', 'via'],
+      mode: 'auto',
+      provider: 'fake',
+    }).result;
+    const drawn = routeService.create(db, {
+      tripId: trip.id,
+      name: 'Cat and Fiddle',
+      colour: null,
+      points: routeService.get(db, shaped.id).points,
+    }).result;
+
+    const a = await exportScope(db, { kind: 'route', id: shaped.id }, 'gpx');
+    const b = await exportScope(db, { kind: 'route', id: drawn.id }, 'gpx');
+    expect(stripTimes(a.text)).toBe(stripTimes(b.text));
   });
 });

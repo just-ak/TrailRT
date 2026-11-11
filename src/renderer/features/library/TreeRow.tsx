@@ -1,19 +1,33 @@
 import type { ReactNode } from "react";
 import type { TreeNode } from "@shared/domain/types";
 
+/** Which modifier keys were held, so the panel can decide what a click means. */
+export interface ClickModifiers {
+  /** ⌘ on macOS: toggle this row's membership. */
+  metaKey: boolean;
+  /** Extend the selection from the anchor to here. */
+  shiftKey: boolean;
+}
+
 interface Props {
   node: TreeNode;
   depth: number;
+  /** The anchor: what the properties panel is describing. */
   selected: boolean;
+  /** A member of a multi-selection, which may or may not be the anchor. */
+  inSelection: boolean;
   expanded: boolean;
   hasChildren: boolean;
   renaming: boolean;
   dropTarget: boolean;
+  /** The single tab stop in the tree. See the roving tabIndex in LibraryPanel. */
+  focusable: boolean;
   onToggle: () => void;
-  onSelect: () => void;
+  onSelect: (modifiers: ClickModifiers) => void;
   onContextMenu: (event: React.MouseEvent) => void;
   onRenameCommit: (name: string) => void;
   onRenameCancel: () => void;
+  onFocusRow?: () => void;
   onDragStart?: (event: React.DragEvent) => void;
   onDragOver?: (event: React.DragEvent) => void;
   onDragLeave?: () => void;
@@ -60,6 +74,7 @@ function Icon({ node }: { node: TreeNode }): ReactNode {
   // A recorded track, distinguishable from a drawn route at a glance.
   if (node.kind === "track") return <span aria-hidden="true">📈</span>;
   if (node.kind === "waypoint") return <span aria-hidden="true">📍</span>;
+  if (node.kind === "group") return <span aria-hidden="true">{node.glyph ?? "▫️"}</span>;
   return <span aria-hidden="true">🔖</span>;
 }
 
@@ -67,15 +82,18 @@ export function TreeRow({
   node,
   depth,
   selected,
+  inSelection,
   expanded,
   hasChildren,
   renaming,
   dropTarget,
+  focusable,
   onToggle,
   onSelect,
   onContextMenu,
   onRenameCommit,
   onRenameCancel,
+  onFocusRow,
   onDragStart,
   onDragOver,
   onDragLeave,
@@ -84,16 +102,43 @@ export function TreeRow({
   const unavailable = node.kind === "view" && node.available === false;
   const archived = node.status === "archived";
 
+  /*
+   * Three visual states, not two.
+   *
+   * The anchor is filled, a non-anchor member of a multi-selection is tinted,
+   * and everything else is plain. Without the distinction a batch of twelve
+   * would look identical to a single selection of twelve, and the properties
+   * panel describing only one of them would appear to be a bug.
+   */
+  const background = selected
+    ? "bg-[var(--color-accent)] text-white"
+    : inSelection
+      ? "bg-[var(--color-accent)]/30"
+      : dropTarget
+        ? "bg-[var(--color-accent)]/20"
+        : "hover:bg-[var(--color-surface-sunken)]";
+
   return (
     <div
       role="treeitem"
+      // The row's position in the tree. The keyboard handler moves DOM focus
+      // by querying this, because focus has to follow the roving tabIndex and
+      // only the panel knows the visible row order.
+      data-path={node.id}
       // An explicit label keeps the accessible name exactly the object's name.
       // Without it the name is composed from the row's contents, which pulls in
       // the chevron button's label and the status badges.
       aria-label={node.name}
-      aria-selected={selected}
+      // Reports membership of the selection rather than just "is the anchor",
+      // so a screen reader announces all twelve members of a batch.
+      aria-selected={inSelection || selected}
       aria-expanded={hasChildren ? expanded : undefined}
       aria-level={depth + 1}
+      // Roving tabIndex: exactly one row in the tree is tabbable, and the
+      // arrow keys move which one. A tree where every row is a tab stop is
+      // unusable with a keyboard, and one where none is cannot be reached.
+      tabIndex={focusable ? 0 : -1}
+      onFocus={onFocusRow}
       draggable={onDragStart !== undefined && !renaming}
       onDragStart={onDragStart}
       onDragOver={onDragOver}
@@ -102,19 +147,17 @@ export function TreeRow({
       onContextMenu={onContextMenu}
       onClick={(event) => {
         event.stopPropagation();
-        if (!unavailable) onSelect();
+        if (unavailable) return;
+        // The modifiers are the whole point: the row cannot decide what a
+        // click means, because only the panel knows the anchor and the
+        // visible row order a range is measured over.
+        onSelect({ metaKey: event.metaKey, shiftKey: event.shiftKey });
       }}
       onDoubleClick={() => {
         if (hasChildren) onToggle();
       }}
       style={{ paddingLeft: depth * INDENT + 6 }}
-      className={`group flex h-[26px] cursor-default items-center gap-1.5 pr-2 text-[13px] ${
-        selected
-          ? "bg-[var(--color-accent)] text-white"
-          : dropTarget
-            ? "bg-[var(--color-accent)]/20"
-            : "hover:bg-[var(--color-surface-sunken)]"
-      } ${unavailable ? "opacity-55" : ""}`}
+      className={`group flex h-[26px] cursor-default items-center gap-1.5 pr-2 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] focus-visible:ring-inset ${background} ${unavailable ? "opacity-55" : ""}`}
     >
       <button
         type="button"

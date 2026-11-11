@@ -2,9 +2,14 @@ import { haversineDistance, type LatLon } from '@shared/geo/distance';
 import {
   isRoadClass,
   isSurfaceKind,
+  MAX_SNAP_DISPLACEMENT_M,
   type MatchedEdge,
+  MAX_ROUTE_CANDIDATES,
+  type RouteCandidate,
   type RouteLeg,
   type RoutingProvider,
+  type SectionLocation,
+  type SnapResult,
   type TransportMode,
 } from '@shared/routing/RoutingProvider';
 import { ServiceError } from '../services/errors';
@@ -66,6 +71,7 @@ const MATCH_ATTRIBUTES = [
   'edge.speed_limit',
   'edge.road_class',
   'edge.surface',
+  'edge.traversability',
   'edge.begin_shape_index',
   'edge.end_shape_index',
   'shape',
@@ -74,10 +80,18 @@ const MATCH_ATTRIBUTES = [
 
 // --------------------------------------------------------------- wire types
 
+interface ValhallaTrip {
+  legs?: { shape?: string; summary?: { length?: number; time?: number } }[];
+}
+
 interface ValhallaRouteResponse {
-  trip?: {
-    legs?: { shape?: string; summary?: { length?: number; time?: number } }[];
-  };
+  trip?: ValhallaTrip;
+  /**
+   * Further routes between the same two locations, best first. Present only
+   * when the request asked for `alternates` and the engine found any; never
+   * for a request with more than two locations.
+   */
+  alternates?: { trip?: ValhallaTrip }[];
 }
 
 interface ValhallaEdge {
@@ -85,6 +99,8 @@ interface ValhallaEdge {
   speed_limit?: number;
   road_class?: string;
   surface?: string;
+  /** `forward`, `backward` or `both`, relative to the edge's own direction. */
+  traversability?: string;
   begin_shape_index?: number;
   end_shape_index?: number;
 }
@@ -181,7 +197,12 @@ export function createValhallaProviderWith(
   call: ValhallaTransport,
   meta: ValhallaProviderMeta,
 ): RoutingProvider {
-  return {
+  /*
+   * Named so `snapSection` can fall back to `snap` on the same instance. A
+   * method reaching for `this` would break the moment a caller passed one of
+   * these methods around on its own.
+   */
+  const provider: RoutingProvider = {
     id: meta.id,
     name: meta.name,
     origins: meta.origins,
@@ -207,6 +228,13 @@ export function createValhallaProviderWith(
        */
       const legs: RouteLeg[] = [];
       const unmatchedLegs: [number, number][] = [];
+      /** Largest displacement seen for each control point, by index. */
+      const displacement = new Map<number, number>();
+
+      const noteDisplacement = (index: number, metres: number): void => {
+        const seen = displacement.get(index);
+        if (seen === undefined || metres > seen) displacement.set(index, metres);
+      };
 
       for (let i = 0; i < controlPoints.length - 1; i += 1) {
         const from = controlPoints[i];
@@ -229,6 +257,35 @@ export function createValhallaProviderWith(
             leg?.shape === undefined ? [] : decodeValhallaShape(leg.shape);
 
           if (shape.length < 2) {
+            legs.push(straightLeg(from, to, i));
+            unmatchedLegs.push([i, i + 1]);
+            continue;
+          }
+
+          /*
+           * How far the engine had to move each end to reach a road.
+           *
+           * Measured, because Valhalla will not say. Its response echoes the
+           * *input* coordinates back in `trip.locations`, so a leg whose
+           * endpoints were dragged kilometres to the edge of the loaded graph
+           * is indistinguishable from a clean match unless the geometry is
+           * compared with what was asked for.
+           *
+           * A leg with an end this far out is marked **unmatched** and kept as
+           * a straight line. That is the same treatment as "no road path
+           * between these points", and for the same reason: the honest output
+           * is a line the user can see is not a road, not a confident route to
+           * somewhere they did not choose.
+           */
+          const startOff = haversineDistance(from, shape[0] as LatLon);
+          const endOff = haversineDistance(to, shape.at(-1) as LatLon);
+          noteDisplacement(i, startOff);
+          noteDisplacement(i + 1, endOff);
+
+          if (
+            startOff > MAX_SNAP_DISPLACEMENT_M ||
+            endOff > MAX_SNAP_DISPLACEMENT_M
+          ) {
             legs.push(straightLeg(from, to, i));
             unmatchedLegs.push([i, i + 1]);
             continue;
@@ -271,7 +328,12 @@ export function createValhallaProviderWith(
         }
       }
 
-      return { provider: meta.id, mode, legs, unmatchedLegs };
+      const displaced = [...displacement.entries()]
+        .filter(([, metres]) => metres > MAX_SNAP_DISPLACEMENT_M)
+        .map(([index, displacementM]) => ({ index, displacementM }))
+        .toSorted((a, b) => a.index - b.index);
+
+      return { provider: meta.id, mode, legs, unmatchedLegs, displaced };
     },
 
     async match(shape, mode) {
@@ -328,6 +390,13 @@ export function createValhallaProviderWith(
           speedLimitMps: speedKmh === null ? null : speedKmh * KMH_TO_MPS,
           roadClass: isRoadClass(edge.road_class) ? edge.road_class : null,
           surface: isSurfaceKind(edge.surface) ? edge.surface : null,
+          oneway:
+            edge.traversability === 'both'
+              ? false
+              : edge.traversability === 'forward' ||
+                  edge.traversability === 'backward'
+                ? true
+                : null,
         });
       }
 
@@ -343,8 +412,183 @@ export function createValhallaProviderWith(
         unmatchedPointCount,
       };
     },
+
+    async alternatives(from, to, mode, count) {
+      const wanted = Math.max(0, Math.min(count, MAX_ROUTE_CANDIDATES) - 1);
+
+      const request = (alternates: number) =>
+        call<ValhallaRouteResponse>('/route', {
+          locations: [
+            { lat: from.lat, lon: from.lon },
+            { lat: to.lat, lon: to.lon },
+          ],
+          costing: costingFor(mode),
+          directions_options: { units: 'kilometers' },
+          ...(alternates > 0 ? { alternates } : {}),
+        });
+
+      let response: ValhallaRouteResponse;
+      try {
+        response = await request(wanted);
+      } catch (cause) {
+        if (!(cause instanceof ServiceError) || cause.code !== 'PROVIDER_ERROR') {
+          throw cause;
+        }
+        if (wanted === 0) return [];
+        /*
+         * Retried once without alternates. A host can configure
+         * `max_alternates` lower than the bundled engine's 2 — or to zero —
+         * and then refuses the request outright rather than returning fewer.
+         * The plain route is still worth having; a second refusal means there
+         * is no road route at all, which is an empty list, not an error.
+         */
+        try {
+          response = await request(0);
+        } catch (retryCause) {
+          if (retryCause instanceof ServiceError && retryCause.code === 'PROVIDER_ERROR') {
+            return [];
+          }
+          throw retryCause;
+        }
+      }
+
+      const trips = [response.trip, ...(response.alternates ?? []).map((a) => a.trip)];
+      const candidates: RouteCandidate[] = [];
+      for (const trip of trips) {
+        const candidate = toCandidate(trip, from, to);
+        // A candidate the engine had to drag an end of beyond the limit is
+        // left out, not shown: it is a route to somewhere the user did not
+        // choose (ADR 0016, Requirement 1.9).
+        if (candidate !== null) candidates.push(candidate);
+      }
+      return candidates;
+    },
+
+    async snapSection(locations, mode) {
+      if (locations.length < 2) {
+        throw new ServiceError('INVALID_REQUEST', 'A section needs at least two points.');
+      }
+      const points = locations.map((l) => ({ lat: l.point.lat, lon: l.point.lon }));
+      if (locations.length === 2 || !locations.some((l) => l.passThrough)) {
+        // Nothing to pass through: the per-leg path is the same answer, and it
+        // degrades one leg at a time rather than failing as a unit.
+        return provider.snap(points, mode);
+      }
+
+      let response: ValhallaRouteResponse;
+      try {
+        response = await call<ValhallaRouteResponse>('/route', {
+          locations: locations.map(toSectionLocation),
+          costing: costingFor(mode),
+          directions_options: { units: 'kilometers' },
+        });
+      } catch (cause) {
+        /*
+         * A multi-location request fails as a unit: one point in a field and
+         * the engine routes none of it. Falling back to per-leg routing keeps
+         * every leg that can be routed, at the cost of pass-through — the
+         * caller checks for reversals afterwards. Transport failures still
+         * propagate, for the reason `snap` gives.
+         */
+        if (cause instanceof ServiceError && cause.code === 'PROVIDER_ERROR') {
+          return provider.snap(points, mode);
+        }
+        throw cause;
+      }
+
+      const section = toSectionResult(response, points, mode, meta.id);
+      return section ?? provider.snap(points, mode);
+    },
+  };
+
+  return provider;
+}
+
+/**
+ * One section location on the wire.
+ *
+ * `break_through` keeps the leg split at the location — so the caller can keep
+ * leg boundaries — while forbidding a U-turn there. Plain `break` is the
+ * default and allows one, which is right for a via point the route visits.
+ */
+function toSectionLocation(location: SectionLocation): Record<string, unknown> {
+  return {
+    lat: location.point.lat,
+    lon: location.point.lon,
+    type: location.passThrough ? 'break_through' : 'break',
   };
 }
+
+/** Translates one trip into a candidate, or null when it is not believable. */
+function toCandidate(
+  trip: ValhallaTrip | undefined,
+  from: LatLon,
+  to: LatLon,
+): RouteCandidate | null {
+  const leg = trip?.legs?.[0];
+  const shape = leg?.shape === undefined ? [] : decodeValhallaShape(leg.shape);
+  if (shape.length < 2) return null;
+
+  const startDisplacementM = haversineDistance(from, shape[0] as LatLon);
+  const endDisplacementM = haversineDistance(to, shape.at(-1) as LatLon);
+  if (
+    startDisplacementM > MAX_SNAP_DISPLACEMENT_M ||
+    endDisplacementM > MAX_SNAP_DISPLACEMENT_M
+  ) {
+    return null;
+  }
+
+  const length = finite(leg?.summary?.length);
+  return {
+    shape,
+    distanceM: length === null ? null : length * KM_TO_M,
+    estimatedDurationS: finite(leg?.summary?.time),
+    startDisplacementM,
+    endDisplacementM,
+  };
+}
+
+/**
+ * Translates a section response into a snap result, or null when it cannot
+ * be trusted as one — wrong leg count, an empty leg, or an end the engine
+ * moved too far. The caller then falls back to per-leg routing, which knows
+ * how to keep a bad leg straight without discarding the good ones.
+ */
+function toSectionResult(
+  response: ValhallaRouteResponse,
+  points: readonly LatLon[],
+  mode: TransportMode,
+  providerId: string,
+): SnapResult | null {
+  const wireLegs = response.trip?.legs ?? [];
+  if (wireLegs.length !== points.length - 1) return null;
+
+  const legs: RouteLeg[] = [];
+  for (const [i, wire] of wireLegs.entries()) {
+    const from = points[i] as LatLon;
+    const to = points[i + 1] as LatLon;
+    const shape = wire.shape === undefined ? [] : decodeValhallaShape(wire.shape);
+    if (shape.length < 2) return null;
+    if (
+      haversineDistance(from, shape[0] as LatLon) > MAX_SNAP_DISPLACEMENT_M ||
+      haversineDistance(to, shape.at(-1) as LatLon) > MAX_SNAP_DISPLACEMENT_M
+    ) {
+      return null;
+    }
+    const length = finite(wire.summary?.length);
+    legs.push({
+      matched: true,
+      fromControlIndex: i,
+      toControlIndex: i + 1,
+      shape,
+      distanceM: length === null ? null : length * KM_TO_M,
+      durationS: finite(wire.summary?.time),
+    });
+  }
+
+  return { provider: providerId, mode, legs, unmatchedLegs: [], displaced: [] };
+}
+
 
 /**
  * A provider talking to a remote Valhalla over HTTP.

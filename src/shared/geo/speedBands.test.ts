@@ -212,3 +212,34 @@ describe('recordedSpeedMps', () => {
     expect(recordedSpeedMps(0, 0, 5000)).toBe(0);
   });
 });
+
+describe('assumed limits (ADR 0018)', () => {
+  const MPH = 1609.344 / 3600;
+
+  it('counts assumed distance in its band and reports it separately', () => {
+    const d = speedDistribution(
+      [
+        { distanceM: 400, speedMps: 60 * MPH },
+        { distanceM: 300, speedMps: 60 * MPH, assumed: true },
+        { distanceM: 300, speedMps: null },
+      ],
+      'imperial',
+      'posted',
+    );
+    const band = d.bands.find((b) => b.label === '55–70 mph');
+    expect(band?.distanceM).toBe(700);
+    expect(band?.assumedDistanceM).toBe(300);
+    expect(band?.assumedPercent).toBeCloseTo(30, 9);
+    expect(d.assumed.percent).toBeCloseTo(30, 9);
+    // Unknown is untouched by assumption: what no rule placed stays Unknown.
+    expect(d.unknown.percent).toBeCloseTo(30, 9);
+    const sum = d.bands.reduce((s, b) => s + b.percent, 0) + d.unknown.percent;
+    expect(sum).toBeCloseTo(100, 9);
+  });
+
+  it('reports no assumed share when nothing was assumed', () => {
+    const d = speedDistribution([{ distanceM: 100, speedMps: 10 }], 'metric', 'posted');
+    expect(d.assumed.distanceM).toBe(0);
+    expect(d.bands.every((b) => b.assumedDistanceM === 0)).toBe(true);
+  });
+});

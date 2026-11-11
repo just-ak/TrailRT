@@ -106,8 +106,26 @@ export function AboutDialog(): ReactNode {
       </table>
 
       <p className="mt-3 text-[11px] text-[var(--color-text-muted)]">
-        Map data © OpenStreetMap contributors, available under the Open Database
-        License.
+        Map data, road data and the UK boundary © OpenStreetMap contributors,
+        available under the Open Database License. Map regions are downloaded
+        from Geofabrik and combined with osmium-tool (GPL-3.0-or-later).
+      </p>
+      <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+        Terrain elevation: Terrain Tiles, from the AWS Registry of Open Data,
+        derived from SRTM (NASA, public domain) and other open sources. Heights
+        are modelled, not measured.
+      </p>
+      <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+        Points of interest, place names, streets and addresses are read from the
+        same OpenStreetMap regions on this computer: © OpenStreetMap
+        contributors, Open Database License.
+      </p>
+      <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+        Postcodes: Ordnance Survey Code-Point Open, under the Open Government
+        Licence v3.0. Contains OS data © Crown copyright and database right.
+        Contains Royal Mail data © Royal Mail copyright and database right.
+        Contains National Statistics data © Crown copyright and database
+        right. Searched on this computer; nothing you type is sent anywhere.
       </p>
     </Dialog>
   );

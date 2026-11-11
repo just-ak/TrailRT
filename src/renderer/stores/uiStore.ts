@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { DEFAULT_SETTINGS, PANEL_LIMITS } from '@shared/domain/defaults';
 import type {
   AppSettings,
+  BatchAssessment,
+  BatchMember,
   PanelLayout,
   ThemePreference,
 } from '@shared/domain/types';
@@ -26,11 +28,29 @@ export type DialogKind =
       target: { type: 'trip' | 'folder'; id: string; name: string };
       counts: Record<string, number>;
     }
+  /**
+   * Batch deletion, gated on confirmation because it may be partly
+   * irreversible.
+   *
+   * Carries the assessment the main process produced rather than recomputing
+   * it here, so the warning the user reads is the one the mutation will
+   * honour (Requirement 2.5).
+   */
+  | {
+      kind: 'confirmBatchDelete';
+      members: BatchMember[];
+      assessment: BatchAssessment;
+    }
   /** Files already parsed and staged in the main process, awaiting confirmation. */
   | { kind: 'import'; staged: StagedImport[] }
   | { kind: 'export'; scope: ExportScopeRequest }
   /** Picks a downloadable map region from the visible map area. */
   | { kind: 'regionPicker' };
+
+/** What a POI search runs along. */
+export type PoiScope = { kind: 'route'; routeId: string } | { kind: 'itinerary'; tripId: string };
+
+export type PlanDrawer = { kind: 'calendar'; tripId: string } | { kind: 'poi'; scope: PoiScope };
 
 interface UiState {
   layout: PanelLayout;
@@ -47,11 +67,40 @@ interface UiState {
    * has asked for anything.
    */
   profile: { ownerType: 'route' | 'track'; ownerId: string } | null;
+  /**
+   * The geometry whose point table is open, or null.
+   *
+   * Transient, like the profile drawer: the table is a view of one object's
+   * geometry, and a table restored on launch would be editing something the
+   * user has not selected yet.
+   *
+   * The table lives inside the profile drawer, so that a point selected in one
+   * is shown in the other. Opening it therefore opens the drawer for the same
+   * geometry, and closing the drawer closes it.
+   */
+  pointTable: { ownerType: 'route' | 'track'; ownerId: string } | null;
+  /**
+   * Point indices the table has selected, mirrored onto the map.
+   *
+   * Lives here rather than in the table so the map layer can read it without
+   * the two components having to know about each other. Read-only as far as
+   * the data is concerned: highlighting changes nothing and records no undo
+   * entry (Requirement 5.6).
+   */
+  highlightedPoints: readonly number[];
+  /**
+   * Phase 10: the planning drawer below the map, in the slot the profile
+   * uses, so the map stays in view. One of profile, calendar or POIs at a
+   * time; opening one closes the others.
+   */
+  planDrawer: PlanDrawer | null;
 
   hydrate(settings: AppSettings, systemPrefersDark: boolean): void;
   setLayout(patch: Partial<PanelLayout>): void;
   toggleLibrary(): void;
   toggleProperties(): void;
+  /** Phase 10: hide or show the panel below the map. */
+  toggleDrawer(): void;
   setTheme(theme: ThemePreference): void;
   setSystemPrefersDark(dark: boolean): void;
   openDialog(dialog: DialogKind): void;
@@ -61,6 +110,12 @@ interface UiState {
   setMapOffline(offline: boolean): void;
   openProfile(ownerType: 'route' | 'track', ownerId: string): void;
   closeProfile(): void;
+  openPointTable(ownerType: 'route' | 'track', ownerId: string): void;
+  closePointTable(): void;
+  setHighlightedPoints(indices: readonly number[]): void;
+  openCalendar(tripId: string): void;
+  openPoiPanel(scope: PoiScope): void;
+  closePlanDrawer(): void;
   isDark(): boolean;
 }
 
@@ -84,6 +139,9 @@ export const useUiStore = create<UiState>((set, get) => ({
   toast: null,
   mapOffline: false,
   profile: null,
+  pointTable: null,
+  highlightedPoints: [],
+  planDrawer: null,
 
   hydrate: (settings, systemPrefersDark) => {
     set({
@@ -115,6 +173,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   toggleProperties: () =>
     get().setLayout({ propertiesVisible: !get().layout.propertiesVisible }),
 
+  toggleDrawer: () => get().setLayout({ drawerVisible: get().layout.drawerVisible === false }),
+
   setTheme: (theme) => {
     set({ theme });
     void callOr(api().settings.set({ key: 'theme', value: theme }), null);
@@ -130,8 +190,53 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   setMapOffline: (mapOffline) => set({ mapOffline }),
 
-  openProfile: (ownerType, ownerId) => set({ profile: { ownerType, ownerId } }),
-  closeProfile: () => set({ profile: null }),
+  // Opening something below the map shows that panel again if it was hidden.
+  openCalendar: (tripId) => {
+    set({ planDrawer: { kind: 'calendar', tripId }, profile: null, pointTable: null, highlightedPoints: [] });
+    if (get().layout.drawerVisible === false) get().setLayout({ drawerVisible: true });
+  },
+  openPoiPanel: (scope) => {
+    set({ planDrawer: { kind: 'poi', scope }, profile: null, pointTable: null, highlightedPoints: [] });
+    if (get().layout.drawerVisible === false) get().setLayout({ drawerVisible: true });
+  },
+  closePlanDrawer: () => set({ planDrawer: null }),
+
+  openProfile: (ownerType, ownerId) => {
+    set({ planDrawer: null });
+    if (get().layout.drawerVisible === false) get().setLayout({ drawerVisible: true });
+    const table = get().pointTable;
+    const sameOwner =
+      table !== null &&
+      table.ownerType === ownerType &&
+      table.ownerId === ownerId;
+    // A table for a different geometry cannot stay open under this drawer.
+    set(
+      sameOwner
+        ? { profile: { ownerType, ownerId } }
+        : {
+            profile: { ownerType, ownerId },
+            pointTable: null,
+            highlightedPoints: [],
+          },
+    );
+  },
+  closeProfile: () =>
+    set({ profile: null, pointTable: null, highlightedPoints: [] }),
+
+  openPointTable: (ownerType, ownerId) =>
+    // Highlighting is cleared with the owner: indices are only meaningful
+    // against the geometry they came from, and carrying them over would mark
+    // arbitrary points on a different object.
+    set({
+      profile: { ownerType, ownerId },
+      pointTable: { ownerType, ownerId },
+      highlightedPoints: [],
+      planDrawer: null,
+    }),
+
+  closePointTable: () => set({ pointTable: null, highlightedPoints: [] }),
+
+  setHighlightedPoints: (indices) => set({ highlightedPoints: indices }),
 
   isDark: () => {
     const { theme, systemPrefersDark } = get();

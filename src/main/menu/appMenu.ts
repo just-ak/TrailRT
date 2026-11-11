@@ -204,6 +204,12 @@ export function buildApplicationMenu(undo: UndoState = NO_UNDO): Menu {
           accelerator: 'Cmd+R',
           click: dispatch('route:new'),
         },
+        {
+          // Following roads is the default (ADR 0018); this is the deliberate
+          // exception, for paths no road graph knows.
+          label: 'New Straight-Line Route',
+          click: dispatch('route:newStraight'),
+        },
         later('New Track', 'Phase 3'),
         {
           label: 'New Waypoint',

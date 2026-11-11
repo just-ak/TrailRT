@@ -5,28 +5,49 @@ Electron with React and TypeScript. Plan, organise, view and edit outdoor trips,
 routes, tracks and waypoints, with OpenStreetMap and OpenTopoMap as map
 providers and no Garmin hardware or cloud account required.
 
-**Status: Phases 1 to 4 complete and verified.** The app launches, renders an
+**Status: Phases 1 to 7 and 10 complete and verified.** The app launches, renders an
 OpenStreetMap or OpenTopoMap map, and manages trips, folders, routes, tracks and
 waypoints that persist across restarts. Routes are drawn and edited directly on
 the map with undo and redo over every edit; GPX, KML, KMZ, TCX, FIT and CSV
 import and export; and the map now carries a scale bar, cursor coordinates,
 layer visibility, a measure tool, a combined elevation and road-attribute
-profile, and snap-to-road backed by a routing engine built into the app. Phase 5
-(windy-roads routing) is next.
+profile, and snap-to-road backed by a routing engine built into the app.
+Objects can be multi-selected and moved or deleted as one undoable batch, and a
+route or track's points can be inspected and corrected in a table that
+highlights the selected points on the map. A route between two places now
+offers the routes on offer, up to three, and can be shaped on the map by
+dragging its line or its points, with every edit undoable. Phase 7 makes
+following roads the default way to make a route, picks map regions from a UK
+county map — several at once, merged into one graph — and gives every profile
+terrain altitude and a twisty score, with UK roads that post no limit counted
+at the national default, labelled as assumed. Phase 10, built ahead of 8 and 9
+at the owner's request, adds road trip planning: a trip can be planned by date
+as an itinerary of stops lasting hours or days, shown as a calendar and
+summarised by day in the library, with the drives between stops planned by road
+automatically. Fuel, hotels and other places can be found along the way, and
+postcodes and places can be searched with no network. Phase 8 (windy-roads
+routing) is next; Phase 11 (geotagged photos) has requirements only.
 
 Every acceptance criterion is verified against the packaged DMG build, not just
-the development output: 812 unit tests and 68 end-to-end tests pass, with a
+the development output: 1,564 unit tests and 142 end-to-end tests pass, with a
 clean typecheck and no lint errors.
+
+**To run it, download
+[`downloads/TrailRT-0.1.0-arm64.dmg`](downloads/TrailRT-0.1.0-arm64.dmg)**
+(Apple silicon, macOS 13.3 or later). See
+[Installing a release build](#installing-a-release-build).
 
 ### What road routing is, and is not
 
-There are two ways to get a road-following route. The **snap routing tool** in
-the map toolbar routes as you go: each click is a control point and the road
-geometry between it and the last one appears immediately, so you build the route
-and watch it follow the roads. Alternatively, draw a straight-line route and
-press **Snap to roads** in its properties to convert it in one step. Either way
-your clicks are kept as control points, so the route can be re-snapped later in
-a different transport mode without redrawing it.
+Following roads is the default. **New Route** routes as you go: each click is a
+control point and the road geometry between it and the last one appears
+immediately, so you build the route and watch it follow the roads. With no map
+region loaded it draws straight lines instead and says why, with **Add map
+regions…** one click away. A route that deliberately ignores roads — off-road, a
+ferry, private land — is **New Straight-Line Route** in the Trip menu, and an
+imported straight route can be converted with **Snap to roads** in its
+properties. Your clicks are kept as control points, so the route can be
+re-snapped later in a different transport mode without redrawing it.
 
 Snap-to-road, road classes and posted speed limits need an external routing
 service, and **none is configured by default**. With no endpoint set, TrailRT
@@ -45,16 +66,19 @@ It runs in-process as an N-API addon, so there is no daemon, no port and no
 background process. Measured inside Electron against a local graph: a route in
 52 ms, road attributes across 51 edges in 7 ms.
 
-What you do need is a **region**, because the engine is useless without a
-routing graph. Pan the map to where you want to route and press **Add a map
-region**: TrailRT matches the visible area against Geofabrik's published
-extracts and offers the few that cover it, most specific first, with real
-download sizes. Pick one and it downloads and builds a graph locally.
+What you do need is **map regions**, because the engine is useless without a
+routing graph. **Choose map regions** opens a map of the UK: click the counties
+you ride in — England's 47, plus Scotland, Wales, and the island of Ireland
+(Northern Ireland is only published with the Republic) — and see the total
+download size before committing. Several regions are merged into one graph with
+`osmium`, because Valhalla refuses overlapping extracts, so a ride round Buxton,
+Macclesfield and Leek needs Derbyshire, Cheshire and Staffordshire (about
+110 MB, built in about a minute) rather than all of England. Outside the UK, the
+**Elsewhere** tab offers the published extracts covering the visible map.
 
-Sizes matter, which is why they are shown before you commit. Zoomed in on
-Liechtenstein the options are the country at 3.3 MB, or the Alps bundle that
-covers your whole view at 2.3 GB. Anything past 2 GB is marked unselectable
-rather than allowed to start a download that would be refused at the end.
+Terrain heights for route profiles download with the regions, from the open
+Terrain Tiles dataset (SRTM-derived, about 30 m). They are a model, labelled as
+one, and never written into your routes.
 
 Importing a `.osm.pbf` by hand still works, for a custom extract or a region
 Geofabrik does not publish.
@@ -90,7 +114,7 @@ nvm use          # Node 26
 npm install
 npm run dev      # development, with HMR
 npm run verify   # lint, typecheck, unit tests, build, end-to-end tests
-npm run package  # macOS .app + DMG for arm64 and x64
+npm run package  # macOS .app + DMG, Apple silicon (arm64) only
 ```
 
 ![Implementation progress](docs/progress-mindmap.svg)
@@ -104,6 +128,7 @@ npm run package  # macOS .app + DMG for arm64 and x64
 | [`docs/adr/`](docs/adr/)                                 | Architectural decision records                                     |
 | [`docs/licences/`](docs/licences/)                       | Third-party dependency and licence register                        |
 | [`docs/progress-mindmap.svg`](docs/progress-mindmap.svg) | Canonical implementation status                                    |
+| [`downloads/`](downloads/)                               | The packaged app (DMG), stored with Git LFS                        |
 
 Read [`.kiro/specs/spec-review.md`](.kiro/specs/spec-review.md) first. It
 records the contradictions found in the source specification and how each was
@@ -135,12 +160,31 @@ good set rather than an aspiration.
    elevation / speed / road-class profile, distance-weighted speed
    distribution, scale bar, cursor coordinates, layer visibility, keyboard
    panning, a measure tool and the Waze hand-off
-5. **Windy roads routing** — motorcycle-friendly routes that favour bends, with
-   curvature scoring that steers the search rather than re-ranking afterwards
-6. **Garmin compatibility** — GDB, IMG and device transfer investigations
+5. **Object and point management** — _complete._ Multi-select in the library by
+   ⌘-click, Shift-click and keyboard, with batch move and delete that are one
+   undo step rather than N; a virtualised point table for one route or track
+   with in-place editing, non-contiguous deletion that preserves a recording's
+   segment breaks, and the selected points highlighted on the map
+6. **Route alternatives and shaping** — _complete._ Up to three routes on offer
+   between two places, and shaping by dragging the line or its points, every
+   edit undoable
+7. **UK regions and profile** — _complete._ Map regions picked from a UK county
+   map and merged into one graph, following roads by default, and profiles with
+   terrain altitude, a twisty score and assumed national speed limits
+8. **Windy roads routing** — _next._ Motorcycle-friendly routes that favour
+   bends, with curvature scoring that steers the search rather than re-ranking
+   afterwards
+9. **Garmin compatibility** — GDB, IMG and device transfer investigations
+10. **Road trip planning** — _complete._ Dated itineraries with stops in hours
+    or days, a calendar, drives planned by road automatically, places found
+    along the way, and offline postcode and place search
+11. **Geotagged photos** — _requirements only._ Photos from a linked folder,
+    placed on the map by their own GPS data, with a preview in the corner of
+    the map
 
-Phases are built in order. Later phases are specified at requirements level only
-until the phase before them is built and tested.
+Phases are built in order, unless the owner moves one forward: Phase 10 was
+built ahead of 8 and 9 at the owner's request. Later phases are specified at
+requirements level only until the phase before them is built and tested.
 
 ## File formats
 
@@ -156,8 +200,8 @@ claim of support that has not been exercised.
 | FIT                       | ✓    | —     | Via the MIT-licensed parser, not Garmin's SDK (ADR 0006/0007). Coordinates are quantised by the format, and the import says so |
 | CSV                       | ✓    | ✓     | Waypoints, with header mapping and delimiter detection for spreadsheets from elsewhere                                         |
 | TrailRT collection (JSON) | ✓    | ✓     | Whole trips, folders and geometry, for moving between installs. Imports as a merge, never an overwrite                         |
-| Garmin GDB                | —    | —     | Recognised and explained rather than accepted and failed. Phase 6                                                              |
-| Garmin IMG                | —    | —     | Map products rather than trip data. Phase 6                                                                                    |
+| Garmin GDB                | —    | —     | Recognised and explained rather than accepted and failed. Phase 9                                                              |
+| Garmin IMG                | —    | —     | Map products rather than trip data. Phase 9                                                                                    |
 
 **TCX and FIT are deliberately read-only.** Both describe a recording session —
 laps, device identity, sport — that TrailRT does not hold, so writing one would
@@ -183,10 +227,22 @@ were excluded on licence grounds: `react-leaflet` (Hippocratic-2.1, so Leaflet
 is used directly) and Garmin's own `@garmin/fitsdk` (proprietary EULA, so the
 MIT-licensed FIT parser is used instead).
 
-Distribution is via GitHub releases and a DMG. The Mac App Store is not a
+Distribution is a DMG, committed under `downloads/` through Git LFS in the
+same commit as the source it was built from. The Mac App Store is not a
 target — its terms conflict with GPL-3.0.
 
 ## Installing a release build
+
+TrailRT needs a Mac with Apple silicon (M1 or later) running macOS 13.3 or
+later. Intel Macs are not supported; see ADR 0013.
+
+To download it from GitHub, open
+[`downloads/TrailRT-0.1.0-arm64.dmg`](downloads/TrailRT-0.1.0-arm64.dmg) and
+click **Download**. The file is stored with Git LFS, so a `git clone` without
+[Git LFS](https://git-lfs.com) installed gets a small text pointer instead of
+the DMG. Run `git lfs install` once, then `git lfs pull`.
+
+Open the DMG and drag TrailRT into Applications.
 
 There is no Apple Developer ID for this project yet, so release builds are
 ad-hoc signed rather than notarised. macOS will block the app on first launch
@@ -214,7 +270,7 @@ Recorded up front rather than discovered later:
 
 - **GDB** has no JavaScript parser. GPSBabel is the only mature reader, and
   because it is GPL-2.0-or-later it is compatible with our licence, so support
-  is viable — but it is Phase 6 work and unproven until tested against real
+  is viable — but it is Phase 9 work and unproven until tested against real
   files. See ADR 0006 as amended.
 - **Garmin IMG** rendering is architecturally accommodated but not planned for
   implementation. No encryption or licensing circumvention, ever.

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { RouteWithPoints } from '@shared/domain/types';
+import type { LatLon } from '@shared/geo/distance';
 import { routeColour } from '@shared/domain/symbols';
 import { closestSegment } from '@shared/geo/routeEdit';
 import { endpointIcon, vertexIcon } from './markers';
@@ -39,12 +40,27 @@ export function useRouteLayers(
   selectedId: string | null,
   handlers: Handlers,
   enabled: boolean,
+  /**
+   * The points the user placed, when the selected route has been snapped.
+   *
+   * Empty or absent for a hand-drawn route, which then behaves exactly as it
+   * always has. See the handles effect below for why this changes what is
+   * draggable.
+   */
+  controlPoints: readonly LatLon[] = [],
 ): void {
   const lineGroupRef = useRef<L.LayerGroup | null>(null);
   const handleGroupRef = useRef<L.LayerGroup | null>(null);
   const linesRef = useRef(new Map<string, L.Polyline>());
 
   const handlersRef = useRef(handlers);
+  /*
+   * Control points are read through a ref for the same reason the handlers
+   * are: the array arrives fresh from a store selector on every render, so
+   * depending on its identity would rebuild every handle continuously.
+   * `controlKey` below is what actually triggers a rebuild.
+   */
+  const controlRef = useRef(controlPoints);
   // A polyline's click handler is created once per route but needs the *current*
   // selection to decide between "select me" and "insert a point", so it reads
   // the selection from a ref rather than a captured value.
@@ -54,7 +70,8 @@ export function useRouteLayers(
   useEffect(() => {
     handlersRef.current = handlers;
     selectedIdRef.current = selectedId;
-  }, [handlers, selectedId]);
+    controlRef.current = controlPoints;
+  }, [handlers, selectedId, controlPoints]);
 
   useEffect(() => {
     if (map === null) return;
@@ -113,6 +130,14 @@ export function useRouteLayers(
         line.on('click', (event) => {
           L.DomEvent.stopPropagation(event);
           if (selectedIdRef.current === route.id) {
+            /*
+             * A snapped route is shaped through `useRouteShaping`, whose hit
+             * area sits above this line. Should a click reach here anyway it
+             * must not insert a raw vertex: that edits derived road geometry,
+             * which the next re-route silently discards — the Phase 6
+             * investigation's defect.
+             */
+            if (controlRef.current.length > 0) return;
             // Already selected: a click on the line means "insert a point here".
             const hit = closestSegment(route.points, {
               lat: event.latlng.lat,
@@ -158,6 +183,15 @@ export function useRouteLayers(
     }
   }, [map, routes, selectedId]);
 
+  /*
+   * A stable key for the control points, so the handles effect re-runs when
+   * they change without re-running on every render. The array arrives fresh
+   * from a store selector each time.
+   */
+  const controlKey = controlPoints
+    .map((point) => `${point.lat},${point.lon}`)
+    .join('|');
+
   // --- editing handles for the selected route only
   useEffect(() => {
     const group = handleGroupRef.current;
@@ -168,6 +202,16 @@ export function useRouteLayers(
 
     const route = routes.find((r) => r.id === selectedId);
     if (route === undefined) return;
+
+    /*
+     * A snapped route is edited through the points the user placed, not the
+     * road vertices the engine produced, and those handles belong to
+     * `useRouteShaping` (Phase 6). A snapped route is hundreds to thousands of
+     * vertices; a draggable marker on each would bury the map, and dragging a
+     * derived road vertex is meaningless anyway. A hand-drawn route has no
+     * control points and keeps per-vertex editing.
+     */
+    if (controlRef.current.length > 0) return;
 
     for (const [index, point] of route.points.entries()) {
       const isFirst = index === 0;
@@ -205,5 +249,8 @@ export function useRouteLayers(
 
       handle.addTo(group);
     }
-  }, [map, routes, selectedId, enabled]);
+    // `controlKey` stands in for `controlPoints`, whose identity changes on
+    // every render.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
+  }, [map, routes, selectedId, enabled, controlKey]);
 }

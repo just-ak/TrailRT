@@ -50,7 +50,10 @@ the lockfile is a compliance failure, not an inconvenience.
 
 ## Distribution channels
 
-GitHub releases plus a DMG for direct download. Notarisation is compatible with
+GitHub releases plus a DMG for direct download. The DMG is also committed under
+`downloads/` through Git LFS, in the same commit as the source it was built
+from, so the corresponding source for every committed binary is the commit
+that carries it. Notarisation is compatible with
 GPL-3.0 — it attests to the binary rather than restricting the user — but there
 is no Developer ID yet, so builds are **ad-hoc signed** and notarisation is
 configured but disabled. See ADR 0009, and document the Gatekeeper consequence

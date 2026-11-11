@@ -1,5 +1,8 @@
 import { z } from 'zod';
+import { MAX_ITINERARY_STOPS, MAX_OTHER_MINUTES, MAX_STAY_DAYS, MAX_STOP_MINUTES } from '../domain/itinerary';
+import { POI_CATEGORY_IDS } from '../poi/categories';
 import { checkRoutingOrigin } from '../net/origin';
+import { isValidDate, isValidTime } from '../time/zoned';
 
 /**
  * Request schemas for every IPC channel. The main process validates against
@@ -35,6 +38,7 @@ export const layerVisibilitySchema = z
     routes: z.boolean(),
     tracks: z.boolean(),
     waypoints: z.boolean(),
+    pois: z.boolean().optional(),
   })
   .strict();
 
@@ -153,6 +157,8 @@ export const panelLayoutSchema = z
     propertiesWidth: z.number().int().min(0).max(2000),
     libraryVisible: z.boolean(),
     propertiesVisible: z.boolean(),
+    drawerHeight: z.number().int().min(0).max(4000).optional(),
+    drawerVisible: z.boolean().optional(),
   })
   .strict();
 
@@ -252,6 +258,8 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
     .object({ key: z.literal('transportMode'), value: transportModeSchema })
     .strict(),
   z.object({ key: z.literal('showScaleBar'), value: z.boolean() }).strict(),
+  z.object({ key: z.literal('routeAlternatives'), value: z.boolean() }).strict(),
+  z.object({ key: z.literal('ukDefaultSpeedLimits'), value: z.boolean() }).strict(),
   z
     .object({ key: z.literal('layerVisibility'), value: layerVisibilitySchema })
     .strict(),
@@ -518,6 +526,97 @@ export const trackDeleteRangeRequest = z
   })
   .strict();
 
+// -------------------------------------- Phase 5: object and point management
+
+/**
+ * A recorded timestamp, epoch milliseconds.
+ *
+ * Bounded to 1900–2100 rather than left open: every value outside that is a
+ * unit mix-up (seconds mistaken for milliseconds lands in 1970) or a parsing
+ * failure, and accepting one would put a point on the map's time axis that no
+ * recording could have produced. Nullable, because untimed is a real state.
+ */
+export const recordedAtSchema = z
+  .number()
+  .int()
+  .min(-2_208_988_800_000)
+  .max(4_102_444_800_000)
+  .nullable();
+
+/**
+ * How many points one paged read returns.
+ *
+ * Capped well below the 10,000-row route limit: this backs a virtualised table
+ * whose viewport is a few dozen rows, so a large window would defeat the point
+ * of paging at all.
+ */
+export const trackPointsPageRequest = z
+  .object({
+    id: idSchema,
+    offset: z.number().int().min(0).default(0),
+    limit: z.number().int().min(1).max(2_000).default(200),
+  })
+  .strict();
+
+export const trackEditPointRequest = z
+  .object({
+    id: idSchema,
+    index: z.number().int().min(0),
+    lat: latSchema,
+    lon: lonSchema,
+    ele: elevationSchema.default(null),
+    time: recordedAtSchema.default(null),
+  })
+  .strict();
+
+/**
+ * Flat point indices to delete, possibly non-contiguous.
+ *
+ * Bounded at the same 10,000 the undo inverse carries, so a request that could
+ * never be recorded as one step is refused at the boundary rather than applied
+ * and then reported as irreversible.
+ */
+export const trackDeletePointsRequest = z
+  .object({
+    id: idSchema,
+    indices: z.array(z.number().int().min(0)).min(1).max(10_000),
+  })
+  .strict();
+
+export const batchKindSchema = z.enum(['route', 'track', 'waypoint']);
+
+export const batchMemberSchema = z
+  .object({ kind: batchKindSchema, id: idSchema })
+  .strict();
+
+/**
+ * Members of a batch.
+ *
+ * The 500 cap matches `batchService.MAX_BATCH_MEMBERS`, deliberately
+ * duplicated: the schema refuses an oversized payload before any row is read,
+ * and the service refuses it again for callers that are not the IPC layer.
+ */
+export const batchMembersSchema = z.array(batchMemberSchema).min(1).max(500);
+
+export const batchAssessRequest = z
+  .object({
+    members: batchMembersSchema,
+    operation: z.enum(['delete', 'move']),
+  })
+  .strict();
+
+export const batchDeleteRequest = z
+  .object({ members: batchMembersSchema })
+  .strict();
+
+export const batchMoveRequest = z
+  .object({ members: batchMembersSchema, tripId: idSchema })
+  .strict();
+
+export type BatchMemberInput = z.infer<typeof batchMemberSchema>;
+export type TrackPointsPageRequest = z.infer<typeof trackPointsPageRequest>;
+export type TrackEditPointRequest = z.infer<typeof trackEditPointRequest>;
+
 // -------------------------------------------------------- import / export
 
 export const importFormatSchema = z.enum([
@@ -672,6 +771,9 @@ export const routingSpeedDistributionRequest = attributeOwnerSchema.extend({
   source: z.enum(['posted', 'recorded']),
 });
 
+/** Terrain tiles for one geometry's profile. ADR 0018. */
+export const routingDownloadTerrainRequest = attributeOwnerSchema;
+
 export const routingConsentNoticeRequest = z
   .object({ endpoint: z.string().max(2048) })
   .strict();
@@ -741,6 +843,101 @@ const previewedLegSchema = z
     matched: z.boolean(),
     shape: z.array(latLonSchema).min(2).max(10_000),
     distanceM: z.number().finite().nonnegative().nullable(),
+    /**
+     * How far the engine moved this leg's end to reach a road.
+     *
+     * Defaulted rather than required: it is a diagnostic the main process
+     * measured and handed to the renderer, so a payload without it is a
+     * tool that has not been told rather than a malformed request.
+     */
+    displacementM: z
+      .number()
+      .finite()
+      .nonnegative()
+      .nullable()
+      .default(null),
+  })
+  .strict();
+
+// ------------------------------------------------- Phase 6: shaping
+
+const sectionLocationSchema = z
+  .object({ point: latLonSchema, passThrough: z.boolean() })
+  .strict();
+
+/** A section to route: an edit touches at most two legs, so three points. */
+export const routingRouteSectionRequest = z
+  .object({
+    locations: z.array(sectionLocationSchema).min(2).max(5),
+    mode: transportModeRequestSchema,
+  })
+  .strict();
+
+export const routingAlternativesRequest = z
+  .object({
+    from: latLonSchema,
+    to: latLonSchema,
+    count: z.number().int().min(1).max(3).default(3),
+    mode: transportModeRequestSchema,
+  })
+  .strict();
+
+const controlRoleSchema = z.enum(['via', 'shaping']);
+
+const legIndexSchema = z.number().int().min(0).max(999);
+const controlIndexSchema = z.number().int().min(0).max(1000);
+
+/** Every shaping edit, mirroring `RouteEdit` in `shared/routing/edit.ts`. */
+const routeEditSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('append'), at: latLonSchema }).strict(),
+  z.object({ kind: z.literal('move'), index: controlIndexSchema, to: latLonSchema }).strict(),
+  z.object({ kind: z.literal('insert'), leg: legIndexSchema, at: latLonSchema }).strict(),
+  z
+    .object({
+      kind: z.literal('insertOnLine'),
+      leg: legIndexSchema,
+      segmentEnd: z.number().int().min(1).max(25_000),
+      at: latLonSchema,
+    })
+    .strict(),
+  z.object({ kind: z.literal('remove'), index: controlIndexSchema }).strict(),
+  z
+    .object({ kind: z.literal('setRole'), index: controlIndexSchema, role: controlRoleSchema })
+    .strict(),
+  z
+    .object({
+      kind: z.literal('choose'),
+      leg: legIndexSchema,
+      candidate: z.array(latLonSchema).min(2).max(10_000),
+      shaping: z.array(latLonSchema).max(3),
+    })
+    .strict(),
+]);
+
+/**
+ * Committing a shaping edit.
+ *
+ * `expected` is the control-point state the renderer planned against; the
+ * service compares it with the database and refuses on any difference.
+ */
+export const routingApplyEditRequest = z
+  .object({
+    routeId: idSchema,
+    expected: z
+      .array(
+        z
+          .object({
+            lat: latSchema,
+            lon: lonSchema,
+            role: controlRoleSchema,
+            shapeIndex: z.number().int().min(0).nullable(),
+          })
+          .strict(),
+      )
+      .min(2)
+      .max(1000),
+    edit: routeEditSchema,
+    legs: z.array(previewedLegSchema).min(0).max(4).nullable(),
   })
   .strict();
 
@@ -759,6 +956,8 @@ export const routingCreateSnappedRequest = z
     colour: routeColourSchema.default(null),
     controlPoints: z.array(latLonSchema).min(2).max(1000),
     legs: z.array(previewedLegSchema).min(1).max(999),
+    /** Phase 6: parallel to `controlPoints`. Absent means every point is a via. */
+    roles: z.array(controlRoleSchema).max(1000).optional(),
     mode: transportModeRequestSchema,
   })
   .strict()
@@ -792,10 +991,182 @@ export const routingSuggestRegionsRequest = z
     message: 'The visible area is empty.',
   });
 
+/** Region ids as the Geofabrik index names them. */
+const regionIdSchema = z
+  .string()
+  .min(1)
+  .max(128)
+  .regex(/^[a-z0-9-]+$/, 'Not a region id.');
+
+/**
+ * One or more regions to build into a single graph. Capped well above the 50
+ * UK regions; past that, the 2 GB build limit refuses it anyway.
+ */
 export const routingDownloadRegionRequest = z
-  .object({ regionId: z.string().min(1).max(128) })
+  .object({ regionIds: z.array(regionIdSchema).min(1).max(64) })
+  .strict()
+  .refine((v) => new Set(v.regionIds).size === v.regionIds.length, {
+    message: 'A region is listed twice.',
+  });
+
+export const routingRegionSizesRequest = z
+  .object({ regionIds: z.array(regionIdSchema).min(1).max(64) })
   .strict();
 
 export type RoutingSuggestRegionsRequest = z.infer<
   typeof routingSuggestRegionsRequest
 >;
+
+// --------------------------------------------------------- Phase 10: search
+
+export const searchQueryRequest = z
+  .object({
+    text: z.string().max(200),
+    lat: latSchema,
+    lon: lonSchema,
+    limit: z.number().int().min(1).max(50).optional(),
+  })
+  .strict();
+
+// --------------------------------------------------------- Phase 10: places
+
+export const poiCategorySchema = z.enum(POI_CATEGORY_IDS);
+
+export const alongScopeSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('route'), routeId: idSchema }).strict(),
+  z.object({ kind: z.literal('itinerary'), tripId: idSchema }).strict(),
+]);
+
+const distanceAlongSchema = z.number().finite().min(0).max(10_000_000);
+
+export const alongSectionSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('all') }).strict(),
+  z.object({ kind: z.literal('range'), fromM: distanceAlongSchema, toM: distanceAlongSchema }).strict(),
+  z
+    .object({ kind: z.literal('near'), lat: latSchema, lon: lonSchema, radiusM: z.number().min(100).max(50_000) })
+    .strict(),
+  // A local date of the itinerary; validated as a real date below.
+  z.object({ kind: z.literal('day'), date: z.string().max(10) }).strict(),
+]);
+
+export const placesAlongRequest = z
+  .object({
+    requestId: z.string().min(1).max(64),
+    scope: alongScopeSchema,
+    categories: z.array(poiCategorySchema).min(1).max(POI_CATEGORY_IDS.length),
+    widthM: z.number().min(100).max(10_000),
+    section: alongSectionSchema,
+  })
+  .strict();
+
+export const placesCancelRequest = z.object({ requestId: z.string().min(1).max(64) }).strict();
+
+export const placesDetourRequest = z
+  .object({ scope: alongScopeSchema, poiId: z.number().int().positive() })
+  .strict();
+
+export const placesGetRequest = z.object({ poiId: z.number().int().positive() }).strict();
+
+export const placesAddWaypointRequest = z
+  .object({ poiId: z.number().int().positive(), tripId: idSchema })
+  .strict();
+
+// ------------------------------------------------------ Phase 10: itinerary
+
+/** A real calendar date, `YYYY-MM-DD`. A pattern alone would let 2026-02-30 through. */
+export const dateSchema = z.string().refine(isValidDate, { message: 'Expected a real date, YYYY-MM-DD' });
+
+/** `HH:mm`, 00:00 to 23:59. */
+export const timeSchema = z.string().refine(isValidTime, { message: 'Expected a time from 00:00 to 23:59' });
+
+export const durationKindSchema = z.enum(['hours', 'days']);
+const stopMinutesSchema = z.number().int().min(0).max(MAX_STOP_MINUTES);
+const stayDaysSchema = z.number().int().min(1).max(MAX_STAY_DAYS);
+
+export const itineraryGetRequest = z.object({ tripId: idSchema }).strict();
+
+export const itineraryCreateRequest = z
+  .object({ tripId: idSchema, startDate: dateSchema, startTime: timeSchema })
+  .strict();
+
+export const itineraryRemoveRequest = z.object({ tripId: idSchema }).strict();
+
+export const itineraryUpdateRequest = z
+  .object({
+    tripId: idSchema,
+    startDate: dateSchema.optional(),
+    startTime: timeSchema.optional(),
+    defaultDepart: timeSchema.optional(),
+    maxDriveMinutes: z.number().int().min(30).max(24 * 60).nullable().optional(),
+    rangeKm: z.number().finite().positive().max(5000).nullable().optional(),
+    reservePct: z.number().int().min(0).max(90).optional(),
+    energy: z.enum(['fuel', 'electric']).optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).some((k) => k !== 'tripId'), {
+    message: 'At least one field must be provided',
+  });
+
+export const itineraryAddStopRequest = z
+  .object({
+    tripId: idSchema,
+    waypointId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+    durationKind: durationKindSchema.optional(),
+    durationMinutes: stopMinutesSchema.nullable().optional(),
+    durationDays: stayDaysSchema.nullable().optional(),
+    notes: optionalTextSchema.optional(),
+  })
+  .strict();
+
+export const itineraryStopRequest = z.object({ id: idSchema }).strict();
+
+export const itineraryMoveStopRequest = z
+  .object({ id: idSchema, toIndex: z.number().int().min(0).max(MAX_ITINERARY_STOPS - 1) })
+  .strict();
+
+export const itineraryUpdateStopRequest = z
+  .object({
+    id: idSchema,
+    durationKind: durationKindSchema.optional(),
+    durationMinutes: stopMinutesSchema.nullable().optional(),
+    durationDays: stayDaysSchema.nullable().optional(),
+    departTime: timeSchema.nullable().optional(),
+    arriveBy: timeSchema.nullable().optional(),
+    departAt: timeSchema.nullable().optional(),
+    notes: optionalTextSchema.optional(),
+  })
+  .strict()
+  .refine((v) => Object.keys(v).some((k) => k !== 'id'), {
+    message: 'At least one field must be provided',
+  });
+
+export const itineraryLinkLegRequest = z
+  .object({ id: idSchema, routeId: idSchema.nullable() })
+  .strict();
+
+export const itineraryAddPoiStopRequest = z
+  .object({
+    poiId: z.number().int().positive(),
+    tripId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+  })
+  .strict();
+
+export const itineraryExportIcsRequest = z
+  .object({ tripId: idSchema, includeLegs: z.boolean() })
+  .strict();
+
+/**
+ * A chosen route is set with `itineraryLinkLegRequest`, which carries the
+ * route; this sets the other two modes.
+ */
+export const itinerarySetLegModeRequest = z
+  .object({
+    id: idSchema,
+    mode: z.enum(['road', 'other']),
+    transport: z.enum(['ferry', 'train', 'flight', 'other']).nullable().optional(),
+    minutes: z.number().int().min(1).max(MAX_OTHER_MINUTES).nullable().optional(),
+    label: z.string().trim().max(200).nullable().optional(),
+  })
+  .strict();

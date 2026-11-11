@@ -1,4 +1,4 @@
-import type { Waypoint, WaypointGroup } from '@shared/domain/types';
+import type { Waypoint, WaypointGroup, WaypointSource } from '@shared/domain/types';
 import type { WaypointWithTrip } from '@shared/ipc/api';
 import { isValidLat, isValidLon } from '@shared/geo/distance';
 import { DEFAULT_SYMBOL_ID } from '@shared/domain/symbols';
@@ -72,7 +72,7 @@ export function create(
     symbol: string;
     notes: string | null;
     groupId: string | null;
-    source?: 'user' | 'import';
+    source?: WaypointSource;
     /** Imported fields with no column of their own. See db/metadata.ts. */
     metadata?: Record<string, unknown> | undefined;
   },
@@ -286,6 +286,8 @@ export function moveBack(
 
 export function remove(db: Db, id: string): Mutation<{ id: string }> {
   const snapshot = requireWaypoint(db, id);
+  // Read before the row goes.
+  const metadata = repo.readWaypointMetadata(db, id);
   repo.deleteWaypoint(db, id);
   return {
     result: { id },
@@ -295,6 +297,9 @@ export function remove(db: Db, id: string): Mutation<{ id: string }> {
         ...snapshotPayload(snapshot),
         tripId: snapshot.tripId,
         source: snapshot.source,
+        // Imported extras and POI provenance live here; an undo that dropped
+        // them would quietly turn a traced place into an anonymous point.
+        metadata,
       },
     },
   };
@@ -313,7 +318,9 @@ export function restore(
     symbol: string;
     notes: string | null;
     groupId: string | null;
-    source: 'user' | 'import';
+    source: WaypointSource;
+    /** Carried by the deletion's inverse, so provenance survives an undo. */
+    metadata?: Record<string, unknown> | undefined;
   },
 ): Mutation<Waypoint> {
   if (repo.findWaypoint(db, input.id) !== null) {

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import type { BoundingBox } from '@shared/geo/polygon';
-import { downloadIndex, parseIndex, rankRegions, regionSize, findRegion } from './geofabrik';
+import {
+  BUXTON_VIEWPORT,
+  LOOP_VIEWPORT,
+  PEAK_DISTRICT_VIEWPORT,
+  TOWNS,
+} from '@fixtures/places';
+import {
+  downloadIndex,
+  parseIndex,
+  rankRegions,
+  regionSize,
+  findRegion,
+} from './geofabrik';
 
 /**
  * Region matching against the **real** Geofabrik index.
@@ -17,16 +29,34 @@ import { downloadIndex, parseIndex, rankRegions, regionSize, findRegion } from '
  * region, that regions nest, and that `-latest.osm.pbf` answers a HEAD with a
  * size after one same-origin redirect. Any of those could change upstream
  * without warning.
+ *
+ * ## The Buxton loop is the interesting case, not a convenient one
+ *
+ * Geofabrik publishes England by **county**, and the four corners of the test
+ * loop fall in three of them:
+ *
+ *   Buxton        Derbyshire
+ *   Macclesfield  Cheshire
+ *   Leek          Staffordshire
+ *   Ashbourne     Derbyshire
+ *
+ * So no county extract covers the square. That is precisely the situation
+ * `rankRegions` was designed around and the reason `coversViewport` is
+ * *reported* rather than used as a filter: ranking by "smallest region that
+ * fully contains the view" would offer `england` for a view of one town, while
+ * ranking by the centre and labelling coverage lets the user choose. Both
+ * halves of that are asserted below against live data.
  */
 
 const live = process.env.TRAILRT_LIVE_GEOFABRIK === '1';
 
-const box = (
-  minLat: number,
-  minLon: number,
-  maxLat: number,
-  maxLon: number,
-): BoundingBox => ({ minLat, minLon, maxLat, maxLon });
+/** A tight box around one point, as zooming in on a town produces. */
+const around = (place: { lat: number; lon: number }): BoundingBox => ({
+  minLat: place.lat - 0.01,
+  maxLat: place.lat + 0.01,
+  minLon: place.lon - 0.01,
+  maxLon: place.lon + 0.01,
+});
 
 describe.runIf(live)('Geofabrik index, live', () => {
   it('parses the published index', async () => {
@@ -41,23 +71,69 @@ describe.runIf(live)('Geofabrik index, live', () => {
     expect(regions.some((r) => r.parent !== null)).toBe(true);
   }, 120_000);
 
-  it('picks real regions for real viewports', async () => {
+  it('picks the county for a town-sized view of Buxton', async () => {
     const regions = parseIndex(await downloadIndex());
+    const ranked = rankRegions(regions, BUXTON_VIEWPORT);
 
-    const pick = (b: BoundingBox) => rankRegions(regions, b).map((r) => r.id);
+    expect(ranked[0]?.id).toBe('derbyshire');
+    // A whole county comfortably contains a view of one town, so this one is
+    // both most specific *and* covering. The unambiguous case.
+    expect(ranked[0]?.coversViewport).toBe(true);
+    // The larger options stay in the list for a user who wants more road.
+    expect(ranked.map((r) => r.id)).toContain('england');
+    expect(ranked.map((r) => r.id)).toContain('great-britain');
+  }, 120_000);
 
-    // A small country, viewed close in. This is the case that exposed
-    // centre-based ranking: by full coverage it would pick `alps`.
-    expect(pick(box(47.12, 9.5, 47.16, 9.54))[0]).toBe('liechtenstein');
+  /**
+   * Each corner resolves to its own county, which is what makes the loop a
+   * three-county square rather than a claim in a comment.
+   */
+  it('places each corner of the loop in its real county', async () => {
+    const regions = parseIndex(await downloadIndex());
+    const top = (place: { lat: number; lon: number }) =>
+      rankRegions(regions, around(place))[0]?.id;
 
-    // A regional view inside one country.
-    expect(pick(box(46.4, 7.5, 47.0, 8.5))[0]).toBe('switzerland');
+    expect(top(TOWNS.buxton)).toBe('derbyshire');
+    expect(top(TOWNS.macclesfield)).toBe('cheshire');
+    expect(top(TOWNS.leek)).toBe('staffordshire');
+    expect(top(TOWNS.ashbourne)).toBe('derbyshire');
+  }, 120_000);
 
-    // Geofabrik publishes sub-country regions, and the most specific wins.
-    expect(pick(box(51.4, -0.3, 51.6, 0.05))[0]).toBe('greater-london');
+  /**
+   * The case the design exists for.
+   *
+   * The whole square spans three counties, so the region at its centre cannot
+   * cover it. The honest answer is to rank that region first anyway and say it
+   * does not cover the view, while keeping the one that does in the list.
+   */
+  it('reports that no county covers the whole square, and offers one that does', async () => {
+    const regions = parseIndex(await downloadIndex());
+    const ranked = rankRegions(regions, LOOP_VIEWPORT);
 
-    // A continent-scale view still resolves, to the continent.
-    expect(pick(box(40, -5, 55, 20))).toContain('europe');
+    const first = ranked[0];
+    expect(first).toBeDefined();
+    // The loop's centre lands in Staffordshire, between Buxton and Leek.
+    expect(first?.id).toBe('staffordshire');
+    // Not covering — stated, not hidden.
+    expect(first?.coversViewport).toBe(false);
+
+    // And something that does cover it is still on offer, so the user is not
+    // left with only an option that would leave them unable to route the
+    // western half of their own ride.
+    const covering = ranked.find((r) => r.coversViewport);
+    expect(covering?.id).toBe('england');
+
+    console.info(
+      `[live] loop view: ${ranked.map((r) => `${r.id}${r.coversViewport ? ' (covers)' : ''}`).join(' > ')}`,
+    );
+  }, 120_000);
+
+  it('resolves a regional view of the Peak District to a county', async () => {
+    const regions = parseIndex(await downloadIndex());
+    const ranked = rankRegions(regions, PEAK_DISTRICT_VIEWPORT);
+
+    expect(ranked[0]?.id).toBe('derbyshire');
+    expect(ranked.find((r) => r.coversViewport)?.id).toBe('england');
   }, 120_000);
 
   /*
@@ -68,11 +144,16 @@ describe.runIf(live)('Geofabrik index, live', () => {
    */
   it('reports a download size through the dated-file redirect', async () => {
     const regions = parseIndex(await downloadIndex());
-    const size = await regionSize(findRegion(regions, 'liechtenstein').pbfUrl);
+    const size = await regionSize(findRegion(regions, 'derbyshire').pbfUrl);
 
     expect(size).not.toBeNull();
-    // A few MB. Generous bounds: it grows with OSM, but not to a gigabyte.
+    // Tens of megabytes for an English county. Generous bounds: it grows with
+    // OSM, but a county is not a gigabyte.
     expect(size ?? 0).toBeGreaterThan(1_000_000);
-    expect(size ?? 0).toBeLessThan(100_000_000);
+    expect(size ?? 0).toBeLessThan(500_000_000);
+
+    console.info(
+      `[live] derbyshire extract is ${((size ?? 0) / 1e6).toFixed(1)} MB`,
+    );
   }, 120_000);
 });

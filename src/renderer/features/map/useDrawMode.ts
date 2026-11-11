@@ -44,6 +44,17 @@ export function useDrawMode(map: L.Map | null, options: Options): void {
     container.style.cursor = 'crosshair';
 
     const onClick = (event: L.LeafletMouseEvent): void => {
+      // A double-click is two clicks and then a dblclick, so the second click
+      // would add the same point again and leave a zero-length segment at the
+      // end of every route finished that way. A click within a few pixels of
+      // the last point is that second click, not a new point.
+      const last = optionsRef.current.pending.at(-1);
+      if (
+        last !== undefined &&
+        map.latLngToContainerPoint([last.lat, last.lon]).distanceTo(event.containerPoint) < 4
+      ) {
+        return;
+      }
       optionsRef.current.onAppend(event.latlng.lat, event.latlng.lng);
     };
 

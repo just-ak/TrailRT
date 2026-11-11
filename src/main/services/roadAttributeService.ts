@@ -16,6 +16,8 @@ import type {
   AttributeOwnerType,
   AttributeStatus,
 } from '@shared/routing/results';
+import { inUk } from '@shared/geo/ukBoundary';
+import { ukDefaultLimit } from '@shared/routing/ukSpeedLimits';
 import type { Db } from '../db/client';
 import * as cache from '../db/repositories/roadAttributes';
 import { ServiceError } from './errors';
@@ -186,6 +188,42 @@ export function cached(
   };
 }
 
+export interface PostedOptions {
+  /**
+   * Fill an unposted UK road with its statutory default, marked assumed
+   * (ADR 0018). The `ukDefaultSpeedLimits` setting; off gives ADR 0011's
+   * strict posted-only reporting.
+   */
+  ukDefaults: boolean;
+}
+
+/**
+ * The limit to count for an edge, and whether it was assumed.
+ *
+ * A posted limit always wins. Otherwise, with defaults on, an edge whose
+ * midpoint lies inside the UK and whose road class is known gets the
+ * statutory default. Everything else stays null, which is Unknown. Exported so
+ * the profile bands and the distribution apply exactly the same rule.
+ */
+export function effectiveLimit(
+  shape: readonly LatLon[],
+  edge: MatchedEdge,
+  options: PostedOptions,
+): { mps: number; assumed: boolean } | null {
+  if (edge.speedLimitMps !== null) {
+    return { mps: edge.speedLimitMps, assumed: false };
+  }
+  if (!options.ukDefaults) return null;
+
+  const from = Math.max(0, Math.min(shape.length - 1, edge.startIndex));
+  const to = Math.max(0, Math.min(shape.length - 1, edge.endIndex));
+  const mid = shape[Math.round((from + to) / 2)];
+  if (mid === undefined || !inUk(mid)) return null;
+
+  const fallback = ukDefaultLimit(edge.roadClass, edge.oneway ?? null);
+  return fallback === null ? null : { mps: fallback.mps, assumed: true };
+}
+
 /**
  * Turns matched edges into distance-weighted speed samples.
  *
@@ -198,6 +236,7 @@ export function cached(
 export function postedSpeedSamples(
   shape: readonly LatLon[],
   edges: readonly MatchedEdge[],
+  options: PostedOptions = { ukDefaults: false },
 ): SpeedSample[] {
   const samples: SpeedSample[] = [];
   const covered = new Set<number>();
@@ -219,7 +258,12 @@ export function postedSpeedSamples(
       covered.add(i);
     }
 
-    samples.push({ distanceM, speedMps: edge.speedLimitMps });
+    const limit = effectiveLimit(shape, edge, options);
+    samples.push(
+      limit === null
+        ? { distanceM, speedMps: null }
+        : { distanceM, speedMps: limit.mps, assumed: limit.assumed },
+    );
   }
 
   // Everything no edge claimed.
@@ -242,6 +286,7 @@ export function postedDistribution(
   ownerType: AttributeOwnerType,
   ownerId: string,
   units: UnitSystem,
+  options: PostedOptions = { ukDefaults: false },
 ): { distribution: SpeedDistribution; status: AttributeStatus } | null {
   const entry = cached(db, ownerType, ownerId);
   if (entry === null) return null;
@@ -249,7 +294,7 @@ export function postedDistribution(
   const shape = geometryOf(db, ownerType, ownerId);
   return {
     distribution: speedDistribution(
-      postedSpeedSamples(shape, entry.edges),
+      postedSpeedSamples(shape, entry.edges, options),
       units,
       'posted',
     ),

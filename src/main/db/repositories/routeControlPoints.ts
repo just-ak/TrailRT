@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { asc, eq } from 'drizzle-orm';
 import type { LatLon } from '@shared/geo/distance';
+import { isControlRole, type ControlRole } from '@shared/routing/RoutingProvider';
 import type { Db } from '../client';
 import { routeControlPoints } from '../schema';
 
@@ -27,6 +28,43 @@ export function listControlPoints(db: Db, routeId: string): LatLon[] {
     .all();
 }
 
+/** A stored control point with its role and leg boundary. Phase 6. */
+export interface ControlRow {
+  lat: number;
+  lon: number;
+  role: ControlRole;
+  /** Null for routes snapped before Phase 6: boundaries unknown. */
+  shapeIndex: number | null;
+}
+
+/** What a writer supplies. Role defaults to `via`, boundary to unknown. */
+export type ControlInput = LatLon & {
+  role?: ControlRole | undefined;
+  shapeIndex?: number | null | undefined;
+};
+
+export function listControlRows(db: Db, routeId: string): ControlRow[] {
+  return db
+    .select({
+      lat: routeControlPoints.lat,
+      lon: routeControlPoints.lon,
+      role: routeControlPoints.role,
+      shapeIndex: routeControlPoints.shapeIndex,
+    })
+    .from(routeControlPoints)
+    .where(eq(routeControlPoints.routeId, routeId))
+    .orderBy(asc(routeControlPoints.seq))
+    .all()
+    .map((row) => ({
+      lat: row.lat,
+      lon: row.lon,
+      // A value this build does not recognise is read as `via`: the safe
+      // reading, since a via point is routed as an ordinary stop.
+      role: isControlRole(row.role) ? row.role : 'via',
+      shapeIndex: row.shapeIndex,
+    }));
+}
+
 export function hasControlPoints(db: Db, routeId: string): boolean {
   return (
     db
@@ -51,7 +89,7 @@ export function hasControlPoints(db: Db, routeId: string): boolean {
 export function replaceControlPoints(
   db: Db,
   routeId: string,
-  points: readonly LatLon[],
+  points: readonly ControlInput[],
 ): void {
   db.delete(routeControlPoints)
     .where(eq(routeControlPoints.routeId, routeId))
@@ -65,11 +103,13 @@ export function replaceControlPoints(
     seq,
     lat: point.lat,
     lon: point.lon,
+    role: point.role ?? 'via',
+    shapeIndex: point.shapeIndex ?? null,
   }));
 
   // Chunked for the same reason as replaceTrackPoints and replacePoints:
   // SQLite bounds bound variables per statement (`SQLITE_MAX_VARIABLE_NUMBER`,
-  // 32,766 by default), and five columns times a long control-point list
+  // 32,766 by default), and seven columns times a long control-point list
   // exceeds it.
   const CHUNK = 1000;
   for (let start = 0; start < rows.length; start += CHUNK) {

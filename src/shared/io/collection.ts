@@ -56,6 +56,21 @@ export const collectionRoutePointSchema = z.object({
   notes: nullableText,
 });
 
+/**
+ * A snapped route's control point. Phase 6, ADR 0017.
+ *
+ * Carried so a route moved between installs stays editable: without these a
+ * snapped route arrives as a hand-drawn one with thousands of vertex handles.
+ * `shapeIndex` is the leg boundary in `points`; the reader checks the set of
+ * them against the points before trusting it.
+ */
+export const collectionControlPointSchema = z.object({
+  lat: z.number().min(-90).max(90),
+  lon: z.number().min(-180).max(180),
+  role: z.enum(['via', 'shaping']),
+  shapeIndex: z.number().int().min(0).nullable(),
+});
+
 export const collectionRouteSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
@@ -65,6 +80,15 @@ export const collectionRouteSchema = z.object({
   updatedAt: z.number().int(),
   metadata,
   points: z.array(collectionRoutePointSchema),
+  /** Phase 6, optional: absent for a hand-drawn route and in older files. */
+  control: z.array(collectionControlPointSchema).max(1000).optional(),
+  /** Phase 6, optional: which engine and mode the road geometry came from. */
+  routing: z
+    .object({
+      provider: z.string().max(100),
+      transportMode: z.enum(['auto', 'motorcycle', 'bicycle', 'pedestrian']),
+    })
+    .optional(),
 });
 
 export const collectionTrackPointSchema = z.object({
@@ -96,7 +120,8 @@ export const collectionWaypointSchema = z.object({
   description: nullableText,
   symbol: nullableText,
   notes: nullableText,
-  source: z.enum(['user', 'import']),
+  // Phase 10 adds `poi`: a waypoint added from the place data.
+  source: z.enum(['user', 'import', 'poi']),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
   metadata,

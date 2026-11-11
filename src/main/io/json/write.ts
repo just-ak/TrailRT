@@ -6,10 +6,12 @@ import {
   type CollectionTrip,
 } from '@shared/io/collection';
 import { eq } from 'drizzle-orm';
+import { TRANSPORT_MODES, type TransportMode } from '@shared/routing/RoutingProvider';
 import type { Db } from '../../db/client';
 import { decodeMetadata } from '../../db/metadata';
 import { routes, tracks, trips, waypoints } from '../../db/schema';
 import * as folderRepo from '../../db/repositories/folders';
+import * as controlRepo from '../../db/repositories/routeControlPoints';
 import * as routeRepo from '../../db/repositories/routes';
 import * as trackRepo from '../../db/repositories/tracks';
 import * as tripRepo from '../../db/repositories/trips';
@@ -80,6 +82,7 @@ function tripToCollection(db: Db, tripId: string): CollectionTrip {
       updatedAt: route.updatedAt,
       metadata: metadataFor(db, routes, route.id),
       points: routeRepo.listPoints(db, route.id),
+      ...routingOf(db, route.id),
     })),
 
     tracks: trackRepo.listTracksForTrip(db, trip.id).map((track) => {
@@ -128,6 +131,30 @@ function tripToCollection(db: Db, tripId: string): CollectionTrip {
       updatedAt: waypoint.updatedAt,
       metadata: metadataFor(db, waypoints, waypoint.id),
     })),
+  };
+}
+
+/**
+ * A snapped route's control points and routing provenance, when it has them.
+ * Phase 6: without these a snapped route would be re-imported as hand-drawn.
+ */
+function isTransportMode(value: string): value is TransportMode {
+  return (TRANSPORT_MODES as readonly string[]).includes(value);
+}
+
+function routingOf(
+  db: Db,
+  routeId: string,
+): { control?: controlRepo.ControlRow[]; routing?: { provider: string; transportMode: TransportMode } } {
+  const control = controlRepo.listControlRows(db, routeId);
+  if (control.length === 0) return {};
+  const provenance = routeRepo.readRoutingProvenance(db, routeId);
+  const mode = provenance?.transportMode;
+  return {
+    control,
+    ...(provenance?.routingProvider != null && mode != null && isTransportMode(mode)
+      ? { routing: { provider: provenance.routingProvider, transportMode: mode } }
+      : {}),
   };
 }
 

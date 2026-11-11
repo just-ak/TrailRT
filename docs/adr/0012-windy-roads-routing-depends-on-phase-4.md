@@ -1,6 +1,7 @@
 # ADR 0012: Windy-roads routing depends on Phase 4, and twistiness must steer the search
 
-Status: accepted, with the engine choice explicitly deferred
+Status: accepted, with the engine choice explicitly deferred. Phase numbering
+amended by ADR 0017 and again by ADR 0018: this work is now Phase 8, and Garmin is Phase 9
 
 Date: 2026-11-06
 
@@ -12,7 +13,7 @@ architecture", integrating with "the existing routing, OpenStreetMap data,
 snap-to-road functionality and GPX export capabilities". It mandated a codebase
 investigation before any architectural decision.
 
-That investigation ([`phase-5-windy-roads-routing/investigation.md`](../../.kiro/specs/phase-5-windy-roads-routing/investigation.md))
+That investigation ([`phase-8-windy-roads-routing/investigation.md`](../../.kiro/specs/phase-8-windy-roads-routing/investigation.md))
 found that three of those four things do not exist:
 
 - **No routing engine, and no HTTP client at all.** Runtime dependencies are
@@ -31,9 +32,9 @@ establishing why the existing implementation cannot support the feature.
 
 ## Decision
 
-### 1. This is Phase 5, inserted before Garmin compatibility
+### 1. This is Phase 6, inserted before Garmin compatibility
 
-Garmin compatibility moves from Phase 5 to Phase 6. Windy-roads routing is
+Garmin compatibility moves from Phase 6 to Phase 7. Windy-roads routing is
 sequenced immediately after Phase 4 because it consumes Phase 4's output
 directly, whereas the Garmin work consumes the Phase 3 import/export layer that
 is already built and is mostly investigation.
@@ -128,16 +129,16 @@ restrictions.*
 
 ## Consequences
 
-- Phase 5 cannot start until Phase 4 ships. Said up front rather than discovered.
+- Phase 6 cannot start until Phase 4 ships. Said up front rather than discovered.
 - The 10,000-point cap in `routePointsSchema`, which exists because
   `route:setGeometry` undo entries carry whole point arrays, now blocks snapped
   geometry storage. A twisty 200 km route plausibly needs 20,000–50,000 points.
-  Phase 5 Requirement 8 owns resolving this, and it is a schema decision.
+  Phase 6 Requirement 8 owns resolving this, and it is a schema decision.
 - Rejecting post-hoc re-ranking removes the cheap implementation. The feature is
   genuinely more work as a result, and that is the correct trade.
 - CPU-heavy scoring has nowhere to run today — there is no worker or background
   process in the application. Introducing the first one becomes an explicit
-  decision in the Phase 5 design.
+  decision in the Phase 6 design.
 - `connect-src 'self'` must be widened deliberately, per declared provider host,
   for any network routing. The policy forced this to be visible, which is what
   it is for.
@@ -157,7 +158,7 @@ providers, routing abstraction, snapping, profiles, speed distribution. Folding
 curvature routing in would make a large phase unshippable and blur which
 capability failed when something did.
 
-**Keep Garmin as Phase 5 and append this as Phase 6.** Possible, but it puts the
+**Keep Garmin as Phase 6 and append this as Phase 7.** Possible, but it puts the
 phase that depends most directly on Phase 4 furthest from it, and leaves the
 routing abstraction sitting unexercised for a whole phase.
 

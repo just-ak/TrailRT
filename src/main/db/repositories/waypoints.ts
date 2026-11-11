@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { asc, eq, sql } from 'drizzle-orm';
 import type {
-  GeometrySource,
   Waypoint,
   WaypointGroup,
+  WaypointSource,
 } from '@shared/domain/types';
 import type { WaypointWithTrip } from '@shared/ipc/api';
 import type { Db } from '../client';
-import { encodeMetadata } from '../metadata';
+import { decodeMetadata, encodeMetadata } from '../metadata';
 import { trips, waypointGroups, waypoints } from '../schema';
 
 export function rowToWaypoint(row: typeof waypoints.$inferSelect): Waypoint {
@@ -22,7 +22,7 @@ export function rowToWaypoint(row: typeof waypoints.$inferSelect): Waypoint {
     description: row.description ?? null,
     symbol: row.symbol ?? null,
     notes: row.notes ?? null,
-    source: row.source as GeometrySource,
+    source: row.source as WaypointSource,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -80,7 +80,7 @@ export interface InsertWaypointValues {
   description: string | null;
   symbol: string | null;
   notes: string | null;
-  source: GeometrySource;
+  source: WaypointSource;
   /** Imported fields with no column of their own. See db/metadata.ts. */
   metadata?: Record<string, unknown> | undefined;
   now: number;
@@ -147,6 +147,12 @@ export function updateWaypoint(
     if (value !== undefined) set[key] = value;
   }
   db.update(waypoints).set(set).where(eq(waypoints.id, id)).run();
+}
+
+/** Fields an import or a POI carried that have no column. Empty when none. */
+export function readWaypointMetadata(db: Db, id: string): Record<string, unknown> {
+  const row = db.select({ metadata: waypoints.metadata }).from(waypoints).where(eq(waypoints.id, id)).get();
+  return decodeMetadata(row?.metadata);
 }
 
 export function deleteWaypoint(db: Db, id: string): void {

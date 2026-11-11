@@ -14,6 +14,7 @@ import { api, callOr } from "../../lib/client";
 import { useRoutingStore } from "../../stores/routingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
+import { PlaceDataStatus, PostcodeSection } from "./PlaceDataSettings";
 
 const TRANSPORT_LABELS: Record<TransportMode, string> = {
   auto: "Car",
@@ -23,6 +24,95 @@ const TRANSPORT_LABELS: Record<TransportMode, string> = {
 };
 
 /** Settings apply immediately and persist on change. No restart, no OK button. */
+/**
+ * Map data for the built-in engine, in a section of its own.
+ *
+ * Separated from Road routing because it is a different kind of thing: road
+ * routing is a handful of preferences, while this is a download measured in
+ * hundreds of megabytes that the engine cannot work without. Burying it under
+ * a routing heading made the one prerequisite look like an option.
+ */
+function MapRegionSection(): ReactNode {
+  const region = useRoutingStore((s) => s.region);
+  const regionImporting = useRoutingStore((s) => s.regionImporting);
+  const regionProgress = useRoutingStore((s) => s.regionProgress);
+
+  const labelClass = "text-[13px] text-[var(--color-text-primary)]";
+  const hintClass = "text-[11px] text-[var(--color-text-muted)]";
+
+  return (
+    <section aria-labelledby="map-regions-heading" className="mb-3">
+      <h3
+        id="map-regions-heading"
+        className="mb-1 text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase"
+      >
+        Map regions
+      </h3>
+      <p className={`${hintClass} mb-2`}>
+        The road data the built-in engine routes on. Without it, routes stay as
+        the straight lines you draw.
+      </p>
+      {/* --- the built-in engine's map region */}
+      <div className="mb-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)] p-3">
+        <p className={labelClass}>Map regions</p>
+        {region === null ? (
+          <p className={`${hintClass} mb-2`}>
+            No regions loaded. Choose the counties you ride in on a map of the
+            UK, or any region elsewhere. Several are combined into one map so
+            routes can cross between them. A county is typically 20–60 MB and
+            builds in under a minute.
+          </p>
+        ) : (
+          <p className={`${hintClass} mb-2`}>
+            <strong>{region.regionName}</strong> ·{" "}
+            {region.tileCount.toLocaleString()} tiles ·{" "}
+            {(region.graphBytes / 1024 ** 2).toFixed(0)} MB · built{" "}
+            {new Date(region.builtAt).toLocaleDateString()}
+          </p>
+        )}
+
+        {regionImporting ? (
+          <p
+            role="status"
+            className="text-[12px] text-[var(--color-text-primary)]"
+          >
+            {regionProgress?.stage ?? "Starting…"}
+            <span className={`${hintClass} ml-2`}>
+              This can take a few minutes. You can keep using the rest of the
+              app.
+            </span>
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={region === null ? "primary" : "default"}
+              onClick={() => actions.openRegionPicker()}
+            >
+              {region === null ? "Choose map regions…" : "Change regions…"}
+            </Button>
+            {/* The manual path stays: Geofabrik granularity stops at published
+                regions, so anyone wanting a custom extract still needs it. */}
+            <Button onClick={() => void actions.importRoutingRegion()}>
+              Import a .osm.pbf…
+            </Button>
+          </div>
+        )}
+
+        {region !== null && !regionImporting && (
+          /* One map at a time, said out loud: a new selection rebuilds it,
+             and importing a file replaces it. A user expecting an import to
+             add to what is there would otherwise quietly lose it. ADR 0018. */
+          <p className={`${hintClass} mt-1`}>
+            Changing regions rebuilds the map from the new selection. Importing a
+            file replaces it.
+          </p>
+        )}
+        {!regionImporting && <PlaceDataStatus />}
+      </div>
+    </section>
+  );
+}
+
 export function SettingsDialog(): ReactNode {
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.set);
@@ -175,6 +265,12 @@ export function SettingsDialog(): ReactNode {
 
       <div className="my-3 h-px bg-[var(--color-border-subtle)]" />
 
+      {/*
+        Above Road routing on purpose: the engine cannot do anything without
+        map data, so the prerequisite comes before the preferences.
+      */}
+      <MapRegionSection />
+      <PostcodeSection />
       <RoutingSettings />
 
       <div className="my-3 h-px bg-[var(--color-border-subtle)]" />
@@ -273,9 +369,8 @@ function RoutingSettings(): ReactNode {
   const update = useSettingsStore((s) => s.set);
   const loadStatus = useRoutingStore((s) => s.loadStatus);
   const status = useRoutingStore((s) => s.status);
-  const region = useRoutingStore((s) => s.region);
-  const regionImporting = useRoutingStore((s) => s.regionImporting);
-  const regionProgress = useRoutingStore((s) => s.regionProgress);
+  // The map-region state moved to `MapRegionSection`; this section is now
+  // only the remote-service configuration and the transport preference.
 
   /*
    * A local draft of the endpoint, committed on blur.
@@ -390,66 +485,11 @@ function RoutingSettings(): ReactNode {
         Road routing
       </h3>
       <p className={`${hintClass} mb-2`}>
-        A routing engine is built into TrailRT and runs on this machine. It
-        needs a map region to work from, and nothing is sent anywhere. A remote
-        service is optional, for anyone who already runs one.
+        A routing engine is built into TrailRT and runs on this machine, and
+        nothing is sent anywhere. It needs map data to work from, which lives in{" "}
+        <strong>Map regions</strong> above. A remote service is optional, for
+        anyone who already runs one.
       </p>
-
-      {/* --- the built-in engine's map region */}
-      <div className="mb-3 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface-sunken)] p-3">
-        <p className={labelClass}>Map region</p>
-        {region === null ? (
-          <p className={`${hintClass} mb-2`}>
-            No region loaded. Pan the map to where you want to route, then add
-            a region — TrailRT finds the extracts covering that area and shows
-            their download sizes. A country is typically a few hundred
-            megabytes and builds in a minute or two.
-          </p>
-        ) : (
-          <p className={`${hintClass} mb-2`}>
-            <strong>{region.regionName}</strong> ·{' '}
-            {region.tileCount.toLocaleString()} tiles ·{' '}
-            {(region.graphBytes / 1024 ** 2).toFixed(0)} MB · built{' '}
-            {new Date(region.builtAt).toLocaleDateString()}
-          </p>
-        )}
-
-        {regionImporting ? (
-          <p
-            role="status"
-            className="text-[12px] text-[var(--color-text-primary)]"
-          >
-            {regionProgress?.stage ?? 'Starting…'}
-            <span className={`${hintClass} ml-2`}>
-              This can take a few minutes. You can keep using the rest of the
-              app.
-            </span>
-          </p>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={region === null ? 'primary' : 'default'}
-              onClick={() => actions.openRegionPicker()}
-            >
-              {region === null ? 'Add a map region…' : 'Replace region…'}
-            </Button>
-            {/* The manual path stays: Geofabrik granularity stops at published
-                regions, so anyone wanting a custom extract still needs it. */}
-            <Button onClick={() => void actions.importRoutingRegion()}>
-              Import a .osm.pbf…
-            </Button>
-          </div>
-        )}
-
-        {region !== null && !regionImporting && (
-          /* One region at a time, said out loud. Valhalla cannot merge a
-             second one, and a user who expects additive imports would end up
-             quietly losing the first. */
-          <p className={`${hintClass} mt-1`}>
-            Importing another region replaces this one.
-          </p>
-        )}
-      </div>
 
       <div className="py-2">
         <p className={labelClass}>Remote routing service (optional)</p>
@@ -598,6 +638,56 @@ function RoutingSettings(): ReactNode {
             </option>
           ))}
         </select>
+      </div>
+
+      <div className={rowClass}>
+        <div>
+          <p className={labelClass}>Show alternative routes while drawing</p>
+          <p className={hintClass}>
+            {status !== null && !status.capabilities.alternatives
+              ? "The routing service in use cannot offer alternative routes."
+              : "Each new section offers up to three routes to choose from."}
+          </p>
+        </div>
+        <input
+          type="checkbox"
+          aria-label="Show alternative routes while drawing"
+          checked={settings.routeAlternatives}
+          disabled={status !== null && !status.capabilities.alternatives}
+          onChange={(event) =>
+            void applyRouting({
+              key: "routeAlternatives",
+              value: event.target.checked,
+            })
+          }
+        />
+      </div>
+
+      {/* ADR 0018: assumed limits are on by default, and this is the way back
+          to posted-only reporting. */}
+      <div className={rowClass}>
+        <div>
+          <p className={labelClass}>Assume UK default speed limits</p>
+          <p className={hintClass}>
+            Where the map data has no posted limit, count UK roads at the national
+            speed limit (30 mph on residential streets), shown hatched as
+            assumed. Off counts them as Unknown.
+          </p>
+        </div>
+        <input
+          type="checkbox"
+          aria-label="Assume UK default speed limits"
+          checked={settings.ukDefaultSpeedLimits}
+          onChange={(event) => {
+            void update({
+              key: "ukDefaultSpeedLimits",
+              value: event.target.checked,
+            }).then(() => {
+              // Profiles and distributions were drawn under the old rule.
+              useRoutingStore.getState().clear();
+            });
+          }}
+        />
       </div>
 
       {status !== null && (

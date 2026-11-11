@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { CHANNELS, EVENTS, type MenuAction } from '@shared/ipc/channels';
-import type { TrailRtApi } from '@shared/ipc/api';
+import type { PostcodeProgress, TrailRtApi } from '@shared/ipc/api';
 import type { UndoState } from '@shared/domain/types';
 import type { ImportProgress } from '@shared/io/types';
 import type {
@@ -85,6 +85,41 @@ const api: TrailRtApi = {
     move: (req) => call(CHANNELS.routes.move, req),
     delete: (req) => call(CHANNELS.routes.delete, req),
   },
+  places: {
+    status: () => call(CHANNELS.places.status),
+    rebuild: () => call(CHANNELS.places.rebuild),
+    along: (req) => call(CHANNELS.places.along, req),
+    cancel: (req) => call(CHANNELS.places.cancel, req),
+    detour: (req) => call(CHANNELS.places.detour, req),
+    get: (req) => call(CHANNELS.places.get, req),
+    addWaypoint: (req) => call(CHANNELS.places.addWaypoint, req),
+  },
+  search: {
+    query: (req) => call(CHANNELS.search.query, req),
+    status: () => call(CHANNELS.search.status),
+  },
+  postcodes: {
+    listing: () => call(CHANNELS.postcodes.listing),
+    update: () => call(CHANNELS.postcodes.update),
+    cancel: () => call(CHANNELS.postcodes.cancel),
+  },
+  itinerary: {
+    get: (req) => call(CHANNELS.itinerary.get, req),
+    create: (req) => call(CHANNELS.itinerary.create, req),
+    remove: (req) => call(CHANNELS.itinerary.remove, req),
+    update: (req) => call(CHANNELS.itinerary.update, req),
+    addStop: (req) => call(CHANNELS.itinerary.addStop, req),
+    removeStop: (req) => call(CHANNELS.itinerary.removeStop, req),
+    moveStop: (req) => call(CHANNELS.itinerary.moveStop, req),
+    updateStop: (req) => call(CHANNELS.itinerary.updateStop, req),
+    linkLeg: (req) => call(CHANNELS.itinerary.linkLeg, req),
+    setLegMode: (req) => call(CHANNELS.itinerary.setLegMode, req),
+    planAll: (req) => call(CHANNELS.itinerary.planAll, req),
+    addPoiStop: (req) => call(CHANNELS.itinerary.addPoiStop, req),
+    planLeg: (req) => call(CHANNELS.itinerary.planLeg, req),
+    planAround: (req) => call(CHANNELS.itinerary.planAround, req),
+    exportIcs: (req) => call(CHANNELS.itinerary.exportIcs, req),
+  },
   waypoints: {
     listForTrip: (req) => call(CHANNELS.waypoints.listForTrip, req),
     listAll: () => call(CHANNELS.waypoints.listAll),
@@ -115,6 +150,14 @@ const api: TrailRtApi = {
     delete: (req) => call(CHANNELS.tracks.delete, req),
     hasOriginal: (req) => call(CHANNELS.tracks.hasOriginal, req),
     restoreOriginal: (req) => call(CHANNELS.tracks.restoreOriginal, req),
+    points: (req) => call(CHANNELS.tracks.points, req),
+    editPoint: (req) => call(CHANNELS.tracks.editPoint, req),
+    deletePoints: (req) => call(CHANNELS.tracks.deletePoints, req),
+  },
+  batch: {
+    assess: (req) => call(CHANNELS.batch.assess, req),
+    delete: (req) => call(CHANNELS.batch.delete, req),
+    move: (req) => call(CHANNELS.batch.move, req),
   },
   importing: {
     choose: () => call(CHANNELS.importing.choose),
@@ -162,9 +205,15 @@ const api: TrailRtApi = {
     region: () => call(CHANNELS.routing.region),
     suggestRegions: (req) => call(CHANNELS.routing.suggestRegions, req),
     downloadRegion: (req) => call(CHANNELS.routing.downloadRegion, req),
+    regionMap: () => call(CHANNELS.routing.regionMap),
+    regionSizes: (req) => call(CHANNELS.routing.regionSizes, req),
+    downloadTerrain: (req) => call(CHANNELS.routing.downloadTerrain, req),
     snap: (req) => call(CHANNELS.routing.snap, req),
     routeLeg: (req) => call(CHANNELS.routing.routeLeg, req),
     createSnapped: (req) => call(CHANNELS.routing.createSnapped, req),
+    routeSection: (req) => call(CHANNELS.routing.routeSection, req),
+    alternatives: (req) => call(CHANNELS.routing.alternatives, req),
+    applyEdit: (req) => call(CHANNELS.routing.applyEdit, req),
     provenance: (req) => call(CHANNELS.routing.provenance, req),
     match: (req) => call(CHANNELS.routing.match, req),
     attributes: (req) => call(CHANNELS.routing.attributes, req),
@@ -200,6 +249,8 @@ const api: TrailRtApi = {
       subscribe<[RegionProgressEvent]>(EVENTS.regionProgress, listener),
     onRegionJobProgress: (listener) =>
       subscribe<[RegionJobProgress]>(EVENTS.regionJobProgress, listener),
+    onPostcodeProgress: (listener) =>
+      subscribe<[PostcodeProgress]>(EVENTS.postcodeProgress, listener),
   },
 };
 

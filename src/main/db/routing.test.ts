@@ -2,8 +2,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { createDatabase, type Db, type DbHandle } from './client';
 import { expectedSchemaVersion } from './migrate';
+import { MIGRATIONS, splitStatements } from './migrations/index';
+import * as schema from './schema';
 import * as attrs from './repositories/roadAttributes';
 import * as control from './repositories/routeControlPoints';
 import * as routeRepo from './repositories/routes';
@@ -42,9 +46,9 @@ afterEach(() => {
 });
 
 describe('migration 0002', () => {
-  it('is the current schema version', () => {
+  it('is applied, and 0003 is the current schema version', () => {
     expect(handle.migration.schemaVersion).toBe(expectedSchemaVersion());
-    expect(expectedSchemaVersion()).toBe(3);
+    expect(expectedSchemaVersion()).toBe(6);
   });
 
   it('applies on top of a Phase 3 database without losing data', () => {
@@ -83,7 +87,72 @@ describe('migration 0002', () => {
   });
 });
 
+describe('migration 0003', () => {
+  it('upgrades a Phase 5 database: existing control points become via points with unknown boundaries', () => {
+    // Build a database exactly as Phase 5 left it: migrations 1–3 only, with a
+    // snapped route's control points written in the old three-column form.
+    const upgradeDir = mkdtempSync(join(tmpdir(), 'trailrt-p6-upgrade-'));
+    const file = join(upgradeDir, 'phase5.db');
+
+    const sqlite = new Database(file);
+    sqlite.exec(
+      'CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at INTEGER NOT NULL)',
+    );
+    for (const migration of MIGRATIONS.filter((m) => m.version <= 3)) {
+      for (const statement of splitStatements(migration.sql)) sqlite.exec(statement);
+      sqlite
+        .prepare('INSERT INTO schema_migrations VALUES (?, ?, ?)')
+        .run(migration.version, migration.name, Date.now());
+    }
+    const old = drizzle(sqlite, { schema });
+    const trip = tripRepo.insertTrip(old, {
+      id: '0190c3ae-1f2b-7c4d-9e8f-000000000003',
+      folderId: null,
+      name: 'Phase 5 trip',
+      description: null,
+      notes: null,
+      now: Date.now(),
+    });
+    const route = routeRepo.insertRoute(old, {
+      tripId: trip.id,
+      name: 'Snapped in Phase 5',
+      colour: null,
+      source: 'user',
+      now: Date.now(),
+    });
+    const insert = sqlite.prepare(
+      'INSERT INTO route_control_points (id, route_id, seq, lat, lon) VALUES (?, ?, ?, ?, ?)',
+    );
+    insert.run('cp-0', route.id, 0, 53.2588, -1.911);
+    insert.run('cp-1', route.id, 1, 53.2602, -2.1255);
+    sqlite.close();
+
+    const upgraded = createDatabase({ file });
+    // 0004 (Phase 10) follows on the same upgrade; it touches no route table.
+    expect(upgraded.migration.applied).toEqual([4, 5, 6]);
+    expect(control.listControlRows(upgraded.db, route.id)).toEqual([
+      { lat: 53.2588, lon: -1.911, role: 'via', shapeIndex: null },
+      { lat: 53.2602, lon: -2.1255, role: 'via', shapeIndex: null },
+    ]);
+    upgraded.close();
+    rmSync(upgradeDir, { recursive: true, force: true });
+  });
+});
+
 describe('route control points', () => {
+  it('store role and leg boundary, defaulting to via and unknown', () => {
+    control.replaceControlPoints(db, routeId, [
+      { lat: 53.2588, lon: -1.911, role: 'via', shapeIndex: 0 },
+      { lat: 53.26, lon: -2.0, role: 'shaping', shapeIndex: 40 },
+      { lat: 53.2602, lon: -2.1255 },
+    ]);
+    expect(control.listControlRows(db, routeId)).toEqual([
+      { lat: 53.2588, lon: -1.911, role: 'via', shapeIndex: 0 },
+      { lat: 53.26, lon: -2.0, role: 'shaping', shapeIndex: 40 },
+      { lat: 53.2602, lon: -2.1255, role: 'via', shapeIndex: null },
+    ]);
+  });
+
   // Absence is the signal for "hand-drawn", which is how every pre-Phase-4
   // route keeps behaving exactly as it did.
   it('are absent for a route that was never snapped', () => {
@@ -93,9 +162,9 @@ describe('route control points', () => {
 
   it('round-trip in order', () => {
     const points = [
-      { lat: 46.5197, lon: 8.012 },
-      { lat: 46.5231, lon: 8.0168 },
-      { lat: 46.531, lon: 8.0255 },
+      { lat: 53.2533, lon: -1.9343 },
+      { lat: 53.2578, lon: -2.0327 },
+      { lat: 53.261, lon: -2.0675 },
     ];
     control.replaceControlPoints(db, routeId, points);
 
@@ -104,39 +173,39 @@ describe('route control points', () => {
   });
 
   it('preserve full coordinate precision', () => {
-    const point = { lat: 46.519712345678904, lon: 8.012012345678901 };
+    const point = { lat: 53.25331234567890, lon: -1.93431234567890 };
     control.replaceControlPoints(db, routeId, [point]);
     expect(control.listControlPoints(db, routeId)[0]).toEqual(point);
   });
 
   it('replace rather than append', () => {
     control.replaceControlPoints(db, routeId, [
-      { lat: 46, lon: 8 },
-      { lat: 47, lon: 9 },
+      { lat: 53.2588, lon: -1.911 },
+      { lat: 53.1043, lon: -2.0221 },
     ]);
-    control.replaceControlPoints(db, routeId, [{ lat: 48, lon: 10 }]);
+    control.replaceControlPoints(db, routeId, [{ lat: 53.0177, lon: -1.7317 }]);
 
     expect(control.listControlPoints(db, routeId)).toEqual([
-      { lat: 48, lon: 10 },
+      { lat: 53.0177, lon: -1.7317 },
     ]);
   });
 
   it('can be cleared, returning the route to hand-drawn', () => {
-    control.replaceControlPoints(db, routeId, [{ lat: 46, lon: 8 }]);
+    control.replaceControlPoints(db, routeId, [{ lat: 53.2588, lon: -1.911 }]);
     control.clearControlPoints(db, routeId);
     expect(control.hasControlPoints(db, routeId)).toBe(false);
   });
 
   it('are deleted with their route', () => {
-    control.replaceControlPoints(db, routeId, [{ lat: 46, lon: 8 }]);
+    control.replaceControlPoints(db, routeId, [{ lat: 53.2588, lon: -1.911 }]);
     routeRepo.deleteRoute(db, routeId);
     expect(control.listControlPoints(db, routeId)).toEqual([]);
   });
 });
 
 describe('geometryHash', () => {
-  const a = { lat: 46.5197, lon: 8.012 };
-  const b = { lat: 46.5231, lon: 8.0168 };
+  const a = { lat: 53.2533, lon: -1.9343 };
+  const b = { lat: 53.2578, lon: -2.0327 };
 
   it('is stable for the same geometry', () => {
     expect(attrs.geometryHash([a, b])).toBe(attrs.geometryHash([a, b]));
@@ -144,7 +213,7 @@ describe('geometryHash', () => {
 
   it('changes when a coordinate changes', () => {
     expect(attrs.geometryHash([a, b])).not.toBe(
-      attrs.geometryHash([a, { lat: 46.6, lon: 8.0168 }]),
+      attrs.geometryHash([a, { lat: 53.1043, lon: -2.0221 }]),
     );
   });
 
@@ -161,13 +230,13 @@ describe('geometryHash', () => {
   // tolerance, but enough that a float round-trip does not read as an edit.
   it('ignores differences far below matching tolerance', () => {
     expect(attrs.geometryHash([a])).toBe(
-      attrs.geometryHash([{ lat: 46.5197000001, lon: 8.0120000001 }]),
+      attrs.geometryHash([{ lat: 53.2533000001, lon: -1.9343000001 }]),
     );
   });
 
   it('notices a change at the retained precision', () => {
     expect(attrs.geometryHash([a])).not.toBe(
-      attrs.geometryHash([{ lat: 46.51971, lon: 8.012 }]),
+      attrs.geometryHash([{ lat: 53.25331, lon: -1.9343 }]),
     );
   });
 
@@ -178,8 +247,8 @@ describe('geometryHash', () => {
 
 describe('road attribute cache', () => {
   const shape = [
-    { lat: 46.5197, lon: 8.012 },
-    { lat: 46.5231, lon: 8.0168 },
+    { lat: 53.2533, lon: -1.9343 },
+    { lat: 53.2578, lon: -2.0327 },
   ];
   const payload: attrs.RoadAttributePayload = {
     mode: 'auto',
@@ -227,7 +296,7 @@ describe('road attribute cache', () => {
   // attributes computed for its previous shape.
   it('misses after the geometry changes', () => {
     store(shape);
-    const edited = [...shape, { lat: 46.54, lon: 8.03 }];
+    const edited = [...shape, { lat: 53.2602, lon: -2.1256 }];
     expect(
       attrs.findFresh(db, 'route', routeId, attrs.geometryHash(edited)),
     ).toBeNull();
@@ -235,7 +304,7 @@ describe('road attribute cache', () => {
 
   it('keeps one row per object, replacing on re-match', () => {
     store(shape);
-    store([...shape, { lat: 46.54, lon: 8.03 }]);
+    store([...shape, { lat: 53.2602, lon: -2.1256 }]);
 
     // The newer hash hits; the older one does not, because there is only one row.
     expect(
@@ -243,7 +312,7 @@ describe('road attribute cache', () => {
         db,
         'route',
         routeId,
-        attrs.geometryHash([...shape, { lat: 46.54, lon: 8.03 }]),
+        attrs.geometryHash([...shape, { lat: 53.2602, lon: -2.1256 }]),
       ),
     ).not.toBeNull();
     expect(

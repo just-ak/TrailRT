@@ -1,10 +1,13 @@
 import type {
   AppSettings,
+  BatchAssessment,
+  BatchOutcome,
   Folder,
   Route,
   RouteWithPoints,
   Track,
   TrackGeometry,
+  TrackPointsPage,
   TrackWithPoints,
   Trip,
   TreeNode,
@@ -22,7 +25,10 @@ import type {
   ImportReport,
   SkippedItem,
 } from '../io/types';
+import type { Itinerary, ItineraryStop, ItineraryView } from '../domain/itinerary';
 import type { SpeedDistribution } from '../geo/speedBands';
+import type { SearchOutcome, SearchStatus } from '../search/PlaceSearchProvider';
+import type { AlongResult, DetourEstimate, PlaceDataState, Poi } from '../poi/PoiProvider';
 import type { MatchedEdge } from '../routing/RoutingProvider';
 import type {
   AttributeStatus,
@@ -31,8 +37,13 @@ import type {
   LoadedRegion,
   RegionCandidate,
   RegionJobProgress,
+  RegionMapEntry,
+  RegionSize,
+  TerrainDownloadResult,
   RegionProgressEvent,
   PreviewedLeg,
+  Candidate,
+  EditOutcome,
   Profile,
   RouteProvenance,
   RoutingStatus,
@@ -144,6 +155,47 @@ export interface TrailRtApi {
     move(req: Req<typeof S.routeMoveRequest>): Promise<Result<Route>>;
     delete(req: Req<typeof S.routeDeleteRequest>): Promise<Result<{ id: string }>>;
   };
+  /** Phase 10: points of interest, from local place data only. */
+  places: {
+    status(): Promise<Result<PlaceDataState>>;
+    rebuild(): Promise<Result<LoadedRegion>>;
+    along(req: Req<typeof S.placesAlongRequest>): Promise<Result<AlongResult>>;
+    cancel(req: Req<typeof S.placesCancelRequest>): Promise<Result<null>>;
+    detour(req: Req<typeof S.placesDetourRequest>): Promise<Result<DetourEstimate>>;
+    get(req: Req<typeof S.placesGetRequest>): Promise<Result<Poi | null>>;
+    addWaypoint(req: Req<typeof S.placesAddWaypointRequest>): Promise<Result<Waypoint>>;
+  };
+  /** Phase 10: postcode and place search. Nothing leaves the machine. */
+  search: {
+    query(req: Req<typeof S.searchQueryRequest>): Promise<Result<SearchOutcome>>;
+    status(): Promise<Result<SearchStatus>>;
+  };
+  /** Phase 10: Code-Point Open. `update` is the only network call search makes. */
+  postcodes: {
+    listing(): Promise<Result<PostcodeRelease>>;
+    update(): Promise<Result<PostcodeRelease>>;
+    cancel(): Promise<Result<null>>;
+  };
+  /** Phase 10: a trip's dated plan. `get` resolves to null for a trip without one. */
+  itinerary: {
+    get(req: Req<typeof S.itineraryGetRequest>): Promise<Result<ItineraryView | null>>;
+    create(req: Req<typeof S.itineraryCreateRequest>): Promise<Result<Itinerary>>;
+    remove(req: Req<typeof S.itineraryRemoveRequest>): Promise<Result<{ tripId: string }>>;
+    update(req: Req<typeof S.itineraryUpdateRequest>): Promise<Result<Itinerary>>;
+    addStop(req: Req<typeof S.itineraryAddStopRequest>): Promise<Result<ItineraryStop>>;
+    removeStop(req: Req<typeof S.itineraryStopRequest>): Promise<Result<{ id: string }>>;
+    moveStop(req: Req<typeof S.itineraryMoveStopRequest>): Promise<Result<ItineraryStop>>;
+    updateStop(req: Req<typeof S.itineraryUpdateStopRequest>): Promise<Result<ItineraryStop>>;
+    linkLeg(req: Req<typeof S.itineraryLinkLegRequest>): Promise<Result<ItineraryStop>>;
+    setLegMode(req: Req<typeof S.itinerarySetLegModeRequest>): Promise<Result<ItineraryStop>>;
+    planAll(req: Req<typeof S.itineraryGetRequest>): Promise<Result<null>>;
+    addPoiStop(
+      req: Req<typeof S.itineraryAddPoiStopRequest>,
+    ): Promise<Result<{ waypoint: Waypoint; stop: ItineraryStop }>>;
+    planLeg(req: Req<typeof S.itineraryStopRequest>): Promise<Result<{ route: Route; stop: ItineraryStop }>>;
+    planAround(req: Req<typeof S.itineraryStopRequest>): Promise<Result<{ routes: Route[] }>>;
+    exportIcs(req: Req<typeof S.itineraryExportIcsRequest>): Promise<Result<IcsExportResult>>;
+  };
   waypoints: {
     listForTrip(
       req: Req<typeof S.waypointListForTripRequest>,
@@ -212,6 +264,38 @@ export interface TrailRtApi {
     restoreOriginal(
       req: Req<typeof S.trackRestoreOriginalRequest>,
     ): Promise<Result<TrackWithPoints>>;
+    /**
+     * One window of exact points, with the whole track's segment breaks.
+     *
+     * The breaks are global rather than window-local because a renderer cannot
+     * infer a break from a window that does not contain one.
+     */
+    points(
+      req: Req<typeof S.trackPointsPageRequest>,
+    ): Promise<Result<TrackPointsPage>>;
+    editPoint(
+      req: Req<typeof S.trackEditPointRequest>,
+    ): Promise<Result<TrackWithPoints>>;
+    /** Non-contiguous deletion. Segment structure survives. */
+    deletePoints(
+      req: Req<typeof S.trackDeletePointsRequest>,
+    ): Promise<Result<TrackWithPoints>>;
+  };
+  /**
+   * Multi-object operations.
+   *
+   * `assess` is a read: it answers what the batch will do, including which
+   * members cannot be reversed, so the confirmation can say so before the
+   * action rather than after it.
+   */
+  batch: {
+    assess(
+      req: Req<typeof S.batchAssessRequest>,
+    ): Promise<Result<BatchAssessment>>;
+    delete(
+      req: Req<typeof S.batchDeleteRequest>,
+    ): Promise<Result<BatchOutcome>>;
+    move(req: Req<typeof S.batchMoveRequest>): Promise<Result<BatchOutcome>>;
   };
   importing: {
     /** Opens the file dialog in the main process and stages what was chosen. */
@@ -272,10 +356,23 @@ export interface TrailRtApi {
     suggestRegions(
       req: Req<typeof S.routingSuggestRegionsRequest>,
     ): Promise<Result<RegionCandidate[]>>;
-    /** Downloads a chosen extract and builds a graph. Progress via events. */
+    /**
+     * Downloads the chosen extracts, merges several into one, and builds a
+     * graph. Progress via events.
+     */
     downloadRegion(
       req: Req<typeof S.routingDownloadRegionRequest>,
     ): Promise<Result<LoadedRegion>>;
+    /** The UK's downloadable regions, for the picker's map. */
+    regionMap(): Promise<Result<RegionMapEntry[]>>;
+    /** Download sizes, null where the server will not say. */
+    regionSizes(
+      req: Req<typeof S.routingRegionSizesRequest>,
+    ): Promise<Result<RegionSize[]>>;
+    /** Downloads the terrain tiles one geometry's profile needs. */
+    downloadTerrain(
+      req: Req<typeof S.routingDownloadTerrainRequest>,
+    ): Promise<Result<TerrainDownloadResult>>;
     snap(req: Req<typeof S.routingSnapRequest>): Promise<Result<SnapOutcome>>;
     /** One leg, no write. The interactive tool's per-click call. */
     routeLeg(
@@ -284,6 +381,18 @@ export interface TrailRtApi {
     createSnapped(
       req: Req<typeof S.routingCreateSnappedRequest>,
     ): Promise<Result<Route>>;
+    /** Phase 6: route a section through shaping points. No write. */
+    routeSection(
+      req: Req<typeof S.routingRouteSectionRequest>,
+    ): Promise<Result<PreviewedLeg[]>>;
+    /** Phase 6: the routes on offer between two points. No write. */
+    alternatives(
+      req: Req<typeof S.routingAlternativesRequest>,
+    ): Promise<Result<Candidate[]>>;
+    /** Phase 6: commit a shaping edit as previewed. One undo entry. */
+    applyEdit(
+      req: Req<typeof S.routingApplyEditRequest>,
+    ): Promise<Result<EditOutcome>>;
     provenance(
       req: Req<typeof S.routingProvenanceRequest>,
     ): Promise<Result<RouteProvenance>>;
@@ -341,7 +450,29 @@ export interface TrailRtApi {
     onRegionJobProgress(
       listener: (progress: RegionJobProgress) => void,
     ): () => void;
+    onPostcodeProgress(listener: (progress: PostcodeProgress) => void): () => void;
   };
+}
+
+/** What an iCalendar export wrote. */
+export type IcsExportResult =
+  | { cancelled: true; fileName: null }
+  | { cancelled: false; fileName: string; eventCount: number; omitted: string[] };
+
+/** A Code-Point Open release: what is offered, or what was installed. */
+export interface PostcodeRelease {
+  release: string;
+  /** Download size, before fetching. Null once installed. */
+  sizeBytes: number | null;
+  /** Installed only. */
+  date: string | null;
+  count: number | null;
+}
+
+export interface PostcodeProgress {
+  stage: 'downloading' | 'reading';
+  receivedBytes: number;
+  totalBytes: number;
 }
 
 /**

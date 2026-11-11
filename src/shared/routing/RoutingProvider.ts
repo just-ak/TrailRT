@@ -35,6 +35,10 @@ export type TransportMode = (typeof TRANSPORT_MODES)[number];
 
 export const DEFAULT_TRANSPORT_MODE: TransportMode = 'auto';
 
+export function isTransportMode(value: unknown): value is TransportMode {
+  return (TRANSPORT_MODES as readonly unknown[]).includes(value);
+}
+
 /**
  * Road classification, in descending order of significance.
  *
@@ -98,6 +102,29 @@ export interface RouteLeg {
   durationS: number | null;
 }
 
+/**
+ * A control point the engine could not place on a road near where it was put.
+ *
+ * Snapping always moves a point a little: a map click or a town-centre
+ * coordinate is not on a carriageway, and shifting it a few tens of metres is
+ * the operation working. Moving it **kilometres** is not. It means there is no
+ * road near that point *in the loaded graph*, which in practice almost always
+ * means the graph does not cover the area.
+ *
+ * This has to be measured rather than asked, because Valhalla does not tell
+ * you. Its route response echoes back the **input** coordinates in
+ * `trip.locations`, so a request whose points were dragged 10 km to the edge of
+ * the data looks identical to one that matched cleanly. The only evidence is
+ * the distance between the control point and the end of the geometry returned
+ * for it. See ADR 0016.
+ */
+export interface DisplacedControlPoint {
+  /** Index into the control points that were passed in. */
+  index: number;
+  /** How far the engine moved it, in metres. */
+  displacementM: number;
+}
+
 export interface SnapResult {
   provider: string;
   mode: TransportMode;
@@ -107,7 +134,31 @@ export interface SnapResult {
    * explain which parts of the route are still straight lines.
    */
   unmatchedLegs: [number, number][];
+  /**
+   * Control points the engine dragged too far to be believed.
+   *
+   * Reported rather than silently accepted, and the legs touching them are
+   * marked unmatched so they stay visibly straight. A straight line a user can
+   * see is better than a confident road route to somewhere they did not ask
+   * for.
+   */
+  displaced: DisplacedControlPoint[];
 }
+
+/**
+ * How far a control point may be moved before the snap is not believed.
+ *
+ * Snapping is supposed to move points. A click on a map at zoom 12 is easily
+ * 100 m from the nearest carriageway, and a town-centre coordinate is wherever
+ * the gazetteer put it — Buxton's is 4 m from a road, Ashbourne's 5 m, but
+ * neither number is guaranteed.
+ *
+ * 250 m is the working limit: comfortably past any reasonable click or
+ * gazetteer offset, and far short of the kilometres that indicate missing data.
+ * Measured against a Derbyshire-only graph, Macclesfield came back displaced
+ * 3,111 m and Leek 10,670 m, which is the failure this exists to catch.
+ */
+export const MAX_SNAP_DISPLACEMENT_M = 250;
 
 /**
  * One road segment from a map match, with the attributes we have a use for.
@@ -128,6 +179,14 @@ export interface MatchedEdge {
   speedLimitMps: number | null;
   roadClass: RoadClass | null;
   surface: SurfaceKind | null;
+  /**
+   * True when the edge can be travelled in one direction only. OpenStreetMap
+   * draws each carriageway of a dual carriageway as its own one-way way, so this
+   * is what tells a dual carriageway from a single one for the UK default
+   * limits (ADR 0018). Optional because attributes cached before it was
+   * recorded do not carry it; absent and null both mean "not known".
+   */
+  oneway?: boolean | null;
 }
 
 export interface MatchResult {
@@ -139,6 +198,60 @@ export interface MatchResult {
   /** Points the provider could not match to any road. */
   unmatchedPointCount: number;
 }
+
+/**
+ * What a control point is for. Phase 6, ADR 0017.
+ *
+ * A **via** point is a place the route is meant to visit: the start, the end,
+ * and every point clicked in the snap routing tool. A **shaping** point only
+ * bends the route onto a road — it is created by dragging the line or by
+ * choosing an alternative, and the route must pass through it without turning
+ * round.
+ */
+export const CONTROL_ROLES = ['via', 'shaping'] as const;
+
+export type ControlRole = (typeof CONTROL_ROLES)[number];
+
+export function isControlRole(value: unknown): value is ControlRole {
+  return (CONTROL_ROLES as readonly unknown[]).includes(value);
+}
+
+/** One location in a section routed as a single request. */
+export interface SectionLocation {
+  point: LatLon;
+  /**
+   * Arrive and leave without turning round. Set for shaping points.
+   *
+   * The leg is still split here: a section of N locations always comes back
+   * as N - 1 legs, which is what lets the caller keep leg boundaries.
+   */
+  passThrough: boolean;
+}
+
+/**
+ * One route the engine offers between two points.
+ *
+ * Duration is named for what it is. It is the engine's estimate and is never a
+ * measurement — ADR 0011 §8.
+ */
+export interface RouteCandidate {
+  shape: LatLon[];
+  /** Metres. Null when the provider did not report it. */
+  distanceM: number | null;
+  /** Seconds. An engine estimate. Null when not reported. */
+  estimatedDurationS: number | null;
+  /** How far the engine moved each end to reach a road, in metres. ADR 0016. */
+  startDisplacementM: number;
+  endDisplacementM: number;
+}
+
+/**
+ * The most candidates the application ever asks for.
+ *
+ * Valhalla's bundled config allows two alternates, so three in all. Asking a
+ * host for more than it allows is an error, not a truncation.
+ */
+export const MAX_ROUTE_CANDIDATES = 3;
 
 export interface RoutingProvider {
   readonly id: string;
@@ -162,6 +275,58 @@ export interface RoutingProvider {
     shape: readonly LatLon[],
     mode: TransportMode,
   ): Promise<MatchResult>;
+
+  /**
+   * Up to `count` candidates between two points, the engine's preferred route
+   * first. Candidates whose ends the engine moved beyond
+   * `MAX_SNAP_DISPLACEMENT_M` are left out; an empty array means there is no
+   * believable road route at all.
+   *
+   * Optional: a provider that cannot offer alternatives omits it, and the UI
+   * hides the feature rather than the provider faking one.
+   */
+  alternatives?(
+    from: LatLon,
+    to: LatLon,
+    mode: TransportMode,
+    count: number,
+  ): Promise<RouteCandidate[]>;
+
+  /**
+   * Routes a short section as **one** request, splitting legs at every
+   * location and honouring `passThrough`.
+   *
+   * Optional: without it, callers route leg by leg with `snap` and check the
+   * result for reversals at shaping points instead.
+   */
+  snapSection?(
+    locations: readonly SectionLocation[],
+    mode: TransportMode,
+  ): Promise<SnapResult>;
+}
+
+/** What a provider can do beyond the required `snap` and `match`. */
+export interface RoutingCapabilities {
+  alternatives: boolean;
+  passThrough: boolean;
+}
+
+export const NO_ROUTING_CAPABILITIES: RoutingCapabilities = {
+  alternatives: false,
+  passThrough: false,
+};
+
+/**
+ * Derived from which optional methods the provider has, so a capability can
+ * never be claimed without the code that backs it.
+ */
+export function providerCapabilities(
+  provider: Pick<RoutingProvider, 'alternatives' | 'snapSection'>,
+): RoutingCapabilities {
+  return {
+    alternatives: typeof provider.alternatives === 'function',
+    passThrough: typeof provider.snapSection === 'function',
+  };
 }
 
 /**

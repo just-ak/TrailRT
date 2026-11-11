@@ -188,6 +188,58 @@ export function listTrackPoints(db: Db, trackId: string): TrackPointRow[] {
     }));
 }
 
+/**
+ * One window of points, in storage order.
+ *
+ * `LIMIT`/`OFFSET` rather than reading everything and slicing in JS: the whole
+ * reason the point table is paged is that a 200,000-point track must not be
+ * materialised to show forty rows. SQLite walks the index and stops.
+ */
+export function listTrackPointsPage(
+  db: Db,
+  trackId: string,
+  offset: number,
+  limit: number,
+): TrackPointRow[] {
+  return db
+    .select()
+    .from(trackPoints)
+    .where(eq(trackPoints.trackId, trackId))
+    .orderBy(asc(trackPoints.segmentIndex), asc(trackPoints.seq))
+    .limit(limit)
+    .offset(offset)
+    .all()
+    .map((p) => ({
+      segmentIndex: p.segmentIndex,
+      seq: p.seq,
+      lat: p.lat,
+      lon: p.lon,
+      eleM: p.eleM ?? null,
+      recordedAt: p.recordedAt ?? null,
+    }));
+}
+
+/**
+ * How many points are in each segment, in segment order.
+ *
+ * Aggregated in SQL so the segment structure of a large track is a handful of
+ * rows rather than every point. Everything the point table needs to know about
+ * breaks is derivable from this — see `shared/geo/segments.ts`.
+ */
+export function segmentLengths(db: Db, trackId: string): number[] {
+  return db
+    .select({
+      segmentIndex: trackPoints.segmentIndex,
+      n: sql<number>`count(*)`,
+    })
+    .from(trackPoints)
+    .where(eq(trackPoints.trackId, trackId))
+    .groupBy(trackPoints.segmentIndex)
+    .orderBy(asc(trackPoints.segmentIndex))
+    .all()
+    .map((row) => row.n);
+}
+
 export function updateTrack(
   db: Db,
   id: string,

@@ -4,6 +4,7 @@ import { AboutDialog } from "../features/about/AboutDialog";
 import { RestoreDialog } from "../features/backup/RestoreDialog";
 import { ExportDialog } from "../features/export/ExportDialog";
 import { ImportDialog } from "../features/import/ImportDialog";
+import { ConfirmBatchDeleteDialog } from "../features/library/ConfirmBatchDeleteDialog";
 import { ConfirmDeleteDialog } from "../features/library/ConfirmDeleteDialog";
 import { RegionPickerDialog } from "../features/settings/RegionPickerDialog";
 import { SettingsDialog } from "../features/settings/SettingsDialog";
@@ -192,6 +193,12 @@ export function App(): ReactNode {
       {dialog.kind === "confirmDelete" && (
         <ConfirmDeleteDialog target={dialog.target} counts={dialog.counts} />
       )}
+      {dialog.kind === "confirmBatchDelete" && (
+        <ConfirmBatchDeleteDialog
+          members={dialog.members}
+          assessment={dialog.assessment}
+        />
+      )}
       {dialog.kind === "import" && (
         // Keyed on the staged set so choosing a new batch while one is open
         // remounts with fresh selection state rather than merging the two.
@@ -202,7 +209,9 @@ export function App(): ReactNode {
       )}
       {dialog.kind === "export" && <ExportDialog scope={dialog.scope} />}
       {dialog.kind === "regionPicker" && (
-        <RegionPickerDialog onClose={() => useUiStore.getState().closeDialog()} />
+        <RegionPickerDialog
+          onClose={() => useUiStore.getState().closeDialog()}
+        />
       )}
 
       <Toast />

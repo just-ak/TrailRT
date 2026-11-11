@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { BUXTON, MACCLESFIELD } from '@fixtures/places';
 import {
   cleanup,
   close,
@@ -21,6 +22,11 @@ import {
  * instance, and standing one up in CI is out of scope. What *is* verified here
  * is the refusal path, which is the part a user actually meets.
  */
+
+/** Points on the A537 west of Buxton, from the shared test geography. */
+const BUXTON_AT = { lat: BUXTON.lat, lon: BUXTON.lon };
+const CAT_FIDDLE_AT = { lat: 53.2578, lon: -2.0327 };
+const MACCLESFIELD_AT = { lat: MACCLESFIELD.lat, lon: MACCLESFIELD.lon };
 
 let userDataDir: string;
 let harness: Harness;
@@ -411,10 +417,16 @@ test.describe('road data and profile', () => {
     expect(profile).not.toBeNull();
     expect(profile?.totalDistanceM).toBeGreaterThan(0);
 
-    // Drawn on the map with no elevation source, so the band is absent with a
-    // reason rather than a row of zeros.
+    // Drawn on the map with no elevation of its own, and no terrain tiles in a
+    // fresh profile, so the band is absent with the reason and the download
+    // that would fix it — never a row of zeros (ADR 0018).
     expect(profile?.elevation).toBeNull();
-    expect(profile?.elevationAbsentBecause).toMatch(/not the same as a flat/i);
+    expect(profile?.elevationAbsentBecause).toMatch(/not downloaded yet/i);
+    expect(profile?.terrainMissing?.tileCount).toBeGreaterThanOrEqual(1);
+
+    // Straight lines between clicks say nothing about bends: unknown, not 0.
+    expect(profile?.twistiness).toBeNull();
+    expect(profile?.twistinessUnknownBecause).toMatch(/too far apart/i);
 
     // No provider, so no roads have been matched.
     expect(profile?.postedSpeedSpans).toBeNull();
@@ -429,12 +441,18 @@ test.describe('road data and profile', () => {
       .getByRole('treeitem', { name: /Route/ })
       .first()
       .click();
-    await page.getByRole('button', { name: 'Profile' }).click();
+    await page.getByRole('button', { name: 'Profile and points' }).click();
 
     const drawer = page.getByRole('region', { name: 'Route profile' });
     await expect(drawer).toBeVisible();
-    // The absent-band reason is shown to the user, not just present in the API.
-    await expect(drawer.getByText(/not the same as a flat/i)).toBeVisible();
+    // The absent-band reasons are shown to the user, not just present in the
+    // API, with the download that would supply terrain heights. Not clicked:
+    // the tests never touch the network.
+    await expect(drawer.getByText(/not downloaded yet/i)).toBeVisible();
+    await expect(
+      drawer.getByRole('button', { name: /Download terrain heights/ }),
+    ).toBeVisible();
+    await expect(drawer.getByText(/too far apart to show bends/i)).toBeVisible();
 
     await page.getByRole('button', { name: 'Close profile' }).click();
     await expect(drawer).toHaveCount(0);
@@ -471,7 +489,7 @@ test.describe('road data and profile', () => {
 });
 
 test.describe('Waze hand-off', () => {
-  test('offers one destination and says it is the end point', async () => {
+  test('offers the start or the end, one destination each', async () => {
     const { page } = harness;
 
     await page
@@ -479,18 +497,26 @@ test.describe('Waze hand-off', () => {
       .first()
       .click();
 
-    const button = page.getByRole('button', { name: 'End point in Waze' });
-    await expect(button).toBeVisible();
+    // A small icon now, not a full-width button.
+    await page.getByRole('button', { name: 'Navigate in Waze' }).click();
+    const items = page.getByRole('menuitem');
+    await expect(items).toHaveText([
+      'Navigate to start in Waze',
+      'Navigate to end in Waze',
+    ]);
     // No whole-route action exists anywhere, because Waze cannot accept one.
-    await expect(
-      page.getByRole('button', { name: /whole route/i }),
-    ).toHaveCount(0);
+    await expect(page.getByText(/whole route/i)).toHaveCount(0);
+
+    // Not chosen: the tests never open an external link.
+    await page.keyboard.press('Escape');
+    await expect(items).toHaveCount(0);
   });
 
   test('builds a link the main process will accept', async () => {
     const accepted = await harness.page.evaluate(async () => {
       const result = await window.trailrt.app.openExternal({
-        url: 'https://www.waze.com/ul?ll=46.500000%2C8.250000&navigate=yes',
+        // Buxton, as the hand-off would encode it.
+        url: 'https://www.waze.com/ul?ll=53.258800%2C-1.911000&navigate=yes',
       });
       return result.ok;
     });
@@ -513,32 +539,34 @@ test.describe('Waze hand-off', () => {
 
 test.describe('the snap routing tool', () => {
   /*
-   * The tool cannot be driven end to end without a live Valhalla instance, and
-   * standing one up in CI is out of scope. What is verified here is the part
-   * every user meets first: with no provider configured the tool refuses
-   * visibly rather than accepting clicks it cannot act on.
+   * Following roads is the default (ADR 0018), so there is no separate tool to
+   * find. With no map region loaded, "New Route" draws straight lines and says
+   * why, with the fix one click away.
    */
-  test('is offered but disabled, with the reason on the control', async () => {
+  test('has no separate control, and New Route says why it is straight', async () => {
     const { page } = harness;
 
-    const tool = page.getByRole('button', { name: 'Snap routing' });
-    // Present, not hidden: a tool that vanishes is harder to understand than
-    // one that says why it cannot run.
-    await expect(tool).toBeVisible();
-    await expect(tool).toBeDisabled();
-    // The tooltip carries the engine's own reason, so it says what to do
-    // rather than only that something is wrong.
-    await expect(tool).toHaveAttribute('title', /import an openstreetmap region/i);
+    await expect(page.getByRole('button', { name: 'Snap routing' })).toHaveCount(0);
+
+    await page.getByRole('treeitem', { name: /Phase Four Trip/ }).click();
+    await page.getByRole('button', { name: 'New route', exact: true }).click();
+    await expect(page.getByText(/no map region loaded yet/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Add map regions…' })).toBeVisible();
+
+    await page.keyboard.press('Escape');
+    await expect(page.getByText(/no map region loaded yet/i)).toHaveCount(0);
   });
 
   test('refuses a leg request with the same code as a snap', async () => {
-    const code = await harness.page.evaluate(async () => {
-      const result = await window.trailrt.routing.routeLeg({
-        from: { lat: 46.5, lon: 8 },
-        to: { lat: 46.52, lon: 8.02 },
-      });
-      return result.ok ? null : result.error.code;
-    });
+    // Passed in rather than closed over: an `evaluate` callback is serialised
+    // into the renderer, so it cannot see this file's constants.
+    const code = await harness.page.evaluate(
+      async ({ from, to }) => {
+        const result = await window.trailrt.routing.routeLeg({ from, to });
+        return result.ok ? null : result.error.code;
+      },
+      { from: BUXTON_AT, to: CAT_FIDDLE_AT },
+    );
 
     expect(code).toBe('PROVIDER_UNAVAILABLE');
   });
@@ -553,30 +581,26 @@ test.describe('the snap routing tool', () => {
     expect(tripId).not.toBeNull();
     if (tripId === null) return;
 
-    const outcome = await page.evaluate(async (id: string) => {
-      const result = await window.trailrt.routing.createSnapped({
-        tripId: id,
-        name: 'Mismatched',
-        // Three points need two legs. One leg is a preview that drifted out of
-        // step with its points, so neither can be trusted.
-        controlPoints: [
-          { lat: 46.5, lon: 8 },
-          { lat: 46.52, lon: 8.02 },
-          { lat: 46.54, lon: 8.04 },
-        ],
-        legs: [
-          {
-            matched: true,
-            shape: [
-              { lat: 46.5, lon: 8 },
-              { lat: 46.52, lon: 8.02 },
-            ],
-            distanceM: 100,
-          },
-        ],
-      });
-      return result.ok ? { ok: true } : { ok: false, code: result.error.code };
-    }, tripId);
+    const outcome = await page.evaluate(
+      async ({ id, along }) => {
+        const result = await window.trailrt.routing.createSnapped({
+          tripId: id,
+          name: 'Mismatched',
+          // Three points need two legs. One leg is a preview that drifted out
+          // of step with its points, so neither can be trusted.
+          controlPoints: along,
+          legs: [
+            {
+              matched: true,
+              shape: along.slice(0, 2),
+              distanceM: 100,
+            },
+          ],
+        });
+        return result.ok ? { ok: true } : { ok: false, code: result.error.code };
+      },
+      { id: tripId, along: [BUXTON_AT, CAT_FIDDLE_AT, MACCLESFIELD_AT] },
+    );
 
     // Caught at the schema, so it is reported as the request problem it is.
     expect(outcome).toEqual({ ok: false, code: 'INVALID_REQUEST' });
@@ -588,6 +612,10 @@ test.describe('the snap routing tool', () => {
     );
 
     expect(names).toEqual([
+      // Phase 6: the routes on offer between two points. A read.
+      'alternatives',
+      // Phase 6: commits a shaping edit as previewed. One undo entry.
+      'applyEdit',
       'attributes',
       'clearAttributes',
       'consentNotice',
@@ -596,13 +624,21 @@ test.describe('the snap routing tool', () => {
       // graph from it, so a user never has to understand OpenStreetMap
       // distribution to get routing working.
       'downloadRegion',
+      // Phase 7: terrain tiles for one geometry's profile. Downloads data, never
+      // writes to a route.
+      'downloadTerrain',
       // The only channel in the application that spawns a child process.
       'importRegion',
       'match',
       'profile',
       'provenance',
       'region',
+      // Phase 7: the UK regions as shapes, and their sizes. Reads.
+      'regionMap',
+      'regionSizes',
       'routeLeg',
+      // Phase 6: routes a section through shaping points. A read.
+      'routeSection',
       'snap',
       'speedDistribution',
       'status',

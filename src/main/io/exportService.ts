@@ -2,6 +2,7 @@ import { EXPORT_FORMATS, type ExportFormat } from '@shared/io/types';
 import type { Db } from '../db/client';
 import * as tripRepo from '../db/repositories/trips';
 import { ServiceError } from '../services/errors';
+import * as itineraryRepo from '../db/repositories/itineraries';
 import * as routeService from '../services/routeService';
 import * as trackService from '../services/trackService';
 import * as waypointService from '../services/waypointService';
@@ -116,6 +117,23 @@ interface Gathered {
   tripIds: string[];
   /** Document-level name: a single trip's name, or a count. */
   name: string;
+  /** Phase 10: how many of the gathered trips have an itinerary. */
+  scheduled: number;
+}
+
+/**
+ * Puts a scheduled trip's stops and legs first, in itinerary order, so a
+ * device that reads a GPX top to bottom meets them in the order they are
+ * driven (Phase 10 Requirement 10.2). Everything else keeps its existing
+ * order after them. A trip with no itinerary is returned exactly as given,
+ * which is what keeps its export byte-for-byte unchanged.
+ */
+function inItineraryOrder<T extends { id: string }>(items: readonly T[], order: readonly (string | null)[]): T[] {
+  const rank = new Map<string, number>();
+  for (const id of order) if (id !== null && !rank.has(id)) rank.set(id, rank.size);
+  if (rank.size === 0) return [...items];
+  const first = items.filter((item) => rank.has(item.id)).toSorted((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+  return [...first, ...items.filter((item) => !rank.has(item.id))];
 }
 
 function gather(db: Db, scope: ExportScope): Gathered {
@@ -128,6 +146,7 @@ function gather(db: Db, scope: ExportScope): Gathered {
         waypoints: [],
         tripIds: [route.tripId],
         name: route.name,
+        scheduled: 0,
       };
     }
     case 'track': {
@@ -138,6 +157,7 @@ function gather(db: Db, scope: ExportScope): Gathered {
         waypoints: [],
         tripIds: [track.tripId],
         name: track.name,
+        scheduled: 0,
       };
     }
     case 'waypoint': {
@@ -148,6 +168,7 @@ function gather(db: Db, scope: ExportScope): Gathered {
         waypoints: [waypoint],
         tripIds: [waypoint.tripId],
         name: waypoint.name,
+        scheduled: 0,
       };
     }
     case 'trips':
@@ -176,6 +197,7 @@ function gather(db: Db, scope: ExportScope): Gathered {
         waypoints: [],
         tripIds,
         name: '',
+        scheduled: 0,
       };
 
       for (const tripId of tripIds) {
@@ -183,13 +205,18 @@ function gather(db: Db, scope: ExportScope): Gathered {
         if (trip === null) {
           throw new ServiceError('NOT_FOUND', 'That trip no longer exists.');
         }
-        for (const route of routeService.listForTrip(db, tripId)) {
+        const stops = itineraryRepo.findItinerary(db, tripId) === null ? [] : itineraryRepo.listStops(db, tripId);
+        if (itineraryRepo.findItinerary(db, tripId) !== null) gathered.scheduled += 1;
+        const routes = inItineraryOrder(routeService.listForTrip(db, tripId), stops.map((stop) => stop.legRouteId));
+        for (const route of routes) {
           gathered.routes.push(routeService.get(db, route.id));
         }
         for (const track of trackService.listForTrip(db, tripId)) {
           gathered.tracks.push(trackService.get(db, track.id));
         }
-        gathered.waypoints.push(...waypointService.listForTrip(db, tripId));
+        gathered.waypoints.push(
+          ...inItineraryOrder(waypointService.listForTrip(db, tripId), stops.map((stop) => stop.waypointId)),
+        );
       }
 
       const first = tripRepo.findTrip(db, tripIds[0] as string);
@@ -330,6 +357,14 @@ export function planExport(
         'A collection export covers whole trips, so the trip containing this object is written in full.',
       );
     }
+  }
+
+  if (gathered.scheduled > 0) {
+    // No format TrailRT writes has a place for a plan. GPX <time> means a
+    // recorded time, so planned times are not written there either (10.3).
+    losses.push(
+      `Itinerary details (start, durations, fixed times) are not part of ${capability.label} and are not written. Export the itinerary to a calendar instead.`,
+    );
   }
 
   const empty =

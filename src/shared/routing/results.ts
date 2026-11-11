@@ -1,5 +1,13 @@
 import type { ProfileSpan } from '../geo/profile';
-import type { RoadClass, SurfaceKind, TransportMode } from './RoutingProvider';
+import type { Twistiness } from '../geo/twistiness';
+import type {
+  ControlRole,
+  DisplacedControlPoint,
+  RoadClass,
+  RoutingCapabilities,
+  SurfaceKind,
+  TransportMode,
+} from './RoutingProvider';
 
 /**
  * Response contracts for the routing and road-attribute channels.
@@ -60,6 +68,11 @@ export interface RoutingStatus {
    * what sets this.
    */
   endpointTested: boolean;
+  /**
+   * What the configured provider can do beyond snapping. Derived from the
+   * provider's methods, so the UI never offers a feature nothing backs.
+   */
+  capabilities: RoutingCapabilities;
 }
 
 /** What the consent prompt says, built around the host actually configured. */
@@ -79,6 +92,29 @@ export interface SnapOutcome {
   unmatchedLegs: [number, number][];
   /** False when the previous geometry was too large to carry as an inverse. */
   undoable: boolean;
+  /**
+   * Control points the engine could not place on a road near where they were.
+   *
+   * Almost always means the loaded map region does not reach them. Surfaced
+   * because the alternative is a route that confidently goes somewhere the
+   * user did not choose — see ADR 0016.
+   */
+  displaced: DisplacedControlPoint[];
+}
+
+/**
+ * A control point as the renderer sees it.
+ *
+ * `shapeIndex` is the index in the route's points where this point's leg
+ * starts, which is what lets one leg be replaced without touching the others.
+ * Null for a route snapped before Phase 6, whose boundaries are unknown — see
+ * ADR 0017.
+ */
+export interface ProvenanceControlPoint {
+  lat: number;
+  lon: number;
+  role: ControlRole;
+  shapeIndex: number | null;
 }
 
 /** Snap provenance for the properties panel. Null provider means hand-drawn. */
@@ -100,7 +136,15 @@ export interface RouteProvenance {
    * Empty for a hand-drawn route, which is how a pre-Phase-4 route keeps
    * behaving exactly as it did.
    */
-  controlPoints: { lat: number; lon: number }[];
+  controlPoints: ProvenanceControlPoint[];
+  /**
+   * Control points the last snap could not place on a road.
+   *
+   * Persisted with the route rather than shown once and forgotten: a route
+   * snapped against a region that did not cover it is wrong until it is
+   * re-snapped, and the panel should keep saying so.
+   */
+  displaced: DisplacedControlPoint[];
 }
 
 /**
@@ -123,6 +167,44 @@ export interface PreviewedLeg {
   shape: { lat: number; lon: number }[];
   /** Metres, as reported by the provider. Null when it did not say. */
   distanceM: number | null;
+  /**
+   * How far the engine moved the leg's far end to reach a road, in metres.
+   *
+   * Null when it was not measured. The interactive tool shows this per click,
+   * so a point outside the loaded region is obvious at the moment it is placed
+   * rather than after the whole route is drawn and saved.
+   */
+  displacementM: number | null;
+}
+
+/**
+ * Exactly the fields of a `PreviewedLeg`, and nothing else.
+ *
+ * The IPC schema for a leg is strict, so an object carrying any extra field —
+ * a `Candidate`'s `estimatedDurationS`, say — is refused at the boundary as
+ * "not valid". TypeScript cannot catch that, because a `Candidate` is
+ * structurally a `PreviewedLeg`. Anything that stores or sends a leg goes
+ * through this.
+ */
+export function asPreviewedLeg(leg: PreviewedLeg): PreviewedLeg {
+  return {
+    matched: leg.matched,
+    shape: leg.shape,
+    distanceM: leg.distanceM,
+    displacementM: leg.displacementM,
+  };
+}
+
+/**
+ * One of the routes offered for a leg, as the renderer sees it. Phase 6.
+ *
+ * A `PreviewedLeg` plus the engine's duration estimate. `PreviewedLeg` dropped
+ * duration because nothing displayed it; the candidate list does, labelled as
+ * an estimate, and the field name says so too so nobody downstream mistakes it
+ * for a measurement. ADR 0011 §8.
+ */
+export interface Candidate extends PreviewedLeg {
+  estimatedDurationS: number | null;
 }
 
 /**
@@ -152,6 +234,12 @@ export interface AttributeStatus {
 }
 
 export interface ProfileSample {
+  /**
+   * Index of the source point this sample was taken from, in the same
+   * numbering the point table uses (a track's segments flattened in order).
+   * Lets the chart and the table select the same point.
+   */
+  index: number;
   /** Cumulative metres from the start. */
   distanceM: number;
   lat: number;
@@ -193,10 +281,28 @@ export interface Profile {
   samples: ProfileSample[];
 
   elevation: ElevationSummary | null;
+  /**
+   * Where the heights came from. `terrain` is a model (ADR 0018), and must be
+   * labelled as one wherever it is shown — never presented as measured.
+   */
+  elevationSource: 'recorded' | 'terrain' | null;
   elevationAbsentBecause: string | null;
+  /** Set when terrain heights would be available after a download. */
+  terrainMissing: { tileCount: number; approxBytes: number } | null;
+
+  /** How much the line bends. Null when it cannot be scored; see the reason. */
+  twistiness: Twistiness | null;
+  twistinessUnknownBecause: string | null;
 
   /** Posted limits in metres per second, as distance spans. */
   postedSpeedSpans: ProfileSpan<number>[] | null;
+  /**
+   * UK default limits assumed where none is posted (ADR 0018). Its own series,
+   * never merged into `postedSpeedSpans`, so the chart can draw it differently.
+   * Null when nothing was assumed or the setting is off.
+   */
+  assumedSpeedSpans: ProfileSpan<number>[] | null;
+  /** Null when either posted or assumed spans exist. */
   postedSpeedAbsentBecause: string | null;
 
   roadClassSpans: ProfileSpan<RoadClass>[] | null;
@@ -226,10 +332,52 @@ export interface RegionProgressEvent {
  * hard to spot.
  */
 export interface LoadedRegion {
+  /** Display names, joined: "Derbyshire, Cheshire and Staffordshire". */
   regionName: string;
+  /**
+   * Every region the graph was built from. Empty for a graph imported from a
+   * file, or built before regions were recorded. ADR 0018.
+   */
+  regionIds: string[];
   tileCount: number;
   builtAt: number;
   graphBytes: number;
+  /** Set when the graph built but its terrain tiles did not all download. */
+  terrainWarning?: string | null;
+  /**
+   * Set when the graph built but its place data (POIs, place names) did not.
+   * Phase 10: routing still works; search and POIs offer a rebuild.
+   */
+  placesWarning?: string | null;
+}
+
+/**
+ * A downloadable region drawn on the picker's UK map.
+ *
+ * The rings are rounded for drawing and never used to decide coverage, so the
+ * rounding cannot reach routing.
+ */
+export interface RegionMapEntry {
+  id: string;
+  name: string;
+  /** Outer rings as [lon, lat]. */
+  rings: [number, number][][];
+  /** In the graph that is loaded now. */
+  loaded: boolean;
+  /** Something the user should know before choosing it, or null. */
+  note: string | null;
+}
+
+export interface RegionSize {
+  id: string;
+  sizeBytes: number | null;
+}
+
+export interface TerrainDownloadResult {
+  downloaded: number;
+  /** Squares with no land, so no tile to fetch. */
+  sea: number;
+  failed: number;
 }
 
 /**
@@ -260,12 +408,34 @@ export interface RegionCandidate {
   tooLarge: boolean;
 }
 
-/** Progress while a region is being downloaded and built. */
+/** Progress while regions are downloaded, merged and built. */
 export interface RegionJobProgress {
-  phase: 'downloading' | 'building';
+  phase: 'downloading' | 'merging' | 'building' | 'terrain';
   /** Download stage only. */
   receivedBytes: number | null;
   totalBytes: number | null;
   /** Build stage only — the coarse stage name. */
   stage: string | null;
+  /** Which region is downloading, 1-based, out of how many. Download stage only. */
+  regionIndex?: number | null;
+  regionCount?: number | null;
+  regionName?: string | null;
+  /** Terrain stage only. */
+  tilesDone?: number | null;
+  tileCount?: number | null;
+}
+
+/**
+ * What a shaping edit did. Phase 6.
+ *
+ * The same honesty fields as `SnapOutcome`: whether the edit can be undone, and
+ * which legs and points the engine could not route properly.
+ */
+export interface EditOutcome {
+  routeId: string;
+  pointCount: number;
+  /** False when the replaced stretch was too large to carry as an inverse. */
+  undoable: boolean;
+  unmatchedLegs: [number, number][];
+  displaced: DisplacedControlPoint[];
 }

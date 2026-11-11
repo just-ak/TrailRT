@@ -19,7 +19,15 @@ import { readCsv } from '../io/csv/read';
 import { ServiceError } from '../services/errors';
 import * as trackService from '../services/trackService';
 import * as backupService from '../services/backupService';
+import * as batchService from '../services/batchService';
 import * as folderService from '../services/folderService';
+import * as itineraryService from '../services/itineraryService';
+import * as poiTripService from '../services/poiTripService';
+import * as autoPlanService from '../services/autoPlanService';
+import { batch } from '../services/compose';
+import * as itineraryRepo from '../db/repositories/itineraries';
+import { icsFromItinerary } from '../io/ics/fromItinerary';
+import { writeIcs } from '../io/ics/write';
 import type { Mutation } from '../services/folderService';
 import * as geometryService from '../services/geometryService';
 import * as libraryService from '../services/libraryService';
@@ -28,6 +36,7 @@ import * as providerService from '../services/providerService';
 import * as roadAttributeService from '../services/roadAttributeService';
 import * as routeService from '../services/routeService';
 import * as routingService from '../services/routingService';
+import * as shapingService from '../services/shapingService';
 import * as settingsService from '../services/settingsService';
 import * as tripService from '../services/tripService';
 import * as undoService from '../services/undoService';
@@ -35,10 +44,28 @@ import * as waypointService from '../services/waypointService';
 import { readLoadedRegion, writeLoadedRegion } from '../routing/embedded';
 import { currentEmbeddedPaths } from '../routing/embeddedLocation';
 import { importRegion } from '../routing/regionImport';
+import { buildPlacesOrWarn } from '../places/build';
+import { fetchListing, updatePostcodes } from '../places/postcodes';
+import { createSearchService } from '../places/searchService';
+import {
+  createPoiProvider,
+  estimateDetour,
+  itineraryLine,
+  routeLine,
+  searchAlong,
+} from '../places/poiService';
+import { placesState } from '../places/store';
+import { isValidDate } from '@shared/time/zoned';
+import type { AlongSection, Poi } from '@shared/poi/PoiProvider';
+import type { ItineraryStop } from '@shared/domain/itinerary';
+import type { RoutingProvider, TransportMode } from '@shared/routing/RoutingProvider';
 import {
   downloadAndBuild,
+  regionMap,
+  regionSizes,
   suggestRegions,
 } from '../routing/regionCatalogue';
+import { createTerrainStore, type TerrainStore } from '../terrain/terrainStore';
 import { openExternal } from '../security/navigation';
 import { installApplicationMenu } from '../menu/appMenu';
 import { sendToRenderer } from '../window';
@@ -100,8 +127,91 @@ function reparseTrackSegments(
  * Every mutating handler goes through this, which is what guarantees the stack
  * and the menu cannot fall out of step with the database.
  */
-function commit<T>(mutation: Mutation<T>): T {
-  undoService.record(mutation.inverse);
+/**
+ * A POI looked up again in the main process, so the renderer never supplies
+ * the coordinates or tags a waypoint is made from.
+ */
+function poiFor(poiId: number): { poi: Poi; dataDate: string | null } {
+  const paths = currentEmbeddedPaths();
+  const poi = createPoiProvider(paths).get(poiId);
+  if (poi === null) throw new ServiceError('NOT_FOUND', 'That place is no longer in the place data.');
+  const state = placesState(paths);
+  return { poi, dataDate: state.kind === 'ready' ? state.dataDate : null };
+}
+
+/** Along-the-route searches in flight, by the renderer's request id. */
+const alongJobs = new Map<string, AbortController>();
+
+/** The line a POI search runs along: one route, or a whole itinerary. */
+function lineFor(scope: { kind: 'route'; routeId: string } | { kind: 'itinerary'; tripId: string }) {
+  const db = ctx().handle.db;
+  if (scope.kind === 'route') return routeLine(db, scope.routeId);
+  const view = itineraryService.get(db, scope.tripId, planning());
+  if (view === null) throw new ServiceError('NOT_FOUND', 'That trip has no itinerary.');
+  return itineraryLine(db, view);
+}
+
+/** The routing provider if one is usable, or why not. Never throws. */
+function optionalProvider(): { provider: RoutingProvider | null; mode: TransportMode; unavailable: string } {
+  const db = ctx().handle.db;
+  const mode = settingsService.all(db).transportMode;
+  const resolution = providerService.resolve(db);
+  return resolution.available
+    ? { provider: resolution.provider, mode, unavailable: '' }
+    : {
+        provider: null,
+        mode,
+        unavailable:
+          resolution.status.message ?? 'Drives are planned by road once routing is available. Add map regions in Settings.',
+      };
+}
+
+/** Why a by-road leg has no route, for the itinerary view. */
+function planIssue(): (stop: ItineraryStop) => string | null {
+  const { provider, unavailable } = optionalProvider();
+  return () =>
+    provider === null
+      ? unavailable
+      : 'This drive could not be planned by road. Try “Plan the drives by road” again, choose a route, or mark it as other transport.';
+}
+
+/**
+ * Applies a change, plans the drives it leaves without a route in each trip
+ * named, and records all of it as one undo step (design §15.2).
+ */
+async function withPlanning<T>(tripIds: readonly string[], mutation: Mutation<T>, label?: string): Promise<T> {
+  const db = ctx().handle.db;
+  const { provider, mode, unavailable } = optionalProvider();
+  const planned: Mutation<unknown>[] = [];
+  for (const tripId of tripIds) {
+    // oxlint-disable-next-line no-await-in-loop
+    const result = await autoPlanService.autoPlan(db, provider, mode, tripId, unavailable);
+    planned.push(...result.mutations);
+  }
+  if (planned.length === 0) {
+    if (mutation.inverse.kind === 'none') {
+      ctx().notifyLibraryChanged();
+      return mutation.result;
+    }
+    return commit(mutation, label);
+  }
+  return commit(batch(mutation.result, mutation, ...planned), label ?? 'plan drives');
+}
+
+/** The postcode download in flight, so it can be cancelled. One at a time. */
+let postcodeJob: AbortController | null = null;
+
+/** The settings an itinerary's timeline is computed with. Phase 10. */
+function planning(): itineraryService.PlanningSettings {
+  const settings = settingsService.all(ctx().handle.db);
+  return { walkingSpeedKmh: settings.planningSpeedKmh, transportMode: settings.transportMode };
+}
+
+function commit<T>(mutation: Mutation<T>, label?: string): T {
+  // `label` names a batch by its count and composition — "delete 3 routes and
+  // 1 track" — which a flat record keyed by command kind cannot express. Every
+  // other caller leaves it out and gets the per-kind label.
+  undoService.record(mutation.inverse, label);
   ctx().notifyLibraryChanged();
   publishUndoState(undoService.state());
   return mutation.result;
@@ -126,6 +236,20 @@ function publishUndoState(state: UndoState): void {
  * `ctx().handle.db` is read at call time rather than captured, because
  * restoring a backup replaces the database handle.
  */
+
+/**
+ * One terrain store per directory, so its in-memory tile cache survives
+ * between profiles. Keyed by directory because tests and the packaged app use
+ * different user-data roots.
+ */
+let terrainStore: { dir: string; store: TerrainStore } | null = null;
+function terrainFor(paths: { terrainDir: string }): TerrainStore {
+  if (terrainStore === null || terrainStore.dir !== paths.terrainDir) {
+    terrainStore = { dir: paths.terrainDir, store: createTerrainStore(paths.terrainDir) };
+  }
+  return terrainStore.store;
+}
+
 export function registerIpcHandlers(): void {
   // ------------------------------------------------------------- library
   handle(CHANNELS.library.tree, S.libraryTreeRequest, (req) =>
@@ -287,6 +411,224 @@ export function registerIpcHandlers(): void {
     commit(routeService.remove(ctx().handle.db, req.id)),
   );
 
+  // ---------------------------------------------------------------- places
+  // Phase 10. Points of interest from `places.sqlite`, never a network
+  // service. Only `detour` can reach a provider, the user's own routing one.
+
+  handleNoArgs(CHANNELS.places.status, () => placesState(currentEmbeddedPaths()));
+
+  handleNoArgs(CHANNELS.places.rebuild, async () => {
+    const paths = currentEmbeddedPaths();
+    const loaded = readLoadedRegion(paths);
+    if (loaded === null || loaded.regionIds.length === 0) {
+      throw new ServiceError(
+        'INVALID_REQUEST',
+        'These map regions came from a file, so they cannot be downloaded again. Import the file again to build its place data.',
+      );
+    }
+    const result = await downloadAndBuild(paths, loaded.regionIds, {
+      terrain: terrainFor(paths),
+      onProgress: (progress) => sendToRenderer(EVENTS.regionJobProgress, progress),
+    });
+    writeLoadedRegion(paths, result);
+    return result;
+  });
+
+  handle(CHANNELS.places.along, S.placesAlongRequest, async (req) => {
+    const line = lineFor(req.scope);
+    let section: AlongSection;
+    if (req.section.kind === 'near') {
+      section = { kind: 'near', point: { lat: req.section.lat, lon: req.section.lon }, radiusM: req.section.radiusM };
+    } else if (req.section.kind === 'day') {
+      if (!isValidDate(req.section.date)) throw new ServiceError('INVALID_REQUEST', 'That is not a real date.');
+      section = { kind: 'day', date: req.section.date };
+    } else {
+      section = req.section;
+    }
+    const job = new AbortController();
+    alongJobs.get(req.requestId)?.abort();
+    alongJobs.set(req.requestId, job);
+    try {
+      return await searchAlong(createPoiProvider(currentEmbeddedPaths()), {
+        line,
+        categories: req.categories,
+        widthM: req.widthM,
+        section,
+        signal: job.signal,
+      });
+    } finally {
+      if (alongJobs.get(req.requestId) === job) alongJobs.delete(req.requestId);
+    }
+  });
+
+  handle(CHANNELS.places.cancel, S.placesCancelRequest, (req) => {
+    alongJobs.get(req.requestId)?.abort();
+    return null;
+  });
+
+  handle(CHANNELS.places.detour, S.placesDetourRequest, async (req) => {
+    const poi = createPoiProvider(currentEmbeddedPaths()).get(req.poiId);
+    if (poi === null) throw new ServiceError('NOT_FOUND', 'That place is no longer in the place data.');
+    const { provider, mode } = providerService.requireProvider(ctx().handle.db);
+    return estimateDetour(provider, mode, lineFor(req.scope).index, poi);
+  });
+
+  handle(CHANNELS.places.get, S.placesGetRequest, (req) =>
+    createPoiProvider(currentEmbeddedPaths()).get(req.poiId),
+  );
+
+  handle(CHANNELS.places.addWaypoint, S.placesAddWaypointRequest, (req) => {
+    const { poi, dataDate } = poiFor(req.poiId);
+    return commit(poiTripService.addPoiWaypoint(ctx().handle.db, poi, req.tripId, dataDate));
+  });
+
+  handle(CHANNELS.itinerary.addPoiStop, S.itineraryAddPoiStopRequest, async (req) => {
+    const { poi, dataDate } = poiFor(req.poiId);
+    const mutation = poiTripService.addPoiStop(ctx().handle.db, poi, { tripId: req.tripId, index: req.index, dataDate });
+    return withPlanning([req.tripId], mutation, 'add stop');
+  });
+
+  handle(CHANNELS.itinerary.exportIcs, S.itineraryExportIcsRequest, async (req) => {
+    const db = ctx().handle.db;
+    const view = itineraryService.get(db, req.tripId, planning());
+    if (view === null) throw new ServiceError('NOT_FOUND', 'That trip has no itinerary to export.');
+    const trip = tripService.get(db, req.tripId);
+    const output = writeIcs(icsFromItinerary(view, trip.name, { includeLegs: req.includeLegs, now: Date.now() }));
+    const chosen = await dialog.showSaveDialog({
+      title: 'Export to Calendar',
+      defaultPath: `${trip.name.replaceAll(/[\\/:*?"<>|]+/g, ' ').trim() || 'Trip'}.ics`,
+      filters: [{ name: 'iCalendar', extensions: ['ics'] }],
+    });
+    if (chosen.canceled || chosen.filePath === undefined) return { cancelled: true as const, fileName: null };
+    await writeFile(chosen.filePath, output.text, 'utf8');
+    return {
+      cancelled: false as const,
+      fileName: basename(chosen.filePath),
+      eventCount: output.eventCount,
+      omitted: output.omitted,
+    };
+  });
+
+  handle(CHANNELS.itinerary.planLeg, S.itineraryStopRequest, async (req) => {
+    const db = ctx().handle.db;
+    const { provider, mode } = providerService.requireProvider(db);
+    return commit(await poiTripService.planLeg(db, provider, mode, req.id), 'plan leg');
+  });
+
+  handle(CHANNELS.itinerary.planAround, S.itineraryStopRequest, async (req) => {
+    const db = ctx().handle.db;
+    const { provider, mode } = providerService.requireProvider(db);
+    return commit(await poiTripService.planAround(db, provider, mode, req.id), 'route through stop');
+  });
+
+  // ---------------------------------------------------------------- search
+  // Phase 10. Answered from local files only; no handler here reaches the
+  // network except `postcodes.listing` and `postcodes.update`, which the user
+  // starts from Settings.
+
+  handle(CHANNELS.search.query, S.searchQueryRequest, (req) =>
+    createSearchService({ paths: currentEmbeddedPaths() }).search(
+      req.text,
+      { lat: req.lat, lon: req.lon },
+      req.limit ?? 20,
+    ),
+  );
+
+  handleNoArgs(CHANNELS.search.status, () =>
+    createSearchService({ paths: currentEmbeddedPaths() }).status(),
+  );
+
+  handleNoArgs(CHANNELS.postcodes.listing, async () => {
+    const listing = await fetchListing();
+    return { release: listing.release, sizeBytes: listing.sizeBytes, date: null, count: null };
+  });
+
+  handleNoArgs(CHANNELS.postcodes.update, async () => {
+    if (postcodeJob !== null) {
+      throw new ServiceError('CONFLICT', 'The postcode data is already being downloaded.');
+    }
+    const job = new AbortController();
+    postcodeJob = job;
+    try {
+      const meta = await updatePostcodes(currentEmbeddedPaths().gazetteerDir, {
+        signal: job.signal,
+        onProgress: (receivedBytes, totalBytes) =>
+          sendToRenderer(EVENTS.postcodeProgress, {
+            stage: receivedBytes >= totalBytes ? 'reading' : 'downloading',
+            receivedBytes,
+            totalBytes,
+          }),
+      });
+      return { release: meta.release, sizeBytes: null, date: meta.date, count: meta.count };
+    } finally {
+      postcodeJob = null;
+    }
+  });
+
+  handleNoArgs(CHANNELS.postcodes.cancel, () => {
+    postcodeJob?.abort();
+    return null;
+  });
+
+  // ------------------------------------------------------------ itinerary
+  // Phase 10. The view is computed here, where the routes' lengths and modes
+  // are, and sent whole; the renderer never does timeline arithmetic.
+
+  handle(CHANNELS.itinerary.get, S.itineraryGetRequest, (req) =>
+    itineraryService.get(ctx().handle.db, req.tripId, planning(), planIssue()),
+  );
+
+  // Plans every by-road leg that needs it: the retry after adding map
+  // regions, or for a plan made before automatic planning existed.
+  handle(CHANNELS.itinerary.planAll, S.itineraryGetRequest, async (req) =>
+    withPlanning([req.tripId], { result: null, inverse: { kind: 'none', payload: {} } }, 'plan drives'),
+  );
+
+  handle(CHANNELS.itinerary.create, S.itineraryCreateRequest, (req) =>
+    commit(itineraryService.create(ctx().handle.db, req)),
+  );
+
+  handle(CHANNELS.itinerary.remove, S.itineraryRemoveRequest, (req) =>
+    commit(itineraryService.remove(ctx().handle.db, req.tripId)),
+  );
+
+  handle(CHANNELS.itinerary.update, S.itineraryUpdateRequest, (req) => {
+    const { tripId, ...patch } = req;
+    return commit(itineraryService.update(ctx().handle.db, tripId, patch));
+  });
+
+  // Phase 10 feedback: every change to the plan's shape plans the drives it
+  // leaves without a route, and records both as one undo step (§15.2).
+  handle(CHANNELS.itinerary.addStop, S.itineraryAddStopRequest, async (req) =>
+    withPlanning([req.tripId], itineraryService.addStop(ctx().handle.db, req), 'add stop'),
+  );
+
+  handle(CHANNELS.itinerary.removeStop, S.itineraryStopRequest, async (req) => {
+    const tripId = itineraryRepo.findStop(ctx().handle.db, req.id)?.tripId;
+    const mutation = itineraryService.removeStop(ctx().handle.db, { id: req.id });
+    return withPlanning(tripId === undefined ? [] : [tripId], mutation, 'remove stop');
+  });
+
+  handle(CHANNELS.itinerary.moveStop, S.itineraryMoveStopRequest, async (req) => {
+    const mutation = itineraryService.moveStop(ctx().handle.db, req);
+    return withPlanning([mutation.result.tripId], mutation, 'stop move');
+  });
+
+  handle(CHANNELS.itinerary.updateStop, S.itineraryUpdateStopRequest, (req) => {
+    const { id, ...patch } = req;
+    return commit(itineraryService.updateStop(ctx().handle.db, id, patch));
+  });
+
+  handle(CHANNELS.itinerary.linkLeg, S.itineraryLinkLegRequest, async (req) => {
+    const mutation = itineraryService.linkLeg(ctx().handle.db, req);
+    return withPlanning([mutation.result.tripId], mutation, 'leg route');
+  });
+
+  handle(CHANNELS.itinerary.setLegMode, S.itinerarySetLegModeRequest, async (req) => {
+    const mutation = itineraryService.setLegMode(ctx().handle.db, req);
+    return withPlanning([mutation.result.tripId], mutation, 'leg travel');
+  });
+
   // ------------------------------------------------------------ waypoints
   handle(CHANNELS.waypoints.listForTrip, S.waypointListForTripRequest, (req) =>
     waypointService.listForTrip(ctx().handle.db, req.tripId),
@@ -304,13 +646,18 @@ export function registerIpcHandlers(): void {
     commit(waypointService.create(ctx().handle.db, req)),
   );
 
-  handle(CHANNELS.waypoints.update, S.waypointUpdateRequest, (req) =>
-    commit(waypointService.update(ctx().handle.db, req)),
-  );
+  // A waypoint that is a stop takes its drives with it when it moves.
+  handle(CHANNELS.waypoints.update, S.waypointUpdateRequest, async (req) => {
+    const mutation = waypointService.update(ctx().handle.db, req);
+    const moved = req.lat !== undefined || req.lon !== undefined;
+    const trips = moved ? itineraryRepo.tripIdsForWaypoint(ctx().handle.db, req.id) : [];
+    return withPlanning(trips, mutation);
+  });
 
-  handle(CHANNELS.waypoints.move, S.waypointMoveRequest, (req) =>
-    commit(waypointService.move(ctx().handle.db, req)),
-  );
+  handle(CHANNELS.waypoints.move, S.waypointMoveRequest, async (req) => {
+    const mutation = waypointService.move(ctx().handle.db, req);
+    return withPlanning(itineraryRepo.tripIdsForWaypoint(ctx().handle.db, req.id), mutation);
+  });
 
   handle(CHANNELS.waypoints.duplicate, S.waypointDuplicateRequest, (req) =>
     commit(waypointService.duplicate(ctx().handle.db, req.id)),
@@ -412,6 +759,53 @@ export function registerIpcHandlers(): void {
         ),
       ),
   );
+
+  // Read-only: the point table's paging. Records nothing.
+  handle(CHANNELS.tracks.points, S.trackPointsPageRequest, (req) =>
+    trackService.pointsPage(ctx().handle.db, req),
+  );
+
+  handle(CHANNELS.tracks.editPoint, S.trackEditPointRequest, (req) =>
+    commit(trackService.editPointAt(ctx().handle.db, req)),
+  );
+
+  handle(CHANNELS.tracks.deletePoints, S.trackDeletePointsRequest, (req) =>
+    commit(trackService.deletePointsAt(ctx().handle.db, req.id, req.indices)),
+  );
+
+  // --------------------------------------------------------------- batch
+  /*
+   * One handler per batch operation, plus a dry run.
+   *
+   * `assess` deliberately records nothing and mutates nothing: it exists so
+   * the confirmation dialog can name what will not be reversible *before* the
+   * user agrees to it, rather than reporting it afterwards.
+   */
+  handle(CHANNELS.batch.assess, S.batchAssessRequest, (req) =>
+    batchService.assess(ctx().handle.db, req.members, req.operation),
+  );
+
+  handle(CHANNELS.batch.delete, S.batchDeleteRequest, (req) => {
+    const mutation = batchService.remove(ctx().handle.db, req.members);
+    // One commit for the whole batch: one undo entry, one library-changed
+    // event, one native-menu rebuild — Requirement 2.7.
+    return commit(
+      mutation,
+      batchService.labelFor('delete', mutation.result.counts),
+    );
+  });
+
+  handle(CHANNELS.batch.move, S.batchMoveRequest, (req) => {
+    const mutation = batchService.moveToTrip(
+      ctx().handle.db,
+      req.members,
+      req.tripId,
+    );
+    return commit(
+      mutation,
+      batchService.labelFor('move', mutation.result.counts),
+    );
+  });
 
   // --------------------------------------------------------------- import
   handleNoArgs(CHANNELS.importing.choose, async () => {
@@ -591,6 +985,32 @@ export function registerIpcHandlers(): void {
     );
   });
 
+  // ------------------------------------------- Phase 6: alternatives, shaping
+
+  handle(CHANNELS.routing.routeSection, S.routingRouteSectionRequest, async (req) => {
+    const { provider, mode } = providerService.requireProvider(ctx().handle.db);
+    return shapingService.routeSection(provider, req.locations, req.mode ?? mode);
+  });
+
+  handle(CHANNELS.routing.alternatives, S.routingAlternativesRequest, async (req) => {
+    const { provider, mode } = providerService.requireProvider(ctx().handle.db);
+    return shapingService.alternatives(provider, req.from, req.to, req.mode ?? mode, req.count);
+  });
+
+  handle(CHANNELS.routing.applyEdit, S.routingApplyEditRequest, (req) => {
+    const db = ctx().handle.db;
+    const mutation = shapingService.applyEdit(db, {
+      routeId: req.routeId,
+      expected: req.expected,
+      edit: req.edit,
+      legs: req.legs,
+    });
+    // As for a snap: the cached edges describe a line that no longer exists,
+    // and "not matched yet" is the honest state, not "stale".
+    roadAttributeService.clear(db, 'route', req.routeId);
+    return commit(mutation);
+  });
+
   handle(
     CHANNELS.routing.createSnapped,
     S.routingCreateSnappedRequest,
@@ -612,6 +1032,7 @@ export function registerIpcHandlers(): void {
           colour: req.colour,
           controlPoints: req.controlPoints,
           legs: req.legs,
+          roles: req.roles,
           mode: req.mode ?? mode,
           provider: status.providerId ?? 'unknown',
         }),
@@ -636,17 +1057,30 @@ export function registerIpcHandlers(): void {
       properties: ['openFile'],
       filters: [{ name: 'OpenStreetMap extract', extensions: ['pbf'] }],
     });
-    if (chosen.canceled || chosen.filePaths[0] === undefined) return null;
+    const picked = chosen.filePaths[0];
+    if (chosen.canceled || picked === undefined) return null;
 
     const result = await importRegion({
       paths,
-      extractPath: chosen.filePaths[0],
+      extractPath: picked,
       onProgress: (progress) =>
         sendToRenderer(EVENTS.regionProgress, progress),
     });
 
-    writeLoadedRegion(paths, result);
-    return result;
+    // Phase 10: place data from the same file, before anything else touches
+    // it. A file the user picked names no regions, so it has no counties.
+    sendToRenderer(EVENTS.regionProgress, { stage: 'Reading places', percent: null });
+    const placesWarning = await buildPlacesOrWarn({
+      paths,
+      sources: [picked],
+      extract: picked,
+      regions: [],
+      regionName: result.regionName,
+    });
+    // A file the user picked names no index regions, so none are recorded.
+    const loaded = { ...result, regionIds: [], placesWarning };
+    writeLoadedRegion(paths, loaded);
+    return loaded;
   });
 
   handle(
@@ -666,12 +1100,39 @@ export function registerIpcHandlers(): void {
     S.routingDownloadRegionRequest,
     async (req) => {
       const paths = currentEmbeddedPaths();
-      const result = await downloadAndBuild(paths, req.regionId, {
+      const result = await downloadAndBuild(paths, req.regionIds, {
+        terrain: terrainFor(paths),
         onProgress: (progress) =>
           sendToRenderer(EVENTS.regionJobProgress, progress),
       });
       writeLoadedRegion(paths, result);
       return result;
+    },
+  );
+
+  handleNoArgs(CHANNELS.routing.regionMap, () =>
+    regionMap(currentEmbeddedPaths()),
+  );
+
+  handle(CHANNELS.routing.regionSizes, S.routingRegionSizesRequest, (req) =>
+    regionSizes(currentEmbeddedPaths(), req.regionIds),
+  );
+
+  handle(
+    CHANNELS.routing.downloadTerrain,
+    S.routingDownloadTerrainRequest,
+    async (req) => {
+      const names = profileService.terrainTilesFor(
+        ctx().handle.db,
+        req.ownerType,
+        req.ownerId,
+      );
+      const outcome = await terrainFor(currentEmbeddedPaths()).download(names);
+      return {
+        downloaded: outcome.downloaded.length,
+        sea: outcome.sea.length,
+        failed: outcome.failed.length,
+      };
     },
   );
 
@@ -714,6 +1175,8 @@ export function registerIpcHandlers(): void {
       ownerType: req.ownerType,
       ownerId: req.ownerId,
       maxSamples: req.maxSamples,
+      ukDefaults: settingsService.all(ctx().handle.db).ukDefaultSpeedLimits,
+      terrain: terrainFor(currentEmbeddedPaths()),
     }),
   );
 
@@ -730,6 +1193,7 @@ export function registerIpcHandlers(): void {
           req.ownerType,
           req.ownerId,
           units,
+          { ukDefaults: settingsService.all(db).ukDefaultSpeedLimits },
         );
       }
 

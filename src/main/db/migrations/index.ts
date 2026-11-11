@@ -1,6 +1,9 @@
 import initial from './0000_initial.sql?raw';
 import addObjectMetadata from './0001_add_object_metadata.sql?raw';
 import routingAndAttributes from './0002_routing_and_attributes.sql?raw';
+import controlPointRoles from './0003_control_point_roles.sql?raw';
+import itinerary from './0004_itinerary.sql?raw';
+import legModes from './0005_leg_modes.sql?raw';
 
 export interface Migration {
   /** Monotonic. Recorded in `schema_migrations` once applied. */
@@ -24,6 +27,14 @@ export const MIGRATIONS: readonly Migration[] = [
   // Phase 4: snap-to-road provenance on routes, the control points the user
   // placed, and the map-matched road-attribute cache.
   { version: 3, name: '0002_routing_and_attributes', sql: routingAndAttributes },
+  // Phase 6: control points gain a role (via or shaping) and the index of
+  // their leg boundary in `route_points`, so one leg can be replaced in place.
+  { version: 4, name: '0003_control_point_roles', sql: controlPointRoles },
+  // Phase 10: a trip's dated itinerary of stops. Two new tables; nothing
+  // existing changes. ADR 0019 §2.
+  { version: 5, name: '0004_itinerary', sql: itinerary },
+  // Phase 10 feedback: each leg is by road, a chosen route, or other transport.
+  { version: 6, name: '0005_leg_modes', sql: legModes },
 ];
 
 /** drizzle-kit's statement separator. */

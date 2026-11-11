@@ -19,7 +19,13 @@ const SHIPPED = new Set([
   'better-sqlite3',
   'drizzle-orm',
   'electron',
+  // Read GPX, KML, KMZ, TCX and FIT, and Code-Point Open's ZIP, at run time.
+  'fast-xml-parser',
+  'fit-file-parser',
+  'jszip',
   'leaflet',
+  // Phase 10 feedback: the icon set, bundled into the renderer.
+  'lucide-react',
   'react',
   'react-dom',
   'zod',
@@ -171,6 +177,17 @@ const lines = [
   '</details>',
   '',
 ];
+
+/*
+ * The native components and runtime data are maintained by hand in their own
+ * file and appended verbatim. They used to live at the end of the register
+ * itself, which meant every regeneration silently deleted them — a register
+ * that lags what ships is a compliance failure, not an inconvenience.
+ */
+const handMaintained = join(root, 'docs/licences/native-and-data.md');
+if (existsSync(handMaintained)) {
+  lines.push(readFileSync(handMaintained, 'utf8').trimEnd(), '');
+}
 
 mkdirSync(join(root, 'docs/licences'), { recursive: true });
 writeFileSync(join(root, 'docs/licences/third-party-register.md'), lines.join('\n'));

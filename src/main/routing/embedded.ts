@@ -48,6 +48,17 @@ export interface EmbeddedPaths {
   indexFile: string;
   /** Where a downloaded extract is staged before the graph is built. */
   downloadDir: string;
+  /**
+   * `osmium`, bundled beside the Valhalla tools, which merges several extracts
+   * into one before building. Valhalla aborts on overlapping extracts, and
+   * neighbouring regions always overlap. Absent in a build without it, which
+   * then offers single regions only. ADR 0018.
+   */
+  mergeTool: string;
+  /** Downloaded terrain tiles, gzipped HGT. ADR 0018. */
+  terrainDir: string;
+  /** Postcode data, which is not tied to the routing regions. Phase 10. */
+  gazetteerDir: string;
 }
 
 /**
@@ -70,11 +81,19 @@ export function embeddedPaths(
     regionFile: join(userDataDir, 'valhalla', 'region.json'),
     indexFile: join(userDataDir, 'valhalla', 'geofabrik-index.json'),
     downloadDir: join(userDataDir, 'valhalla', 'downloads'),
+    mergeTool: join(root, 'bin', 'osmium'),
+    terrainDir: join(userDataDir, 'terrain'),
+    gazetteerDir: join(userDataDir, 'gazetteer'),
   };
 }
 
 export function addonPresent(paths: EmbeddedPaths): boolean {
   return existsSync(paths.addon);
+}
+
+/** Whether this build can combine several regions into one graph. */
+export function mergeToolPresent(paths: EmbeddedPaths): boolean {
+  return existsSync(paths.mergeTool);
 }
 
 /**
@@ -327,6 +346,12 @@ export function readLoadedRegion(paths: EmbeddedPaths): LoadedRegion | null {
     }
     return {
       regionName: parsed.regionName,
+      // A record written before several regions could be combined has no ids.
+      // Reported as none rather than refused: the graph itself is fine, the
+      // picker just cannot pre-select what it was built from.
+      regionIds: Array.isArray(parsed.regionIds)
+        ? parsed.regionIds.filter((id): id is string => typeof id === 'string')
+        : [],
       tileCount: parsed.tileCount,
       builtAt: parsed.builtAt,
       graphBytes: typeof parsed.graphBytes === 'number' ? parsed.graphBytes : 0,

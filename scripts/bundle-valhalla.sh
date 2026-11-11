@@ -67,6 +67,18 @@ for tool in "${TOOLS[@]}"; do
   fi
   cp "$found" "$OUT/bin/$tool"
 done
+# osmium merges several regions' extracts into one before the tile build,
+# because Valhalla aborts on overlapping extracts (ADR 0018). Copied from
+# Homebrew's bottle and then made relocatable below like every other tool. A
+# bundle without it still works, offering single regions only.
+OSMIUM="$(brew --prefix osmium-tool 2>/dev/null || true)/bin/osmium"
+if [ -x "$OSMIUM" ]; then
+  cp "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$OSMIUM")" "$OUT/bin/osmium"
+else
+  echo "warning: osmium-tool not installed; the app will offer single regions only" >&2
+  echo "  brew install osmium-tool" >&2
+fi
+
 chmod u+w "$OUT/valhalla_node.node" "$OUT/bin/"* 2>/dev/null || true
 
 # ------------------------------------------------- config template
@@ -330,7 +342,11 @@ echo "  all @rpath references resolve inside lib/"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 cp -R "$OUT" "$TMP/valhalla"
-if (cd "$REPO" && VALHALLA_ADDON="$TMP/valhalla/valhalla_node.node" \
+# ELECTRON_RUN_AS_NODE is unset because editors that host Electron (VS Code
+# among them) export it, and it makes Electron start as plain Node — `app` is
+# then undefined and the check fails for a reason unrelated to the bundle.
+if (cd "$REPO" && env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE \
+      VALHALLA_ADDON="$TMP/valhalla/valhalla_node.node" \
       npx electron scripts/verify-valhalla.mjs >"$TMP/verify.log" 2>&1); then
   grep -E "^(loaded|route|match|PASS)" "$TMP/verify.log" | sed 's/^/  /'
 else

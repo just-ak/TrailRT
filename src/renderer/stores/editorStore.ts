@@ -10,8 +10,16 @@ import type { LatLon } from '@shared/geo/distance';
  * 1.4). The measure tool goes further and never writes at all.
  */
 
+/**
+ * Why a route is being drawn as straight lines. ADR 0018: following roads is
+ * the default, so straight lines are either a choice or a fallback, and the
+ * hint bar says which.
+ */
+export type StraightBecause = 'chosen' | 'unavailable';
+
 export type EditorMode =
   | 'idle'
+  /** Straight lines between clicks. See `straightBecause`. */
   | 'drawRoute'
   | 'placeWaypoint'
   | 'measure'
@@ -20,7 +28,9 @@ export type EditorMode =
    * `snapRoutingStore`, because unlike every other mode it is filled in
    * asynchronously by a provider and needs ordering and staleness handling.
    */
-  | 'snapRoute';
+  | 'snapRoute'
+  /** Phase 6: each click appends a via point to a saved snapped route. */
+  | 'extendRoute';
 
 interface EditorState {
   mode: EditorMode;
@@ -28,22 +38,18 @@ interface EditorState {
   pending: RoutePoint[];
   /** The trip a new object will belong to. */
   targetTripId: string | null;
-  /**
-   * Whether a route finished in draw mode should be snapped to roads.
-   *
-   * Kept out of settings on purpose: it is a property of the drawing gesture,
-   * and a user who snapped one route has not asked for every future route to be
-   * snapped. It resets whenever drawing starts.
-   */
-  snapWhileDrawing: boolean;
+  /** The saved route being extended, in `extendRoute` mode. */
+  targetRouteId: string | null;
+  /** In `drawRoute` mode, why the lines are straight. */
+  straightBecause: StraightBecause | null;
   /** Scratch points for the measure tool. Never written anywhere. */
   measurePoints: LatLon[];
 
-  startDrawRoute(tripId: string): void;
+  startDrawRoute(tripId: string, because: StraightBecause): void;
   startPlaceWaypoint(tripId: string): void;
   startMeasure(): void;
   startSnapRoute(tripId: string): void;
-  setSnapWhileDrawing(snap: boolean): void;
+  startExtendRoute(routeId: string): void;
   appendPending(point: RoutePoint): void;
   undoLastPending(): void;
   appendMeasure(point: LatLon): void;
@@ -57,15 +63,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   mode: 'idle',
   pending: [],
   targetTripId: null,
-  snapWhileDrawing: false,
+  targetRouteId: null,
+  straightBecause: null,
   measurePoints: [],
 
-  startDrawRoute: (tripId) =>
+  startDrawRoute: (tripId, because) =>
     set({
       mode: 'drawRoute',
       pending: [],
       targetTripId: tripId,
-      snapWhileDrawing: false,
+      straightBecause: because,
     }),
 
   startPlaceWaypoint: (tripId) =>
@@ -78,7 +85,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   startSnapRoute: (tripId) =>
     set({ mode: 'snapRoute', pending: [], targetTripId: tripId }),
 
-  setSnapWhileDrawing: (snapWhileDrawing) => set({ snapWhileDrawing }),
+  startExtendRoute: (routeId) =>
+    set({ mode: 'extendRoute', pending: [], targetTripId: null, targetRouteId: routeId }),
 
   appendPending: (point) => set({ pending: [...get().pending, point] }),
 
@@ -98,13 +106,14 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       mode: 'idle',
       pending: [],
       targetTripId: null,
-      snapWhileDrawing: false,
+      targetRouteId: null,
+      straightBecause: null,
       measurePoints: [],
     }),
 
   finish: () => {
     const points = get().pending;
-    set({ mode: 'idle', pending: [], targetTripId: null });
+    set({ mode: 'idle', pending: [], targetTripId: null, straightBecause: null });
     return points;
   },
 }));

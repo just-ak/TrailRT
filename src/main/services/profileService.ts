@@ -7,14 +7,18 @@ import {
   thinForDisplay,
   type ProfileSpan,
 } from '@shared/geo/profile';
+import { gainLoss, TERRAIN_GAIN_THRESHOLD_M, tilesFor } from '@shared/geo/hgt';
 import { recordedSpeedMps } from '@shared/geo/speedBands';
+import { twistiness } from '@shared/geo/twistiness';
 import type { RoadClass, SurfaceKind } from '@shared/routing/RoutingProvider';
 import type {
   AttributeOwnerType,
+  ElevationSummary,
   Profile,
   ProfileSample,
 } from '@shared/routing/results';
 import type { Db } from '../db/client';
+import { APPROX_TILE_BYTES, type TerrainSource } from '../terrain/terrainStore';
 import { ServiceError } from './errors';
 import * as roadAttributeService from './roadAttributeService';
 import * as routeService from './routeService';
@@ -126,12 +130,28 @@ function totalLength(points: readonly LatLon[]): number {
   return total;
 }
 
+/** The terrain tiles a geometry's profile would sample. ADR 0018. */
+export function terrainTilesFor(
+  db: Db,
+  ownerType: AttributeOwnerType,
+  ownerId: string,
+): string[] {
+  return tilesFor(sourceGeometry(db, ownerType, ownerId));
+}
+
 export function profileFor(
   db: Db,
   input: {
     ownerType: AttributeOwnerType;
     ownerId: string;
     maxSamples?: number | undefined;
+    /** The `ukDefaultSpeedLimits` setting. ADR 0018. */
+    ukDefaults?: boolean | undefined;
+    /**
+     * Terrain heights for geometry that carries none. Injected so tests need
+     * no disk; absent means no terrain fallback at all. ADR 0018.
+     */
+    terrain?: TerrainSource | undefined;
   },
 ): Profile {
   const points = sourceGeometry(db, input.ownerType, input.ownerId);
@@ -151,13 +171,36 @@ export function profileFor(
   // ascent on any track with detail between samples.
   const elevation = elevationProfile(points);
 
+  /*
+   * Terrain heights, only for geometry with no recorded elevation at all.
+   *
+   * Recorded heights always win, including partial ones: a recording with a
+   * gap is still the user's own measurement, and filling the gap from a model
+   * would make the line look measured where it is not. A route from the engine
+   * has no heights, which is the case this exists for.
+   */
+  let terrainValues: (number | null)[] | null = null;
+  let terrainMissing: Profile['terrainMissing'] = null;
+  if (elevation === null && input.terrain !== undefined) {
+    const looked = input.terrain.elevations(points);
+    if (looked.missingTiles.length > 0) {
+      terrainMissing = {
+        tileCount: looked.missingTiles.length,
+        approxBytes: looked.missingTiles.length * APPROX_TILE_BYTES,
+      };
+    } else if (looked.values.some((value) => value !== null)) {
+      terrainValues = looked.values;
+    }
+  }
+
   const full: ProfileSample[] = points.map((point, index) => {
     const previous = index > 0 ? points[index - 1] : undefined;
     return {
+      index,
       distanceM: distances[index] ?? 0,
       lat: point.lat,
       lon: point.lon,
-      eleM: point.ele,
+      eleM: terrainValues === null ? point.ele : (terrainValues[index] ?? null),
       recordedSpeedMps:
         previous === undefined
           ? null
@@ -179,6 +222,7 @@ export function profileFor(
   );
 
   let postedSpeedSpans: ProfileSpan<number>[] | null = null;
+  let assumedSpeedSpans: ProfileSpan<number>[] | null = null;
   let postedSpeedAbsentBecause: string | null =
     'Roads have not been matched for this geometry yet.';
   let roadClassSpans: ProfileSpan<RoadClass>[] | null = null;
@@ -203,6 +247,25 @@ export function profileFor(
       })),
     ).filter((span) => span.value !== null);
 
+    // The same rule the distribution applies, so the band and the bar agree
+    // about which stretches are assumed. Kept in their own series: posted
+    // spans keep their meaning for every existing reader.
+    const options = { ukDefaults: input.ukDefaults === true };
+    const assumed = spansFromIndices(
+      matched,
+      entry.edges.map((edge) => {
+        const limit = roadAttributeService.effectiveLimit(matched, edge, options);
+        return {
+          startIndex: edge.startIndex,
+          endIndex: edge.endIndex,
+          value: limit !== null && limit.assumed ? limit.mps : null,
+        };
+      }),
+    ).filter((span) => span.value !== null);
+    if (assumed.length > 0) {
+      assumedSpeedSpans = rescaleSpans(assumed, matchedTotalM, totalDistanceM);
+    }
+
     const classes = spansFromIndices(
       matched,
       entry.edges.map((edge) => ({
@@ -226,6 +289,9 @@ export function profileFor(
     // absent speed band is the normal case rather than an inconsistency.
     if (speed.length > 0) {
       postedSpeedSpans = rescaleSpans(speed, matchedTotalM, totalDistanceM);
+      postedSpeedAbsentBecause = null;
+    } else if (assumedSpeedSpans !== null) {
+      // Nothing posted, but the band still has something honest to draw.
       postedSpeedAbsentBecause = null;
     } else {
       postedSpeedAbsentBecause =
@@ -259,6 +325,8 @@ export function profileFor(
       'This recording has no timestamps, so no speed can be derived from it.';
   }
 
+  const twist = twistiness(points);
+
   return {
     ownerType: input.ownerType,
     ownerId: input.ownerId,
@@ -268,20 +336,31 @@ export function profileFor(
     samples: thinned.values,
 
     elevation:
-      elevation === null
-        ? null
-        : {
+      elevation !== null
+        ? {
             minM: elevation.minM,
             maxM: elevation.maxM,
             gainM: elevation.gainM,
             lossM: elevation.lossM,
-          },
+          }
+        : terrainValues !== null
+          ? terrainSummary(terrainValues)
+          : null,
+    elevationSource:
+      elevation !== null ? 'recorded' : terrainValues !== null ? 'terrain' : null,
     elevationAbsentBecause:
-      elevation === null
-        ? 'No point in this geometry carries an elevation, so there is nothing to plot. This is not the same as a flat route.'
-        : null,
+      elevation !== null || terrainValues !== null
+        ? null
+        : terrainMissing !== null
+          ? 'Terrain heights for this area are not downloaded yet.'
+          : 'No point in this geometry carries an elevation, and no terrain heights are available here. This is not the same as a flat route.',
+    terrainMissing,
+
+    twistiness: twist.known ? twist.twistiness : null,
+    twistinessUnknownBecause: twist.known ? null : twist.reason,
 
     postedSpeedSpans,
+    assumedSpeedSpans,
     postedSpeedAbsentBecause,
     roadClassSpans,
     roadClassAbsentBecause,
@@ -290,5 +369,28 @@ export function profileFor(
     recordedSpeedAbsentBecause,
 
     attributes: entry?.status ?? null,
+  };
+}
+
+/**
+ * Range, gain and loss of terrain heights.
+ *
+ * Gain and loss use the hysteresis threshold, because model noise along a road
+ * would otherwise be counted as climbing (see `TERRAIN_GAIN_THRESHOLD_M`).
+ */
+function terrainSummary(values: readonly (number | null)[]): ElevationSummary {
+  let min: number | null = null;
+  let max: number | null = null;
+  for (const value of values) {
+    if (value === null) continue;
+    if (min === null || value < min) min = value;
+    if (max === null || value > max) max = value;
+  }
+  const totals = gainLoss(values, TERRAIN_GAIN_THRESHOLD_M);
+  return {
+    minM: min,
+    maxM: max,
+    gainM: totals?.gainM ?? null,
+    lossM: totals?.lossM ?? null,
   };
 }

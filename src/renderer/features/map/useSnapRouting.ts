@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import type { LatLon } from '@shared/geo/distance';
 import type { PreviewedLeg } from '@shared/routing/results';
-import { pendingPointIcon } from './markers';
 
 /**
  * The interactive snap routing tool's map interaction and preview layer.
@@ -32,10 +31,13 @@ import { pendingPointIcon } from './markers';
 interface Options {
   active: boolean;
   controlPoints: readonly LatLon[];
-  legs: readonly PreviewedLeg[];
+  /** Null where a leg is still being routed. */
+  legs: readonly (PreviewedLeg | null)[];
   routing: boolean;
   onAppend: (point: LatLon) => void;
   onUndoLast: () => void;
+  /** ⌘Z: undo the last edit to the draft (Phase 6). */
+  onUndo: () => void;
   onFinish: () => void;
   onCancel: () => void;
 }
@@ -71,10 +73,20 @@ export function useSnapRouting(map: L.Map | null, options: Options): void {
       });
     };
 
-    const onDoubleClick = (event: L.LeafletMouseEvent): void => {
-      // Leaflet's zoom-on-double-click would otherwise fire alongside the
-      // finish, leaving the user zoomed in on a route they just saved.
-      L.DomEvent.stop(event);
+    /*
+     * Double-click finishes, wherever in the map it lands.
+     *
+     * A native listener on the container, in the capture phase, rather than
+     * Leaflet's map `dblclick`. The first click of a double-click places a
+     * point, and that point's draggable handle is then directly under the
+     * pointer: the second click and the `dblclick` land on the handle, Leaflet
+     * fires them on the marker, and the map never hears of it — so the route
+     * silently failed to finish. Capturing at the container catches it before
+     * any layer does, and stopping it there also keeps Leaflet from zooming.
+     */
+    const onDoubleClick = (event: MouseEvent): void => {
+      event.preventDefault();
+      event.stopPropagation();
       optionsRef.current.onFinish();
     };
 
@@ -88,17 +100,26 @@ export function useSnapRouting(map: L.Map | null, options: Options): void {
       } else if (event.key === 'Backspace') {
         event.preventDefault();
         optionsRef.current.onUndoLast();
+      } else if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        event.key.toLowerCase() === 'z'
+      ) {
+        // Reached only when the Edit menu's Undo is disabled; when enabled,
+        // its accelerator routes here through `actions.undo` instead.
+        event.preventDefault();
+        optionsRef.current.onUndo();
       }
     };
 
     map.on('click', onClick);
-    map.on('dblclick', onDoubleClick);
+    container.addEventListener('dblclick', onDoubleClick, true);
     map.doubleClickZoom.disable();
     window.addEventListener('keydown', onKeyDown);
 
     return () => {
       map.off('click', onClick);
-      map.off('dblclick', onDoubleClick);
+      container.removeEventListener('dblclick', onDoubleClick, true);
       map.doubleClickZoom.enable();
       window.removeEventListener('keydown', onKeyDown);
       container.style.cursor = previousCursor;
@@ -124,7 +145,32 @@ export function useSnapRouting(map: L.Map | null, options: Options): void {
     group.clearLayers();
     if (!active || controlPoints.length === 0) return;
 
-    for (const leg of legs) {
+    for (const [index, leg] of legs.entries()) {
+      if (leg === null) {
+        /*
+         * A leg still being routed: a faint dotted line straight between its
+         * points, so a slow provider shows as pending rather than as a route
+         * that quietly stops short. Drawn per hole now that a drag in the
+         * middle of the draft can open one anywhere (Phase 6).
+         */
+        const from = controlPoints[index];
+        const to = controlPoints[index + 1];
+        if (from === undefined || to === undefined) continue;
+        L.polyline(
+          [
+            [from.lat, from.lon],
+            [to.lat, to.lon],
+          ],
+          {
+            color: routing ? '#f59e0b' : '#94a3b8',
+            weight: 2,
+            dashArray: '2 5',
+            opacity: 0.8,
+            interactive: false,
+          },
+        ).addTo(group);
+        continue;
+      }
       const latlngs = leg.shape.map((p) => [p.lat, p.lon] as L.LatLngTuple);
       L.polyline(
         latlngs,
@@ -141,35 +187,7 @@ export function useSnapRouting(map: L.Map | null, options: Options): void {
       ).addTo(group);
     }
 
-    /*
-     * The pending tail: control points with no leg yet.
-     *
-     * Drawn as one dotted line through all of them rather than only the next
-     * gap, so clicking ahead of a slow provider shows the whole queue instead
-     * of hiding the clicks that have not been reached.
-     */
-    const firstUnrouted = legs.length;
-    if (firstUnrouted < controlPoints.length - 1) {
-      const tail = controlPoints
-        .slice(firstUnrouted)
-        .map((p) => [p.lat, p.lon] as L.LatLngTuple);
-      if (tail.length > 1) {
-        L.polyline(tail, {
-          color: routing ? '#f59e0b' : '#94a3b8',
-          weight: 2,
-          dashArray: '2 5',
-          opacity: 0.8,
-          interactive: false,
-        }).addTo(group);
-      }
-    }
-
-    for (const point of controlPoints) {
-      L.marker([point.lat, point.lon], {
-        icon: pendingPointIcon(),
-        interactive: false,
-        zIndexOffset: 500,
-      }).addTo(group);
-    }
+    // The points themselves are drawn, numbered and draggable, by
+    // `useRouteShaping` (Phase 6), which owns every edit to them.
   }, [map, active, controlPoints, legs, routing]);
 }

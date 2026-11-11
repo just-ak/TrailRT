@@ -8,6 +8,9 @@ export default defineConfig({
       '@preload': resolve('src/preload'),
       '@shared': resolve('src/shared'),
       '@renderer': resolve('src/renderer'),
+      // Test fixtures, including the shared test geography. Deliberately
+      // outside `src/` so nothing the application ships can import it.
+      '@fixtures': resolve('test-data'),
     },
   },
   test: {

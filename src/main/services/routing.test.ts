@@ -3,14 +3,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { LatLon } from '@shared/geo/distance';
+import { ASHBOURNE, BUXTON, LEEK, MACCLESFIELD } from '@fixtures/places';
 import {
+  MAX_SNAP_DISPLACEMENT_M,
   MAX_SNAPPED_POINTS,
   MAX_UNDOABLE_POINTS,
+  type MatchedEdge,
   type MatchResult,
   type RoutingProvider,
   type SnapResult,
   type TransportMode,
 } from '@shared/routing/RoutingProvider';
+import { checkBoundaries } from '@shared/routing/splice';
 import { createDatabase, type Db, type DbHandle } from '../db/client';
 import * as controlRepo from '../db/repositories/routeControlPoints';
 import { ServiceError } from './errors';
@@ -21,14 +25,56 @@ import * as trackService from './trackService';
 import * as tripService from './tripService';
 import * as undoService from './undoService';
 
+/**
+ * Named points on the Buxton loop, west along the A537 then round the square.
+ *
+ * Bare coordinates rather than the fixture's `Place` objects, because these
+ * stand in for what a user clicked — a position, with no elevation or name
+ * attached yet. The provider here is a fake, so the geography is not under
+ * test; it is here so the fixtures read as a real ride and match what the
+ * live snap tests and the end-to-end specs use.
+ */
+const BUX: LatLon = { lat: BUXTON.lat, lon: BUXTON.lon };
+const MAC: LatLon = { lat: MACCLESFIELD.lat, lon: MACCLESFIELD.lon };
+const LEE: LatLon = { lat: LEEK.lat, lon: LEEK.lon };
+const ASH: LatLon = { lat: ASHBOURNE.lat, lon: ASHBOURNE.lon };
+/** Along the A537 between Buxton and Macclesfield. */
+const BURBAGE: LatLon = { lat: 53.2533, lon: -1.9343 };
+const CAT_FIDDLE: LatLon = { lat: 53.2578, lon: -2.0327 };
+const WALKER_BARN: LatLon = { lat: 53.261, lon: -2.0675 };
+/** On the A515, used where a test needs a point off the direct line. */
+const NEWHAVEN: LatLon = { lat: 53.1393, lon: -1.7535 };
+
+/**
+ * Great-circle metres, written out here rather than imported.
+ *
+ * A test that computed its expectations with the same function the code under
+ * test uses would agree with it by construction, including when both are
+ * wrong.
+ */
+const toRad = (deg: number): number => (deg * Math.PI) / 180;
+
+function haversineM(a: LatLon, b: LatLon): number {
+  const R = 6_371_008.8;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
 let dir: string;
 let handle: DbHandle;
 let db: Db;
 let tripId: string;
 
-const rp = (lat: number, lon: number, ele: number | null = null) => ({
-  lat,
-  lon,
+const rp = (
+  at: { lat: number; lon: number },
+  ele: number | null = null,
+) => ({
+  lat: at.lat,
+  lon: at.lon,
   ele,
   name: null,
   symbol: null,
@@ -48,9 +94,9 @@ const timedTrack = () =>
       segments: [
         {
           points: [
-            { lat: 46.5, lon: 8, ele: null, time: 0 },
-            { lat: 46.51, lon: 8, ele: null, time: 60_000 },
-            { lat: 46.52, lon: 8, ele: null, time: 120_000 },
+            { ...BUX, ele: null, time: 0 },
+            { ...BURBAGE, ele: null, time: 60_000 },
+            { ...CAT_FIDDLE, ele: null, time: 120_000 },
           ],
         },
       ],
@@ -106,6 +152,19 @@ function fakeProvider(options: {
       options.onCall?.();
       const legs: SnapResult['legs'] = [];
       const unmatchedLegs: [number, number][] = [];
+      const displaced: SnapResult['displaced'] = [];
+
+      const straight = (i: number, from: LatLon, to: LatLon): void => {
+        legs.push({
+          matched: false,
+          fromControlIndex: i,
+          toControlIndex: i + 1,
+          shape: [from, to],
+          distanceM: null,
+          durationS: null,
+        });
+        unmatchedLegs.push([i, i + 1]);
+      };
 
       for (let i = 0; i < controlPoints.length - 1; i += 1) {
         const from = controlPoints[i] as LatLon;
@@ -120,17 +179,65 @@ function fakeProvider(options: {
               ]
             : scripted;
         if (shape === null) {
+          straight(i, from, to);
+          continue;
+        }
+
+        /*
+         * A shape too short to have ends is passed through as-is.
+         *
+         * This is how a *broken* provider is modelled — one that answers with
+         * a leg containing no geometry — and the service is supposed to reject
+         * the whole snap for it. Converting it to a straight line here would
+         * hide exactly the case that test covers, and there is nothing to
+         * measure a displacement against anyway.
+         */
+        if (shape.length < 2) {
           legs.push({
-            matched: false,
+            matched: true,
             fromControlIndex: i,
             toControlIndex: i + 1,
-            shape: [from, to],
+            shape,
             distanceM: null,
             durationS: null,
           });
-          unmatchedLegs.push([i, i + 1]);
           continue;
         }
+
+        /*
+         * Displacement measured from the scripted shape, exactly as the real
+         * adapter measures it from the engine's.
+         *
+         * The fake mirroring this matters. A shape that starts a long way from
+         * its control point is what a graph that does not cover the area
+         * produces, and the service's handling of that is the point of these
+         * tests — a fake that always reported no displacement could not
+         * reproduce it.
+         */
+        const startOff = haversineM(from, shape[0] as LatLon);
+        const endOff = haversineM(to, shape.at(-1) as LatLon);
+
+        for (const [index, metres] of [
+          [i, startOff],
+          [i + 1, endOff],
+        ] as const) {
+          if (metres <= MAX_SNAP_DISPLACEMENT_M) continue;
+          const seen = displaced.find((entry) => entry.index === index);
+          if (seen === undefined) {
+            displaced.push({ index, displacementM: metres });
+          } else {
+            seen.displacementM = Math.max(seen.displacementM, metres);
+          }
+        }
+
+        if (
+          startOff > MAX_SNAP_DISPLACEMENT_M ||
+          endOff > MAX_SNAP_DISPLACEMENT_M
+        ) {
+          straight(i, from, to);
+          continue;
+        }
+
         legs.push({
           matched: true,
           fromControlIndex: i,
@@ -141,7 +248,13 @@ function fakeProvider(options: {
         });
       }
 
-      return { provider: 'fake', mode, legs, unmatchedLegs };
+      return {
+        provider: 'fake',
+        mode,
+        legs,
+        unmatchedLegs,
+        displaced: displaced.toSorted((a, b) => a.index - b.index),
+      };
     },
 
     async match(shape, mode): Promise<MatchResult> {
@@ -166,7 +279,7 @@ function fakeProvider(options: {
   };
 }
 
-const newRoute = (points = [rp(46.5, 8), rp(46.52, 8.02)], name = 'Route') =>
+const newRoute = (points = [rp(BUX), rp(CAT_FIDDLE)], name = 'Route') =>
   routeService.create(db, { tripId, name, colour: null, points }).result;
 
 // ------------------------------------------------------------- flattenLegs
@@ -176,10 +289,10 @@ describe('flattenLegs', () => {
   // segment at every control point, which inflates the count and reads as a
   // stationary sample in any speed calculation.
   it('drops the vertex shared between consecutive legs', () => {
-    const shared = { lat: 46.51, lon: 8.01 };
+    const shared = BURBAGE;
     const flat = routingService.flattenLegs([
-      { shape: [{ lat: 46.5, lon: 8 }, shared] },
-      { shape: [shared, { lat: 46.52, lon: 8.02 }] },
+      { shape: [BUX, shared] },
+      { shape: [shared, CAT_FIDDLE] },
     ]);
 
     expect(flat).toHaveLength(3);
@@ -189,14 +302,14 @@ describe('flattenLegs', () => {
     const flat = routingService.flattenLegs([
       {
         shape: [
-          { lat: 46.5, lon: 8 },
-          { lat: 46.51, lon: 8.01 },
+          BUX,
+          BURBAGE,
         ],
       },
       {
         shape: [
-          { lat: 46.6, lon: 8.1 },
-          { lat: 46.62, lon: 8.12 },
+          LEE,
+          ASH,
         ],
       },
     ]);
@@ -221,8 +334,8 @@ describe('snapRoute', () => {
     // The user's two points survive as intent, so one of them can be moved
     // later and only the affected leg re-snapped.
     expect(controlRepo.listControlPoints(db, route.id)).toEqual([
-      { lat: 46.5, lon: 8 },
-      { lat: 46.52, lon: 8.02 },
+      BUX,
+      CAT_FIDDLE,
     ]);
   });
 
@@ -258,7 +371,7 @@ describe('snapRoute', () => {
       routeId: route.id,
       provider: fakeProvider({
         // A detour: via a point well off the straight line.
-        legShape: (from, to) => [from, { lat: 46.7, lon: 8.3 }, to],
+        legShape: (from, to) => [from, NEWHAVEN, to],
       }),
       mode: 'auto',
     });
@@ -270,7 +383,7 @@ describe('snapRoute', () => {
   });
 
   it('drops elevation on snapped points rather than carrying it over', async () => {
-    const route = newRoute([rp(46.5, 8, 1200), rp(46.52, 8.02, 1400)]);
+    const route = newRoute([rp(BUX, 1200), rp(CAT_FIDDLE, 1400)]);
     await routingService.snapRoute(db, {
       routeId: route.id,
       provider: fakeProvider({}),
@@ -287,13 +400,13 @@ describe('snapRoute', () => {
 
   describe('an unmatched leg', () => {
     it('stays straight and is recorded in metadata', async () => {
-      const route = newRoute([rp(46.5, 8), rp(46.52, 8.02), rp(46.54, 8.04)]);
+      const route = newRoute([rp(BUX), rp(CAT_FIDDLE), rp(MAC)]);
 
       const outcome = await routingService.snapRoute(db, {
         routeId: route.id,
         provider: fakeProvider({
           // Refuse the second leg only.
-          legShape: (from) => (from.lat === 46.52 ? null : undefined),
+          legShape: (from) => (from.lat === CAT_FIDDLE.lat ? null : undefined),
         }),
         mode: 'auto',
       });
@@ -305,11 +418,11 @@ describe('snapRoute', () => {
     });
 
     it('does not fail the whole snap', async () => {
-      const route = newRoute([rp(46.5, 8), rp(46.52, 8.02), rp(46.54, 8.04)]);
+      const route = newRoute([rp(BUX), rp(CAT_FIDDLE), rp(MAC)]);
       const outcome = await routingService.snapRoute(db, {
         routeId: route.id,
         provider: fakeProvider({
-          legShape: (from) => (from.lat === 46.52 ? null : undefined),
+          legShape: (from) => (from.lat === CAT_FIDDLE.lat ? null : undefined),
         }),
         mode: 'auto',
       });
@@ -322,7 +435,7 @@ describe('snapRoute', () => {
       tripId,
       name: 'Imported',
       colour: null,
-      points: [rp(46.5, 8), rp(46.52, 8.02)],
+      points: [rp(BUX), rp(CAT_FIDDLE)],
       metadata: { extensions: { source: 'gpx' } },
     }).result;
 
@@ -338,7 +451,7 @@ describe('snapRoute', () => {
   });
 
   it('refuses a route with fewer than two points', async () => {
-    const route = newRoute([rp(46.5, 8)]);
+    const route = newRoute([rp(BUX)]);
     await expect(
       routingService.snapRoute(db, {
         routeId: route.id,
@@ -352,10 +465,22 @@ describe('snapRoute', () => {
   // route that cannot be drawn or exported.
   it('refuses a snap that would exceed the point cap, naming the count', async () => {
     const route = newRoute();
-    const huge = Array.from({ length: MAX_SNAPPED_POINTS + 10 }, (_, i) => ({
-      lat: 46.5 + i * 1e-6,
-      lon: 8 + i * 1e-6,
-    }));
+    /*
+     * A dense shape that genuinely runs between the control points.
+     *
+     * Interpolated rather than marching off in a straight line from the start:
+     * a shape whose far end is nowhere near the control point it is supposed
+     * to reach is now treated as a displaced, unmatched leg and replaced with
+     * a two-point straight line — which would never reach the cap, so the test
+     * would pass for the wrong reason.
+     */
+    const huge = Array.from({ length: MAX_SNAPPED_POINTS + 10 }, (_, i) => {
+      const t = i / (MAX_SNAPPED_POINTS + 9);
+      return {
+        lat: BUX.lat + (CAT_FIDDLE.lat - BUX.lat) * t,
+        lon: BUX.lon + (CAT_FIDDLE.lon - BUX.lon) * t,
+      };
+    });
 
     try {
       await routingService.snapRoute(db, {
@@ -439,7 +564,7 @@ describe('snap undo', () => {
   // memory problem dressed as a convenience. Declaring it beats faking it.
   it('declares itself non-undoable above the bound rather than faking an inverse', async () => {
     const big = Array.from({ length: MAX_UNDOABLE_POINTS + 1 }, (_, i) =>
-      rp(46.5 + i * 1e-6, 8 + i * 1e-6),
+      rp({ lat: BUX.lat + i * 1e-6, lon: BUX.lon + i * 1e-6 }),
     );
     const route = routeService.create(db, {
       tripId,
@@ -540,7 +665,7 @@ describe('road attributes', () => {
 
     routeService.setGeometry(db, {
       id: route.id,
-      points: [rp(46.5, 8), rp(46.52, 8.02), rp(46.6, 8.1)],
+      points: [rp(BUX), rp(CAT_FIDDLE), rp(LEE)],
     });
 
     expect(
@@ -557,9 +682,9 @@ describe('road attributes', () => {
         segments: [
           {
             points: [
-              { lat: 46.5, lon: 8, ele: 1000, time: 1_700_000_000_000 },
-              { lat: 46.51, lon: 8.01, ele: 1010, time: 1_700_000_060_000 },
-              { lat: 46.52, lon: 8.02, ele: 1020, time: 1_700_000_120_000 },
+              { ...BUX, ele: 1000, time: 1_700_000_000_000 },
+              { ...BURBAGE, ele: 1010, time: 1_700_000_060_000 },
+              { ...CAT_FIDDLE, ele: 1020, time: 1_700_000_120_000 },
             ],
           },
         ],
@@ -596,12 +721,24 @@ describe('road attributes', () => {
 // ----------------------------------------------------- speed distribution
 
 describe('postedSpeedSamples', () => {
-  const shape = [
-    { lat: 46.5, lon: 8 },
-    { lat: 46.51, lon: 8 },
-    { lat: 46.52, lon: 8 },
-    { lat: 46.53, lon: 8 },
-  ];
+  /** Four points west along the A537: unequal spacing, as a real road has. */
+  const shape = [BUX, BURBAGE, CAT_FIDDLE, WALKER_BARN];
+
+  /**
+   * Segment lengths of `shape`, computed rather than assumed.
+   *
+   * The earlier version of these tests used four points on a meridian a
+   * hundredth of a degree apart and asserted one sample was "twice" another.
+   * That held because the segments happened to be equal — so it would also
+   * have held if the weighting ignored distance and counted segments. Summing
+   * the real lengths states the invariant that was meant.
+   */
+  const segments = shape
+    .slice(0, -1)
+    .map((point, index) => haversineM(point, shape[index + 1] as LatLon));
+
+  const spanM = (from: number, to: number) =>
+    segments.slice(from, to).reduce((sum, length) => sum + length, 0);
 
   it('weights each edge by the distance it actually covers', () => {
     const samples = roadAttributeService.postedSpeedSamples(shape, [
@@ -624,11 +761,10 @@ describe('postedSpeedSamples', () => {
     ]);
 
     expect(samples).toHaveLength(2);
-    // The second edge spans two segments, so roughly twice the distance.
-    expect(samples[1]?.distanceM).toBeCloseTo(
-      (samples[0]?.distanceM ?? 0) * 2,
-      0,
-    );
+    // Each sample carries the summed length of the segments its edge spans:
+    // the first edge one segment, the second the remaining two.
+    expect(samples[0]?.distanceM).toBeCloseTo(spanM(0, 1), 0);
+    expect(samples[1]?.distanceM).toBeCloseTo(spanM(1, 3), 0);
   });
 
   /*
@@ -650,11 +786,9 @@ describe('postedSpeedSamples', () => {
 
     const unknown = samples.filter((s) => s.speedMps === null);
     expect(unknown).toHaveLength(1);
-    // Two of the three segments were unmatched.
-    expect(unknown[0]?.distanceM).toBeCloseTo(
-      (samples[0]?.distanceM ?? 0) * 2,
-      0,
-    );
+    // The last two of the three segments were unmatched, so Unknown carries
+    // exactly their combined length — not a segment count.
+    expect(unknown[0]?.distanceM).toBeCloseTo(spanM(1, 3), 0);
   });
 
   it('adds no Unknown sample when every segment is covered', () => {
@@ -686,6 +820,90 @@ describe('postedSpeedSamples', () => {
   });
 });
 
+/** An unposted edge across the whole of a four-point shape. */
+const unpostedEdge = (
+  roadClass: MatchedEdge['roadClass'],
+  oneway?: boolean | null,
+): MatchedEdge => ({
+  startIndex: 0,
+  endIndex: 3,
+  lengthM: null,
+  speedLimitMps: null,
+  roadClass,
+  surface: null,
+  ...(oneway === undefined ? {} : { oneway }),
+});
+
+describe('UK default limits (ADR 0018)', () => {
+  /** The A537 west of Buxton: inside the UK, unposted in this test. */
+  const shape = [BUX, BURBAGE, CAT_FIDDLE, WALKER_BARN];
+  const MPH = 1609.344 / 3600;
+  const edge = unpostedEdge;
+
+  it('counts an unposted UK tertiary road at 60 mph, marked assumed', () => {
+    const [sample] = roadAttributeService.postedSpeedSamples(
+      shape,
+      [edge('tertiary', false)],
+      { ukDefaults: true },
+    );
+    expect(sample?.speedMps).toBeCloseTo(60 * MPH, 9);
+    expect(sample?.assumed).toBe(true);
+  });
+
+  it('never marks a posted limit as assumed, and never overrides it', () => {
+    const [sample] = roadAttributeService.postedSpeedSamples(
+      shape,
+      [{ ...edge('tertiary'), speedLimitMps: 50 * MPH }],
+      { ukDefaults: true },
+    );
+    expect(sample?.speedMps).toBeCloseTo(50 * MPH, 9);
+    expect(sample?.assumed).toBe(false);
+  });
+
+  it('reads attributes cached before one-way was recorded as single carriageway', () => {
+    const [sample] = roadAttributeService.postedSpeedSamples(
+      shape,
+      [edge('trunk')],
+      { ukDefaults: true },
+    );
+    expect(sample?.speedMps).toBeCloseTo(60 * MPH, 9);
+  });
+
+  it('leaves the road Unknown with the setting off', () => {
+    const [sample] = roadAttributeService.postedSpeedSamples(
+      shape,
+      [edge('tertiary', false)],
+      { ukDefaults: false },
+    );
+    expect(sample?.speedMps).toBeNull();
+  });
+
+  it('leaves a road with no class Unknown', () => {
+    const [sample] = roadAttributeService.postedSpeedSamples(
+      shape,
+      [edge(null)],
+      { ukDefaults: true },
+    );
+    expect(sample?.speedMps).toBeNull();
+  });
+
+  it('leaves a road outside the UK Unknown', () => {
+    // The N11 south of Dublin: Irish law, not UK law.
+    const dublin = [
+      { lat: 53.27, lon: -6.18 },
+      { lat: 53.26, lon: -6.17 },
+      { lat: 53.25, lon: -6.16 },
+      { lat: 53.24, lon: -6.15 },
+    ];
+    const [sample] = roadAttributeService.postedSpeedSamples(
+      dublin,
+      [edge('tertiary', false)],
+      { ukDefaults: true },
+    );
+    expect(sample?.speedMps).toBeNull();
+  });
+});
+
 describe('recordedDistribution', () => {
   it('derives speed from the track timestamps', () => {
     const track = timedTrack();
@@ -711,8 +929,8 @@ describe('recordedDistribution', () => {
         segments: [
           {
             points: [
-              { lat: 46.5, lon: 8, ele: null, time: null },
-              { lat: 46.51, lon: 8, ele: null, time: null },
+              { ...BUX, ele: null, time: null },
+              { ...BURBAGE, ele: null, time: null },
             ],
           },
         ],
@@ -798,14 +1016,15 @@ const previewed = (
   shape: { lat: number; lon: number }[],
   matched = true,
   distanceM: number | null = 100,
-) => ({ matched, shape, distanceM });
+  displacementM: number | null = null,
+) => ({ matched, shape, distanceM, displacementM });
 
 describe('routeLeg', () => {
   it('returns one leg from a two-point snap', async () => {
     const leg = await routingService.routeLeg(
       fakeProvider({}),
-      { lat: 46.5, lon: 8 },
-      { lat: 46.52, lon: 8.02 },
+      BUX,
+      CAT_FIDDLE,
       'auto',
     );
 
@@ -824,8 +1043,8 @@ describe('routeLeg', () => {
 
     await routingService.routeLeg(
       provider,
-      { lat: 46.5, lon: 8 },
-      { lat: 46.51, lon: 8.01 },
+      BUX,
+      BURBAGE,
       'auto',
     );
 
@@ -839,15 +1058,15 @@ describe('routeLeg', () => {
   it('reports an unmatched leg as a straight line rather than failing', async () => {
     const leg = await routingService.routeLeg(
       fakeProvider({ legShape: () => null }),
-      { lat: 46.5, lon: 8 },
-      { lat: 46.52, lon: 8.02 },
+      BUX,
+      CAT_FIDDLE,
       'auto',
     );
 
     expect(leg.matched).toBe(false);
     expect(leg.shape).toEqual([
-      { lat: 46.5, lon: 8 },
-      { lat: 46.52, lon: 8.02 },
+      BUX,
+      CAT_FIDDLE,
     ]);
     expect(leg.distanceM).toBeNull();
   });
@@ -855,8 +1074,8 @@ describe('routeLeg', () => {
   it('treats a provider that returns nothing usable as unmatched', async () => {
     const leg = await routingService.routeLeg(
       fakeProvider({ legShape: () => [] }),
-      { lat: 46.5, lon: 8 },
-      { lat: 46.52, lon: 8.02 },
+      BUX,
+      CAT_FIDDLE,
       'auto',
     );
 
@@ -867,9 +1086,9 @@ describe('routeLeg', () => {
 
 describe('createSnappedRoute', () => {
   const control = [
-    { lat: 46.5, lon: 8 },
-    { lat: 46.52, lon: 8.02 },
-    { lat: 46.54, lon: 8.04 },
+    BUX,
+    CAT_FIDDLE,
+    MAC,
   ];
 
   it('saves the previewed geometry, not a re-route', () => {
@@ -878,7 +1097,7 @@ describe('createSnappedRoute', () => {
      * service re-routed on save, the stored geometry would come back as
      * something else and this detour would vanish.
      */
-    const detour = { lat: 46.7, lon: 8.3 };
+    const detour = NEWHAVEN;
 
     const mutation = routingService.createSnappedRoute(db, {
       tripId,
@@ -915,7 +1134,7 @@ describe('createSnappedRoute', () => {
 
     const stored = controlRepo.listControlPoints(db, mutation.result.id);
     expect(stored).toHaveLength(3);
-    expect(stored[0]).toMatchObject({ lat: 46.5, lon: 8 });
+    expect(stored[0]).toMatchObject(BUX);
 
     const provenance = routingService.provenance(db, mutation.result.id);
     expect(provenance.routingProvider).toBe('fake');
@@ -987,8 +1206,8 @@ describe('createSnappedRoute', () => {
    */
   it('refuses a route past the editable point limit, naming the count', () => {
     const huge = Array.from({ length: MAX_UNDOABLE_POINTS + 10 }, (_, i) => ({
-      lat: 46.5 + i * 0.00001,
-      lon: 8,
+      lat: BUX.lat + i * 0.00001,
+      lon: BUX.lon,
     }));
 
     let message = '';
@@ -1037,7 +1256,7 @@ describe('createSnappedRoute', () => {
   });
 
   it('joins legs by the same rule as a whole-route snap', () => {
-    const shared = { lat: 46.52, lon: 8.02 };
+    const shared = CAT_FIDDLE;
 
     const mutation = routingService.createSnappedRoute(db, {
       tripId,
@@ -1073,5 +1292,279 @@ describe('createSnappedRoute', () => {
     // elevation measured elsewhere would be invented data.
     expect(saved.points.every((p) => p.ele === null)).toBe(true);
     expect(saved.elevGainM).toBeNull();
+  });
+});
+
+// --------------------------------------------- control points off the graph
+
+/**
+ * A control point the engine cannot reach.
+ *
+ * This is the failure that prompted the whole mechanism, and it is worth
+ * restating why it needs one. Valhalla does not refuse a point outside its
+ * loaded graph — it silently snaps it to the nearest road it *does* have and
+ * routes to there instead, reporting success and echoing the original
+ * coordinates back. Measured against a Derbyshire-only graph, Macclesfield
+ * came back displaced 3,111 m and Leek 10,670 m, and the route looked
+ * perfectly plausible while going nowhere near either town. See ADR 0016.
+ */
+/** Scripts a leg whose far end lands well away from where it was asked. */
+const offBy = (metres: number) =>
+  fakeProvider({
+    legShape: (from, to) => [
+      from,
+      // Dragged north: a degree of latitude is about 111.3 km.
+      { lat: to.lat + metres / 111_320, lon: to.lon },
+    ],
+  });
+
+describe('snapRoute with a control point off the graph', () => {
+  it('reports the control point and how far it was moved', async () => {
+    const route = newRoute([rp(BUX), rp(CAT_FIDDLE)]);
+
+    const mutation = await routingService.snapRoute(db, {
+      routeId: route.id,
+      provider: offBy(4_000),
+      mode: 'auto',
+    });
+
+    expect(mutation.result.displaced).toHaveLength(1);
+    expect(mutation.result.displaced[0]?.index).toBe(1);
+    expect(mutation.result.displaced[0]?.displacementM).toBeCloseTo(4_000, -2);
+  });
+
+  it('keeps the leg as a straight line rather than a confident wrong road', async () => {
+    const route = newRoute([rp(BUX), rp(CAT_FIDDLE)]);
+
+    const mutation = await routingService.snapRoute(db, {
+      routeId: route.id,
+      provider: offBy(4_000),
+      mode: 'auto',
+    });
+
+    // The same treatment as "no road path between these two points". A line
+    // the user can see is not a road beats a road route to the wrong place.
+    expect(mutation.result.unmatchedLegs).toEqual([[0, 1]]);
+
+    const saved = routeService.get(db, route.id);
+    expect(saved.points).toHaveLength(2);
+    expect(saved.points[1]?.lat).toBeCloseTo(CAT_FIDDLE.lat, 6);
+    expect(saved.points[1]?.lon).toBeCloseTo(CAT_FIDDLE.lon, 6);
+  });
+
+  it('says nothing when the displacement is within tolerance', async () => {
+    const route = newRoute([rp(BUX), rp(CAT_FIDDLE)]);
+
+    // 40 m: a map click or a gazetteer coordinate is easily this far from a
+    // carriageway, and snapping it is the operation working.
+    const mutation = await routingService.snapRoute(db, {
+      routeId: route.id,
+      provider: offBy(40),
+      mode: 'auto',
+    });
+
+    expect(mutation.result.displaced).toEqual([]);
+    expect(mutation.result.unmatchedLegs).toEqual([]);
+  });
+
+  it('persists it, so the panel keeps saying so after a reload', async () => {
+    const route = newRoute([rp(BUX), rp(CAT_FIDDLE)]);
+
+    await routingService.snapRoute(db, {
+      routeId: route.id,
+      provider: offBy(9_000),
+      mode: 'auto',
+    });
+
+    // A route snapped against a region that did not reach it stays wrong until
+    // it is re-snapped, so this cannot be a toast that scrolls away.
+    const provenance = routingService.provenance(db, route.id);
+    expect(provenance.displaced).toHaveLength(1);
+    expect(provenance.displaced[0]?.displacementM).toBeCloseTo(9_000, -2);
+    expect(provenance.unmatchedLegs).toEqual([[0, 1]]);
+  });
+
+  it('names every bad point in a multi-leg route, once each', async () => {
+    // Four corners of the Buxton loop, every far end dragged off.
+    const route = newRoute([rp(BUX), rp(MAC), rp(LEE), rp(ASH)]);
+
+    const mutation = await routingService.snapRoute(db, {
+      routeId: route.id,
+      provider: offBy(3_000),
+      mode: 'auto',
+    });
+
+    // Points 1, 2 and 3 are each the far end of a leg. Point 0 is only ever a
+    // start, and starts are reported too — but this provider only moves ends,
+    // so the indices are exactly the ends.
+    expect(mutation.result.displaced.map((d) => d.index)).toEqual([1, 2, 3]);
+    expect(mutation.result.unmatchedLegs).toEqual([
+      [0, 1],
+      [1, 2],
+      [2, 3],
+    ]);
+  });
+
+  it('reports a displacement on the leg start as well as the end', async () => {
+    const route = newRoute([rp(BUX), rp(CAT_FIDDLE)]);
+
+    const mutation = await routingService.snapRoute(db, {
+      routeId: route.id,
+      provider: fakeProvider({
+        // Only the *start* is dragged, which is what a first control point
+        // outside the graph looks like.
+        legShape: (from, to) => [
+          { lat: from.lat + 5_000 / 111_320, lon: from.lon },
+          to,
+        ],
+      }),
+      mode: 'auto',
+    });
+
+    expect(mutation.result.displaced.map((d) => d.index)).toEqual([0]);
+  });
+});
+
+describe('routeLeg displacement', () => {
+  it('reports how far the clicked point was moved', async () => {
+    const leg = await routingService.routeLeg(
+      fakeProvider({
+        legShape: (from, to) => [
+          from,
+          { lat: to.lat + 6_000 / 111_320, lon: to.lon },
+        ],
+      }),
+      BUX,
+      CAT_FIDDLE,
+      'auto',
+    );
+
+    // Surfaced per click so a point outside the loaded region is obvious when
+    // it is placed, not after the whole route is drawn and saved.
+    expect(leg.displacementM).toBeCloseTo(6_000, -2);
+    expect(leg.matched).toBe(false);
+  });
+
+  it('reports null when the point landed on a road', async () => {
+    const leg = await routingService.routeLeg(
+      fakeProvider({}),
+      BUX,
+      CAT_FIDDLE,
+      'auto',
+    );
+    expect(leg.displacementM).toBeNull();
+    expect(leg.matched).toBe(true);
+  });
+});
+
+// ------------------------------------------- Phase 6: roles and leg boundaries
+
+const boundariesOf = (routeId: string): (number | null)[] =>
+  controlRepo.listControlRows(db, routeId).map((row) => row.shapeIndex);
+
+describe('leg boundaries and roles (Phase 6)', () => {
+  it('a whole-route snap records a boundary for every control point', async () => {
+    const route = newRoute([rp(BUX), rp(CAT_FIDDLE), rp(MAC)]);
+    await routingService.snapRoute(db, {
+      routeId: route.id,
+      provider: fakeProvider({}),
+      mode: 'auto',
+    });
+
+    const points = routeService.get(db, route.id).points;
+    const boundaries = boundariesOf(route.id);
+    // Two three-point legs sharing a vertex: [BUX, mid, CAT, mid, MAC].
+    expect(boundaries).toEqual([0, 2, 4]);
+    expect(checkBoundaries(points.length, boundaries, 3)).toBe(true);
+    expect(points[2]).toMatchObject(CAT_FIDDLE);
+  });
+
+  it('a route built in the tool records boundaries and roles, with ends forced to via', () => {
+    const mutation = routingService.createSnappedRoute(db, {
+      tripId,
+      name: 'Shaped',
+      colour: null,
+      controlPoints: [BUX, CAT_FIDDLE, MAC],
+      legs: [previewed([BUX, BURBAGE, CAT_FIDDLE]), previewed([CAT_FIDDLE, MAC])],
+      roles: ['shaping', 'shaping', 'shaping'],
+      mode: 'auto',
+      provider: 'fake',
+    });
+
+    const rows = controlRepo.listControlRows(db, mutation.result.id);
+    expect(rows.map((r) => r.role)).toEqual(['via', 'shaping', 'via']);
+    expect(rows.map((r) => r.shapeIndex)).toEqual([0, 2, 3]);
+  });
+
+  it('a re-snap keeps each point’s role', async () => {
+    const mutation = routingService.createSnappedRoute(db, {
+      tripId,
+      name: 'Shaped',
+      colour: null,
+      controlPoints: [BUX, CAT_FIDDLE, MAC],
+      legs: [previewed([BUX, CAT_FIDDLE]), previewed([CAT_FIDDLE, MAC])],
+      roles: ['via', 'shaping', 'via'],
+      mode: 'auto',
+      provider: 'fake',
+    });
+
+    await routingService.snapRoute(db, {
+      routeId: mutation.result.id,
+      provider: fakeProvider({}),
+      mode: 'auto',
+    });
+    expect(controlRepo.listControlRows(db, mutation.result.id).map((r) => r.role)).toEqual([
+      'via',
+      'shaping',
+      'via',
+    ]);
+
+    // A moved point supplied without a role is still the kind of point it was.
+    await routingService.snapRoute(db, {
+      routeId: mutation.result.id,
+      provider: fakeProvider({}),
+      mode: 'auto',
+      controlPoints: [BUX, WALKER_BARN, MAC],
+    });
+    expect(controlRepo.listControlRows(db, mutation.result.id)[1]?.role).toBe('shaping');
+  });
+
+  it('undoing a re-snap restores the previous roles and boundaries exactly', async () => {
+    const mutation = routingService.createSnappedRoute(db, {
+      tripId,
+      name: 'Shaped',
+      colour: null,
+      controlPoints: [BUX, CAT_FIDDLE, MAC],
+      legs: [previewed([BUX, BURBAGE, CAT_FIDDLE]), previewed([CAT_FIDDLE, MAC])],
+      roles: ['via', 'shaping', 'via'],
+      mode: 'auto',
+      provider: 'fake',
+    });
+    const before = controlRepo.listControlRows(db, mutation.result.id);
+
+    const resnap = await routingService.snapRoute(db, {
+      routeId: mutation.result.id,
+      provider: fakeProvider({ legShape: (from, to) => [from, NEWHAVEN, to] }),
+      mode: 'auto',
+    });
+    expect(boundariesOf(mutation.result.id)).toEqual([0, 2, 4]);
+
+    undoService.record(resnap.inverse);
+    undoService.undo(db);
+    expect(controlRepo.listControlRows(db, mutation.result.id)).toEqual(before);
+  });
+
+  it('stores unknown rather than wrong boundaries when a provider returns the wrong number of legs', async () => {
+    const route = newRoute([rp(BUX), rp(CAT_FIDDLE), rp(MAC)]);
+    const broken = fakeProvider({});
+    const lying: RoutingProvider = {
+      ...broken,
+      async snap(points, mode) {
+        const result = await broken.snap(points, mode);
+        return { ...result, legs: result.legs.slice(0, 1) };
+      },
+    };
+    await routingService.snapRoute(db, { routeId: route.id, provider: lying, mode: 'auto' });
+    expect(boundariesOf(route.id)).toEqual([null, null, null]);
   });
 });

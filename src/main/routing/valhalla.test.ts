@@ -310,6 +310,28 @@ describe('match', () => {
     expect(result.edges[0]?.surface).toBeNull();
   });
 
+  it('reads one-way from traversability, and unknown as null', async () => {
+    handler = () =>
+      matchResponse([
+        { begin_shape_index: 0, end_shape_index: 1, traversability: 'forward' },
+        { begin_shape_index: 1, end_shape_index: 2, traversability: 'backward' },
+        { begin_shape_index: 2, end_shape_index: 3, traversability: 'both' },
+        { begin_shape_index: 3, end_shape_index: 4 },
+      ]);
+    const result = await provider().match(ALPS, 'auto');
+    expect(result.edges.map((e) => e.oneway)).toEqual([true, true, false, null]);
+  });
+
+  it('asks the engine for traversability', async () => {
+    let body: unknown = null;
+    handler = (_url, sent) => {
+      body = sent;
+      return matchResponse([]);
+    };
+    await provider().match(ALPS, 'auto');
+    expect(JSON.stringify(body)).toContain('edge.traversability');
+  });
+
   it('skips an edge with no shape indices rather than guessing', async () => {
     handler = () => matchResponse([{ length: 1, speed_limit: 50 }]);
     const result = await provider().match(ALPS, 'auto');
@@ -508,5 +530,164 @@ describe('transport failures', () => {
     const result = await provider().snap(ALPS.slice(0, 2), 'auto');
     // Reported as unmatched rather than throwing on a missing field.
     expect(result.legs[0]?.matched).toBe(false);
+  });
+});
+
+// ------------------------------------------------- Phase 6: alternatives
+
+/** A trip with one leg along `shape`, as the Valhalla API reference shows it. */
+const trip = (shape: { lat: number; lon: number }[], lengthKm = 1, timeS = 60) => ({
+  legs: [{ shape: encodePolyline(shape, VALHALLA_PRECISION), summary: { length: lengthKm, time: timeS } }],
+});
+
+const FROM = ALPS[0] as { lat: number; lon: number };
+const TO = ALPS[2] as { lat: number; lon: number };
+/** Three routes between FROM and TO: direct, via a northern and a southern bend. */
+const DIRECT = [FROM, ALPS[1] as { lat: number; lon: number }, TO];
+const NORTH = [FROM, { lat: 46.53, lon: 8.015 }, TO];
+const SOUTH = [FROM, { lat: 46.515, lon: 8.022 }, TO];
+
+describe('alternatives', () => {
+  it('asks for up to two alternates and returns the preferred route first', async () => {
+    handler = () => ({
+      json: {
+        trip: trip(DIRECT, 1.5, 120),
+        alternates: [{ trip: trip(NORTH, 2.25, 150) }, { trip: trip(SOUTH, 3, 200) }],
+      },
+    });
+
+    const candidates = await provider().alternatives?.(FROM, TO, 'motorcycle', 3);
+
+    expect(lastBody.alternates).toBe(2);
+    expect(lastBody.costing).toBe('motorcycle');
+    expect(candidates).toHaveLength(3);
+    expect(candidates?.map((c) => c.distanceM)).toEqual([1500, 2250, 3000]);
+    expect(candidates?.[1]?.estimatedDurationS).toBe(150);
+    expect(candidates?.[1]?.shape[1]?.lat).toBeCloseTo(46.53, 6);
+  });
+
+  it('never asks for more than the engine allows, and asks for none when one route is wanted', async () => {
+    handler = () => ({ json: { trip: trip(DIRECT) } });
+
+    await provider().alternatives?.(FROM, TO, 'auto', 10);
+    expect(lastBody.alternates).toBe(2);
+
+    await provider().alternatives?.(FROM, TO, 'auto', 1);
+    expect(lastBody).not.toHaveProperty('alternates');
+  });
+
+  it('returns only the routes the engine found, never a fabricated one', async () => {
+    handler = () => ({ json: { trip: trip(DIRECT) } });
+    const candidates = await provider().alternatives?.(FROM, TO, 'auto', 3);
+    expect(candidates).toHaveLength(1);
+  });
+
+  it('drops an alternate whose end the engine moved too far', async () => {
+    // Ends 2 km east of TO: a road the user did not choose.
+    const displaced = [FROM, { lat: 46.53, lon: 8.04 }, { lat: 46.531, lon: 8.052 }];
+    handler = () => ({
+      json: { trip: trip(DIRECT), alternates: [{ trip: trip(displaced) }, { trip: trip(SOUTH) }] },
+    });
+    const candidates = await provider().alternatives?.(FROM, TO, 'auto', 3);
+    expect(candidates).toHaveLength(2);
+    expect(candidates?.[1]?.shape[1]?.lat).toBeCloseTo(46.515, 6);
+  });
+
+  it('retries once without alternates when a host refuses them', async () => {
+    handler = (_path, body) =>
+      body.alternates === undefined
+        ? { json: { trip: trip(DIRECT) } }
+        : { status: 400, json: { error: 'Too many alternates' } };
+
+    const candidates = await provider().alternatives?.(FROM, TO, 'auto', 3);
+    expect(requestCount).toBe(2);
+    expect(candidates).toHaveLength(1);
+  });
+
+  it('reports no road route as an empty list, not an error', async () => {
+    handler = () => ({ status: 400, json: { error: 'No path could be found' } });
+    await expect(provider().alternatives?.(FROM, TO, 'auto', 3)).resolves.toEqual([]);
+  });
+
+  it('lets a transport failure propagate rather than calling it unroutable', async () => {
+    handler = () => ({ status: 429, json: {} });
+    await expect(provider().alternatives?.(FROM, TO, 'auto', 3)).rejects.toBeInstanceOf(
+      ServiceError,
+    );
+  });
+});
+
+// --------------------------------------------- Phase 6: pass-through sections
+
+describe('snapSection', () => {
+  const MID = ALPS[1] as { lat: number; lon: number };
+  const section = [
+    { point: FROM, passThrough: false },
+    { point: MID, passThrough: true },
+    { point: TO, passThrough: false },
+  ];
+  const sectionResponse = () => ({
+    json: {
+      trip: {
+        legs: [
+          { shape: encodePolyline([FROM, MID], VALHALLA_PRECISION), summary: { length: 0.5, time: 40 } },
+          { shape: encodePolyline([MID, TO], VALHALLA_PRECISION), summary: { length: 0.75, time: 50 } },
+        ],
+      },
+    },
+  });
+
+  it('routes the section as one request, marking only pass-through locations break_through', async () => {
+    handler = sectionResponse;
+    const result = await provider().snapSection?.(section, 'auto');
+
+    expect(requestCount).toBe(1);
+    expect((lastBody.locations as { type: string }[]).map((l) => l.type)).toEqual([
+      'break',
+      'break_through',
+      'break',
+    ]);
+    expect(result?.legs).toHaveLength(2);
+    expect(result?.legs.map((l) => l.distanceM)).toEqual([500, 750]);
+    expect(result?.legs.every((l) => l.matched)).toBe(true);
+  });
+
+  it('falls back to leg-by-leg routing when the engine refuses the section', async () => {
+    handler = (_path, body) =>
+      (body.locations as unknown[]).length > 2
+        ? { status: 400, json: { error: 'No path' } }
+        : { json: { trip: trip([FROM, MID]) } };
+
+    const result = await provider().snapSection?.(section, 'auto');
+    // One refused section request, then one per leg.
+    expect(requestCount).toBe(3);
+    expect(result?.legs).toHaveLength(2);
+  });
+
+  it('falls back when the engine returns the wrong number of legs', async () => {
+    handler = (_path, body) =>
+      (body.locations as unknown[]).length > 2
+        ? { json: { trip: trip(DIRECT) } }
+        : { json: { trip: trip([FROM, MID]) } };
+
+    const result = await provider().snapSection?.(section, 'auto');
+    expect(requestCount).toBe(3);
+    expect(result?.legs).toHaveLength(2);
+  });
+
+  it('does not fall back on a transport failure', async () => {
+    handler = () => ({ status: 429, json: {} });
+    await expect(provider().snapSection?.(section, 'auto')).rejects.toBeInstanceOf(ServiceError);
+    expect(requestCount).toBe(1);
+  });
+
+  it('uses the per-leg path when nothing needs to pass through', async () => {
+    handler = () => ({ json: { trip: trip([FROM, MID]) } });
+    await provider().snapSection?.(
+      section.map((l) => ({ ...l, passThrough: false })),
+      'auto',
+    );
+    expect(requestCount).toBe(2);
+    expect(lastBody.locations as unknown[]).toHaveLength(2);
   });
 });

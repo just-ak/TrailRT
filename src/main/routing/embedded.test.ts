@@ -140,16 +140,29 @@ describe('buildConfig', () => {
 
 describe('readLoadedRegion', () => {
   const region = {
-    regionName: 'liechtenstein',
-    tileCount: 5,
+    regionName: 'Derbyshire, Cheshire and Staffordshire',
+    regionIds: ['derbyshire', 'cheshire', 'staffordshire'],
+    tileCount: 40,
     builtAt: 1_700_000_000_000,
-    graphBytes: 4_600_000,
+    graphBytes: 141_000_000,
   };
 
-  it('round-trips the region beside the graph', () => {
+  it('round-trips the regions beside the graph', () => {
     writeGraph();
     writeLoadedRegion(paths(), region);
     expect(readLoadedRegion(paths())).toEqual(region);
+  });
+
+  it('reads a record from before several regions could be combined', () => {
+    writeGraph();
+    mkdirSync(join(paths().regionFile, '..'), { recursive: true });
+    writeFileSync(
+      paths().regionFile,
+      JSON.stringify({ regionName: 'Derbyshire', tileCount: 21, builtAt: 1, graphBytes: 50 }),
+      'utf8',
+    );
+    expect(readLoadedRegion(paths())?.regionIds).toEqual([]);
+    expect(readLoadedRegion(paths())?.regionName).toBe('Derbyshire');
   });
 
   /*

@@ -13,7 +13,7 @@ src/
     db/        drizzle client, migrations, repositories
     services/  use-case layer called by IPC handlers
     ipc/       one module per namespace; validates then delegates
-    io/        import/export (Phase 3+), io/garmin/ (Phase 6)
+    io/        import/export (Phase 3+), io/garmin/ (Phase 9)
     security/  CSP, navigation and permission guards
     menu/      application menu definition
   preload/     contextBridge surface only. No logic.
@@ -83,3 +83,38 @@ geometry, parsers, statistics, validation — is tested directly with no Electro
 in the loop. Playwright drives the packaged app for launch, persistence and
 restart flows. Test fixtures live in `test-data/` and are synthetic; never use
 real user GPS data in automated tests.
+
+## One test geography: the Buxton square
+
+Anywhere the geography is load-bearing — snapping, map-region selection, road
+attributes, the end-to-end fixtures — import it from `@fixtures/places` rather
+than inventing coordinates. It is a loop round four real market towns:
+
+```
+  Macclesfield ────── A537 "Cat and Fiddle" ────── Buxton
+       │                                              │
+     A523                                           A515
+       │                                              │
+     Leek ───────── A523 / A52 ───────────────── Ashbourne
+```
+
+Real roads are what make these tests able to fail usefully. A snapped route
+must stay near the control points it was given; posted limits must come back as
+whole mph values; and the loop spans three counties, so no Geofabrik county
+extract covers it — the case the region picker exists for. Invented coordinates
+in empty country can only establish that something came back.
+
+Two rules follow:
+
+- **Do not guess a coordinate.** Resolve it against OpenStreetMap. Three of the
+  via points were out by up to 3.4 km when first written, and only the live
+  corridor assertion caught it.
+- **A local graph must cover the geography.** Use `A515_TRACE`, which stays
+  inside Derbyshire, so a 44 MB county extract is enough. The Cat and Fiddle
+  crosses into Cheshire and belongs to the live tests.
+
+Format fixtures are the exception and stay where they are. Parsing and
+round-trip tests use arbitrary coordinates by design, and moving them would
+churn exact-value assertions for no coverage. The one gap that left — every
+longitude positive, so a dropped minus sign round-trips unseen — is closed by
+`generated/peak-district-loop.gpx`.

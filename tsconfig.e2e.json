@@ -4,8 +4,12 @@
     "tests/**/*",
     "playwright.config.ts",
     "src/renderer/types/global.d.ts",
-    "src/shared/**/*"
+    "src/shared/**/*",
+    "test-data/**/*.ts"
   ],
+  // The seed builder runs the main process's ingest code under vitest, so it
+  // is type-checked with the main process, in tsconfig.node.json.
+  "exclude": ["tests/seed/**/*"],
   "compilerOptions": {
     // End-to-end specs run in Node, but `page.evaluate` callbacks are
     // serialised into the renderer, so their bodies need DOM types.
@@ -13,7 +17,8 @@
     "types": ["node"],
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.e2e.tsbuildinfo",
     "paths": {
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@fixtures/*": ["./test-data/*"]
     }
   }
 }

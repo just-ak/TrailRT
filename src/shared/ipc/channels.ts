@@ -47,6 +47,52 @@ export const CHANNELS = {
     move: 'routes:move',
     delete: 'routes:delete',
   },
+  /** Phase 10: postcode and place search, answered on this machine. */
+  search: {
+    query: 'search:query',
+    status: 'search:status',
+  },
+  /** Phase 10: points of interest from the region build's place data. */
+  places: {
+    status: 'places:status',
+    /** Rebuilds the loaded regions, which also rebuilds their place data. */
+    rebuild: 'places:rebuild',
+    along: 'places:along',
+    cancel: 'places:cancel',
+    detour: 'places:detour',
+    get: 'places:get',
+    /** Adds a POI to a trip as a waypoint. */
+    addWaypoint: 'places:addWaypoint',
+  },
+  /** Phase 10: Code-Point Open, fetched once on request. */
+  postcodes: {
+    listing: 'postcodes:listing',
+    update: 'postcodes:update',
+    cancel: 'postcodes:cancel',
+  },
+  itinerary: {
+    get: 'itinerary:get',
+    create: 'itinerary:create',
+    remove: 'itinerary:remove',
+    update: 'itinerary:update',
+    addStop: 'itinerary:addStop',
+    removeStop: 'itinerary:removeStop',
+    moveStop: 'itinerary:moveStop',
+    updateStop: 'itinerary:updateStop',
+    linkLeg: 'itinerary:linkLeg',
+    /** By road (planned automatically) or other transport ("don't link"). */
+    setLegMode: 'itinerary:setLegMode',
+    /** Plans every by-road leg that has no route: a retry. */
+    planAll: 'itinerary:planAll',
+    /** A POI as a stop: waypoint and stop in one undoable step. */
+    addPoiStop: 'itinerary:addPoiStop',
+    /** Routes the leg arriving at a stop, saves the route and links it. */
+    planLeg: 'itinerary:planLeg',
+    /** Routes the legs into and out of a stop inserted between two others. */
+    planAround: 'itinerary:planAround',
+    /** Saves the itinerary as an iCalendar file the user picks. */
+    exportIcs: 'itinerary:exportIcs',
+  },
   waypoints: {
     listForTrip: 'waypoints:listForTrip',
     listAll: 'waypoints:listAll',
@@ -77,6 +123,31 @@ export const CHANNELS = {
     delete: 'tracks:delete',
     hasOriginal: 'tracks:hasOriginal',
     restoreOriginal: 'tracks:restoreOriginal',
+    /**
+     * One window of exact points, for the point table.
+     *
+     * Paged because a recording can hold 200,000 points and a table shows
+     * forty. Always exact, never the render cache — an index from a simplified
+     * payload would not identify the sample the user is editing.
+     */
+    points: 'tracks:points',
+    /** Corrects one sample. The original file remains the way back. */
+    editPoint: 'tracks:editPoint',
+    /** Deletes points at arbitrary indices, preserving segment breaks. */
+    deletePoints: 'tracks:deletePoints',
+  },
+  /**
+   * Multi-object move and delete.
+   *
+   * One channel per operation plus a dry run, rather than looping the
+   * single-object channels: a loop would give one undo entry, one library
+   * refresh and one native-menu rebuild *per member*. See ADR 0014.
+   */
+  batch: {
+    /** What the batch would do, including what it cannot reverse. */
+    assess: 'batch:assess',
+    delete: 'batch:delete',
+    move: 'batch:move',
   },
   /**
    * Import is a three-step conversation, not one call: the main process opens
@@ -125,8 +196,17 @@ export const CHANNELS = {
     region: 'routing:region',
     /** Which downloadable extracts cover the current map view. */
     suggestRegions: 'routing:suggestRegions',
-    /** Downloads a chosen extract and builds a graph from it. */
+    /**
+     * Downloads the chosen extracts, merges them when there are several, and
+     * builds one graph. ADR 0018.
+     */
     downloadRegion: 'routing:downloadRegion',
+    /** The UK's downloadable regions, as shapes for the picker's map. */
+    regionMap: 'routing:regionMap',
+    /** Download sizes for a selection of regions. */
+    regionSizes: 'routing:regionSizes',
+    /** Terrain tiles covering one route or track, for its profile. */
+    downloadTerrain: 'routing:downloadTerrain',
     snap: 'routing:snap',
     /**
      * Routes one leg and writes nothing. Backs the interactive snap routing
@@ -135,6 +215,12 @@ export const CHANNELS = {
     routeLeg: 'routing:routeLeg',
     /** Saves a route built with the tool, as previewed. */
     createSnapped: 'routing:createSnapped',
+    /** Routes a section through shaping points and writes nothing. Phase 6. */
+    routeSection: 'routing:routeSection',
+    /** The routes the engine offers between two points. Writes nothing. */
+    alternatives: 'routing:alternatives',
+    /** Commits a shaping edit to a saved route, as previewed. */
+    applyEdit: 'routing:applyEdit',
     provenance: 'routing:provenance',
     match: 'routing:match',
     attributes: 'routing:attributes',
@@ -175,6 +261,8 @@ export const EVENTS = {
   regionProgress: 'event:regionProgress',
   /** Download-and-build progress for an automatically fetched region. */
   regionJobProgress: 'event:regionJobProgress',
+  /** Phase 10: the postcode download. */
+  postcodeProgress: 'event:postcodeProgress',
 } as const;
 
 /**
@@ -186,6 +274,7 @@ export const MENU_ACTIONS = [
   'trip:new',
   'folder:new',
   'route:new',
+  'route:newStraight',
   'waypoint:new',
   'edit:undo',
   'edit:redo',

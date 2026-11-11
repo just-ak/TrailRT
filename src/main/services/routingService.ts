@@ -1,9 +1,12 @@
 import type { LatLon } from '@shared/geo/distance';
 import type { RoutePoint } from '@shared/domain/types';
 import {
+  type ControlRole,
+  type DisplacedControlPoint,
   MAX_SNAPPED_POINTS,
   MAX_UNDOABLE_POINTS,
   type RoutingProvider,
+  type SnapResult,
   type TransportMode,
 } from '@shared/routing/RoutingProvider';
 import type {
@@ -12,6 +15,7 @@ import type {
   SnapOutcome,
 } from '@shared/routing/results';
 import type { Route } from '@shared/domain/types';
+import { checkBoundaries, flattenLegsWithBoundaries } from '@shared/routing/splice';
 import type { Db } from '../db/client';
 import * as controlRepo from '../db/repositories/routeControlPoints';
 import * as repo from '../db/repositories/routes';
@@ -57,30 +61,119 @@ export type { RouteProvenance, SnapOutcome } from '@shared/routing/results';
  * which accumulates legs one at a time and never builds a `SnapResult`, joins
  * them by exactly the same rule as a whole-route snap.
  */
+/**
+ * Snaps a whole control-point list, keeping shaping points pass-through.
+ *
+ * Phase 6, design §10. A route with no shaping points — or a provider with no
+ * section routing — is one `snap` call, exactly as before. Otherwise the
+ * points are split into runs from one via point to the next; a run with
+ * shaping points inside it is routed as one section so the route bends
+ * through them rather than turning round at them, and runs without are
+ * gathered into ordinary `snap` calls. Leg, unmatched and displaced indices
+ * are shifted back into whole-route numbering.
+ */
+export async function snapControl(
+  provider: RoutingProvider,
+  control: readonly controlRepo.ControlInput[],
+  mode: TransportMode,
+): Promise<SnapResult> {
+  const points = control.map((p) => ({ lat: p.lat, lon: p.lon }));
+  const interiorShaping = control.some(
+    (p, i) => i > 0 && i < control.length - 1 && p.role === 'shaping',
+  );
+  if (!interiorShaping || provider.snapSection === undefined) {
+    return provider.snap(points, mode);
+  }
+
+  const result: SnapResult = {
+    provider: provider.id,
+    mode,
+    legs: [],
+    unmatchedLegs: [],
+    displaced: [],
+  };
+  const take = (part: SnapResult, offset: number): void => {
+    result.provider = part.provider;
+    for (const leg of part.legs) {
+      result.legs.push({
+        ...leg,
+        fromControlIndex: leg.fromControlIndex + offset,
+        toControlIndex: leg.toControlIndex + offset,
+      });
+    }
+    for (const [a, b] of part.unmatchedLegs) result.unmatchedLegs.push([a + offset, b + offset]);
+    for (const d of part.displaced) {
+      const index = d.index + offset;
+      const seen = result.displaced.find((e) => e.index === index);
+      if (seen === undefined) result.displaced.push({ index, displacementM: d.displacementM });
+      else seen.displacementM = Math.max(seen.displacementM, d.displacementM);
+    }
+  };
+
+  // Via indices bound the runs; the ends are always via points.
+  const vias = control
+    .map((p, i) => (i === 0 || i === control.length - 1 || p.role !== 'shaping' ? i : -1))
+    .filter((i) => i >= 0);
+
+  let plainStart: number | null = null;
+  const flushPlain = async (end: number): Promise<void> => {
+    if (plainStart === null || end <= plainStart) return;
+    // eslint-disable-next-line no-await-in-loop
+    take(await provider.snap(points.slice(plainStart, end + 1), mode), plainStart);
+    plainStart = null;
+  };
+
+  for (let r = 0; r < vias.length - 1; r += 1) {
+    const from = vias[r] as number;
+    const to = vias[r + 1] as number;
+    if (to - from === 1) {
+      plainStart ??= from;
+      continue;
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await flushPlain(from);
+    const section = control.slice(from, to + 1).map((p, i, all) => ({
+      point: { lat: p.lat, lon: p.lon },
+      passThrough: i > 0 && i < all.length - 1,
+    }));
+    // eslint-disable-next-line no-await-in-loop
+    take(await provider.snapSection(section, mode), from);
+  }
+  await flushPlain(control.length - 1);
+
+  result.displaced.sort((a, b) => a.index - b.index);
+  return result;
+}
+
+/**
+ * Pairs control points with their leg boundaries for storage.
+ *
+ * When the boundaries do not describe the shape — a provider that returned the
+ * wrong number of legs — they are stored as unknown rather than wrong. Unknown
+ * boundaries cost one whole-route re-snap on the next edit; wrong ones would
+ * make that edit replace the wrong stretch of road.
+ */
+export function withBoundaries(
+  control: readonly controlRepo.ControlInput[],
+  boundaries: readonly number[],
+  pointCount: number,
+): controlRepo.ControlInput[] {
+  const valid = checkBoundaries(pointCount, boundaries, control.length);
+  return control.map((p, i) => ({
+    lat: p.lat,
+    lon: p.lon,
+    // The start and end are always via points, whatever was supplied.
+    role: i === 0 || i === control.length - 1 ? 'via' : (p.role ?? 'via'),
+    shapeIndex: valid ? (boundaries[i] ?? null) : null,
+  }));
+}
+
 export function flattenLegs(
   legs: readonly { shape: readonly LatLon[] }[],
 ): LatLon[] {
-  const points: LatLon[] = [];
-
-  for (const leg of legs) {
-    for (const [index, point] of leg.shape.entries()) {
-      if (index === 0 && points.length > 0) {
-        const last = points.at(-1);
-        // Six decimals is about 11 cm; anything closer is the same vertex
-        // reported twice rather than two distinct points.
-        if (
-          last !== undefined &&
-          Math.abs(last.lat - point.lat) < 1e-6 &&
-          Math.abs(last.lon - point.lon) < 1e-6
-        ) {
-          continue;
-        }
-      }
-      points.push({ lat: point.lat, lon: point.lon });
-    }
-  }
-
-  return points;
+  // One rule for joining legs, shared with the boundary bookkeeping, so the
+  // two cannot drift apart. See `shared/routing/splice.ts`.
+  return flattenLegsWithBoundaries(legs).points;
 }
 
 /**
@@ -91,7 +184,7 @@ export function flattenLegs(
  * somewhere else would be inventing data. Name, symbol and notes belong to
  * points the user placed, not to road vertices.
  */
-function toRoutePoints(points: readonly LatLon[]): RoutePoint[] {
+export function toRoutePoints(points: readonly LatLon[]): RoutePoint[] {
   return points.map((point) => ({
     lat: point.lat,
     lon: point.lon,
@@ -118,7 +211,7 @@ export interface SnapRouteInput {
    * Points to snap between. Defaults to the route's existing control points,
    * or its current geometry when it has never been snapped.
    */
-  controlPoints?: readonly LatLon[] | undefined;
+  controlPoints?: readonly controlRepo.ControlInput[] | undefined;
 }
 
 /**
@@ -134,11 +227,24 @@ export async function snapRoute(
 ): Promise<Mutation<SnapOutcome>> {
   const existing = routeService.get(db, input.routeId);
 
-  const control =
-    input.controlPoints ??
-    (controlRepo.hasControlPoints(db, input.routeId)
-      ? controlRepo.listControlPoints(db, input.routeId)
-      : existing.points.map((p) => ({ lat: p.lat, lon: p.lon })));
+  const stored = controlRepo.listControlRows(db, input.routeId);
+  /*
+   * Roles survive a re-snap. Supplied points without a role take the role of
+   * the stored point at the same position when the count matches — a moved
+   * point is still the kind of point it was — and are via points otherwise.
+   */
+  const control: controlRepo.ControlInput[] =
+    input.controlPoints === undefined
+      ? stored.length > 0
+        ? stored
+        : existing.points.map((p) => ({ lat: p.lat, lon: p.lon }))
+      : input.controlPoints.map((p, i) => ({
+          lat: p.lat,
+          lon: p.lon,
+          role:
+            p.role ??
+            (stored.length === input.controlPoints?.length ? stored[i]?.role : undefined),
+        }));
 
   if (control.length < 2) {
     throw new ServiceError(
@@ -149,8 +255,8 @@ export async function snapRoute(
 
   // Outside the transaction: a network call must not hold a write lock, and a
   // failure here must leave the route untouched.
-  const snapped = await input.provider.snap(control, input.mode);
-  const shape = flattenLegs(snapped.legs);
+  const snapped = await snapControl(input.provider, control, input.mode);
+  const { points: shape, boundaries } = flattenLegsWithBoundaries(snapped.legs);
 
   if (shape.length < 2) {
     throw new ServiceError(
@@ -162,9 +268,7 @@ export async function snapRoute(
   assertWithinCap(shape.length);
 
   const previousPoints = existing.points;
-  const previousControl = controlRepo.hasControlPoints(db, input.routeId)
-    ? controlRepo.listControlPoints(db, input.routeId)
-    : null;
+  const previousControl = stored.length > 0 ? stored : null;
   const previousMeta = repo.readMetadata(db, input.routeId);
 
   /*
@@ -180,7 +284,11 @@ export async function snapRoute(
 
   db.transaction(() => {
     const now = Date.now();
-    controlRepo.replaceControlPoints(db, input.routeId, control);
+    controlRepo.replaceControlPoints(
+      db,
+      input.routeId,
+      withBoundaries(control, boundaries, shape.length),
+    );
     repo.replacePoints(db, input.routeId, toRoutePoints(shape));
     repo.writeStats(
       db,
@@ -199,6 +307,10 @@ export async function snapRoute(
     repo.writeMetadata(db, input.routeId, {
       ...previousMeta,
       unmatchedLegs: snapped.unmatchedLegs,
+      // Persisted, not shown once: a route snapped against a region that did
+      // not reach it stays wrong until it is re-snapped, so the panel should
+      // keep saying so rather than relying on the user remembering a toast.
+      displacedControlPoints: snapped.displaced,
     });
   });
 
@@ -209,6 +321,7 @@ export async function snapRoute(
     pointCount: shape.length,
     unmatchedLegs: snapped.unmatchedLegs,
     undoable,
+    displaced: snapped.displaced,
   };
 
   return {
@@ -242,14 +355,13 @@ export function restoreSnap(
   input: {
     id: string;
     points: readonly RoutePoint[];
-    controlPoints: readonly LatLon[] | null;
+    controlPoints: readonly controlRepo.ControlInput[] | null;
     metadata: Record<string, unknown>;
   },
 ): Mutation<SnapOutcome> {
   const existing = routeService.get(db, input.id);
-  const currentControl = controlRepo.hasControlPoints(db, input.id)
-    ? controlRepo.listControlPoints(db, input.id)
-    : null;
+  const rows = controlRepo.listControlRows(db, input.id);
+  const currentControl = rows.length > 0 ? rows : null;
   const currentMeta = repo.readMetadata(db, input.id);
 
   db.transaction(() => {
@@ -284,6 +396,9 @@ export function restoreSnap(
       pointCount: input.points.length,
       unmatchedLegs: [],
       undoable: true,
+      // Undoing a snap restores the geometry from before it, so whatever the
+      // engine did to the control points is undone with it.
+      displaced: [],
     },
     inverse: {
       kind: 'route:restoreSnap',
@@ -301,16 +416,27 @@ export function provenance(db: Db, routeId: string): RouteProvenance {
   const row = repo.readRoutingProvenance(db, routeId);
   const metadata = decodeMetadata(encodeMetadata(repo.readMetadata(db, routeId)));
   const unmatched = metadata.unmatchedLegs;
-  const controlPoints = controlRepo.listControlPoints(db, routeId);
+  const controlPoints = controlRepo.listControlRows(db, routeId);
 
   return {
     routingProvider: row?.routingProvider ?? null,
     transportMode: (row?.transportMode as TransportMode | null) ?? null,
     snappedAt: row?.snappedAt ?? null,
     controlPointCount: controlPoints.length,
-    controlPoints: controlPoints.map((p) => ({ lat: p.lat, lon: p.lon })),
+    controlPoints: controlPoints.map((p) => ({
+      lat: p.lat,
+      lon: p.lon,
+      role: p.role,
+      shapeIndex: p.shapeIndex,
+    })),
     unmatchedLegs: Array.isArray(unmatched)
       ? (unmatched as [number, number][])
+      : [],
+    // Absent for a route snapped before displacement was measured, which is
+    // not the same as "measured and found clean" — but an empty list is the
+    // only honest default, and re-snapping produces the real answer.
+    displaced: Array.isArray(metadata.displacedControlPoints)
+      ? (metadata.displacedControlPoints as DisplacedControlPoint[])
       : [],
   };
 }
@@ -351,13 +477,30 @@ export async function routeLeg(
         { lat: to.lat, lon: to.lon },
       ],
       distanceM: null,
+      displacementM: null,
     };
   }
+
+  /*
+   * How far the far end had to move to reach a road.
+   *
+   * Reported per click so a point outside the loaded region is obvious
+   * immediately, rather than after the whole route is drawn. The adapter
+   * already measured it for the whole snap; here there is exactly one leg, so
+   * the displacement of control point 1 is this leg's end displacement.
+   */
+  // `?? []` because `displaced` is a provider's report, and a provider that
+  // does not measure displacement is a provider with nothing to say about it —
+  // not a reason to fail the leg.
+  const displacementM =
+    (result.displaced ?? []).find((entry) => entry.index === 1)
+      ?.displacementM ?? null;
 
   return {
     matched: leg.matched,
     shape: leg.shape.map((p) => ({ lat: p.lat, lon: p.lon })),
     distanceM: leg.distanceM,
+    displacementM,
   };
 }
 
@@ -369,6 +512,11 @@ export interface CreateSnappedInput {
   controlPoints: readonly LatLon[];
   /** The previewed legs, one fewer than the control points. */
   legs: readonly PreviewedLeg[];
+  /**
+   * The role of each control point, parallel to `controlPoints`. Absent from a
+   * caller that predates Phase 6, in which case every point is a via point.
+   */
+  roles?: readonly ControlRole[] | undefined;
   mode: TransportMode;
   provider: string;
 }
@@ -409,7 +557,7 @@ export function createSnappedRoute(
     );
   }
 
-  const shape = flattenLegs(input.legs);
+  const { points: shape, boundaries } = flattenLegsWithBoundaries(input.legs);
 
   if (shape.length < 2) {
     throw new ServiceError(
@@ -451,7 +599,15 @@ export function createSnappedRoute(
     controlRepo.replaceControlPoints(
       db,
       mutation.result.id,
-      input.controlPoints,
+      withBoundaries(
+        input.controlPoints.map((p, i) => ({
+          lat: p.lat,
+          lon: p.lon,
+          role: input.roles?.[i],
+        })),
+        boundaries,
+        shape.length,
+      ),
     );
     repo.writeRoutingProvenance(db, mutation.result.id, {
       routingProvider: input.provider,

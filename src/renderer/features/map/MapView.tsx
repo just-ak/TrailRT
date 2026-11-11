@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -15,9 +16,12 @@ import type {
   Waypoint,
 } from "@shared/domain/types";
 import { formatDistance } from "@shared/geo/units";
-import { pathDistance } from "@shared/geo/distance";
+import { pathDistance, type LatLon } from "@shared/geo/distance";
+import { routeColour } from "@shared/domain/symbols";
+import type { PlannedControl } from "@shared/routing/edit";
+import type { Candidate } from "@shared/routing/results";
 import { ContextMenu, type MenuItem } from "../../components/ContextMenu";
-import { api, callOr } from "../../lib/client";
+import { api, callOr, describeError } from "../../lib/client";
 import * as actions from "../../lib/actions";
 import { useEditorStore } from "../../stores/editorStore";
 import { useGeometryStore } from "../../stores/geometryStore";
@@ -25,7 +29,9 @@ import { useSelectionStore } from "../../stores/selectionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
 import { useRoutingStore } from "../../stores/routingStore";
+import { useShapingStore } from "../../stores/shapingStore";
 import {
+  draftLegShapes,
   snapPointCount,
   snapRoutedDistanceM,
   useSnapRoutingStore,
@@ -36,10 +42,21 @@ import { useDrawMode } from "./useDrawMode";
 import { useLeafletMap } from "./useLeafletMap";
 import { useMeasureTool, measureStateFrom } from "./useMeasureTool";
 import { useRouteLayers } from "./useRouteLayers";
+import { useRouteShaping } from "./useRouteShaping";
+import { useExtendRoute } from "./useExtendRoute";
+import { useCandidateLayers } from "./useCandidateLayers";
+import { CandidateList } from "./CandidateList";
+import { candidateSummaries, legAlternativesAvailability } from "./candidates";
+import { shapingStateFrom } from "./shapingState";
 import { useSnapOverlay } from "./useSnapOverlay";
 import { useSnapRouting } from "./useSnapRouting";
 import { useTrackLayers } from "./useTrackLayers";
 import { useWaypointLayers } from "./useWaypointLayers";
+import { usePoiLayer } from "./usePoiLayer";
+import { SearchBox } from "../search/SearchBox";
+import { PanelToggles } from "./PanelToggles";
+import type { PoiHit } from "@shared/poi/PoiProvider";
+import { usePoiStore } from "../../stores/poiStore";
 
 /**
  * The centre workspace: base map plus the selected trip's routes and waypoints.
@@ -58,6 +75,13 @@ import { useWaypointLayers } from "./useWaypointLayers";
 const NO_ROUTES: readonly RouteWithPoints[] = [];
 const NO_TRACKS: readonly Track[] = [];
 const NO_WAYPOINTS: readonly Waypoint[] = [];
+const NO_POI_HITS: readonly PoiHit[] = [];
+/** Stable identity, so a hand-drawn route does not re-run the handles effect. */
+const NO_CONTROL_POINTS: readonly { lat: number; lon: number }[] = [];
+const NO_PLANNED: readonly PlannedControl[] = [];
+const NO_LEGS: readonly (readonly LatLon[])[] = [];
+const NO_INDICES: readonly number[] = [];
+const NO_CANDIDATES: readonly Candidate[] = [];
 
 function fitTo(bounds: Bounds | null): boolean {
   const map = getMapInstance();
@@ -71,6 +95,57 @@ function fitTo(bounds: Bounds | null): boolean {
     { padding: [56, 56], maxZoom: 16 },
   );
   return true;
+}
+
+/** A snapped route's control point: remove it, or change what it is for. */
+function controlPointMenuItems(
+  routeId: string,
+  index: number,
+  control: readonly PlannedControl[],
+): MenuItem[] {
+  const point = control[index];
+  if (point === undefined) return [];
+  const isEnd = index === 0 || index === control.length - 1;
+  const items: MenuItem[] = [
+    {
+      label: "Remove Point",
+      disabled: control.length <= 2,
+      disabledReason: "A route needs at least two points.",
+      onSelect: () =>
+        void actions.applyShapingEdit(routeId, { kind: "remove", index }, null),
+    },
+  ];
+  if (point.role === "via") {
+    items.push({
+      label: "Make Shaping Point",
+      disabled: isEnd,
+      disabledReason: "The start and end of a route are always via points.",
+      onSelect: () =>
+        void actions.applyShapingEdit(
+          routeId,
+          { kind: "setRole", index, role: "shaping" },
+          null,
+        ),
+    });
+  } else {
+    items.push({
+      label: "Make Via Point",
+      onSelect: () =>
+        void actions.applyShapingEdit(
+          routeId,
+          { kind: "setRole", index, role: "via" },
+          null,
+        ),
+    });
+  }
+  if (index === control.length - 1) {
+    items.push({
+      label: "Extend Route",
+      separatorBefore: true,
+      onSelect: () => actions.startExtendingRoute(routeId),
+    });
+  }
+  return items;
 }
 
 export function MapView(): ReactNode {
@@ -87,7 +162,7 @@ export function MapView(): ReactNode {
   const mode = useEditorStore((s) => s.mode);
   const pending = useEditorStore((s) => s.pending);
   const measurePoints = useEditorStore((s) => s.measurePoints);
-  const snapWhileDrawing = useEditorStore((s) => s.snapWhileDrawing);
+  const straightBecause = useEditorStore((s) => s.straightBecause);
 
   const routingStatus = useRoutingStore((s) => s.status);
   const routeProvenance = useRoutingStore((s) => s.provenance);
@@ -159,6 +234,48 @@ export function MapView(): ReactNode {
     ? (geometry?.waypoints ?? NO_WAYPOINTS)
     : NO_WAYPOINTS;
 
+  /**
+   * "Show alternatives" for one leg of a saved snapped route (Requirement 2).
+   * Present but disabled, with the reason, where it cannot work — an
+   * unmatched leg has no road route to offer alternatives to, and a provider
+   * may not offer alternatives at all.
+   */
+  function legAlternativesItem(routeId: string, leg: number): MenuItem {
+    const availability = legAlternativesAvailability(
+      routeProvenance[routeId] ?? null,
+      leg,
+      routingStatus?.capabilities ?? null,
+    );
+    return {
+      label: "Show Alternatives for This Section",
+      disabled: !availability.available,
+      ...(availability.available ? {} : { disabledReason: availability.reason }),
+      onSelect: () => void actions.showLegAlternatives(routeId, leg),
+    };
+  }
+
+  /** The route context menu, shared by the line and the shaping hit area. */
+  function routeMenuItems(id: string): MenuItem[] {
+    return [
+      { label: "Fit Route to Screen", onSelect: () => fitRoute(id) },
+      {
+        label: "Reverse Route",
+        separatorBefore: true,
+        onSelect: () => void actions.reverseRoute(id),
+      },
+      {
+        label: "Duplicate Route",
+        onSelect: () => void actions.duplicateRoute(id),
+      },
+      {
+        label: "Delete Route",
+        danger: true,
+        separatorBefore: true,
+        onSelect: () => void actions.deleteRoute(id),
+      },
+    ];
+  }
+
   // --- object layers
   useRouteLayers(
     map,
@@ -173,34 +290,107 @@ export function MapView(): ReactNode {
         void actions.insertRouteVertex(id, index, lat, lon),
       onContextMenu: (id, x, y) => {
         void select({ kind: "route", id });
-        setMenu({
-          x,
-          y,
-          items: [
-            { label: "Fit Route to Screen", onSelect: () => fitRoute(id) },
-            {
-              label: "Reverse Route",
-              separatorBefore: true,
-              onSelect: () => void actions.reverseRoute(id),
-            },
-            {
-              label: "Duplicate Route",
-              onSelect: () => void actions.duplicateRoute(id),
-            },
-            {
-              label: "Delete Route",
-              danger: true,
-              separatorBefore: true,
-              onSelect: () => void actions.deleteRoute(id),
-            },
-          ],
-        });
+        setMenu({ x, y, items: routeMenuItems(id) });
       },
     },
     // Handles appear only when not drawing, so a draw click is never eaten by
     // a vertex that happens to be underneath.
     mode === "idle",
+    // The points the user placed, when this route was snapped. Non-empty makes
+    // those the handles instead of every road vertex — see useRouteLayers.
+    selected?.kind === "route"
+      ? (routeProvenance[selected.id]?.controlPoints ?? NO_CONTROL_POINTS)
+      : NO_CONTROL_POINTS,
   );
+
+  /*
+   * Shaping the selected snapped route (Phase 6): drag the line, drag or
+   * Alt-click its points, click to add a shaping point. Only while idle, so a
+   * drawing click is never taken as a shaping gesture.
+   */
+  const selectedRouteId = selected?.kind === "route" ? selected.id : null;
+  const selectedRoute =
+    selectedRouteId === null
+      ? null
+      : (visibleRoutes.find((r) => r.id === selectedRouteId) ?? null);
+  const selectedProvenance =
+    selectedRouteId === null ? null : (routeProvenance[selectedRouteId] ?? null);
+  const shapingBusy = useRoutingStore(
+    (s) => selectedRouteId !== null && s.busy[`route:${selectedRouteId}`] === true,
+  );
+  const shaping = useMemo(
+    () =>
+      selectedRoute === null || selectedProvenance === null
+        ? null
+        : shapingStateFrom(selectedRoute.points, selectedProvenance.controlPoints),
+    [selectedRoute, selectedProvenance],
+  );
+
+  useRouteShaping(map, {
+    active: mode === "idle" && shaping !== null && selectedRouteId !== null,
+    control: shaping?.control ?? NO_PLANNED,
+    legs: shaping?.legs ?? NO_LEGS,
+    colour: routeColour(selectedRoute?.colour ?? null),
+    live: routingStatus?.kind === "embedded",
+    busy: shapingBusy,
+    reversals: shaping?.reversals ?? NO_INDICES,
+    endpoints: true,
+    route: actions.routeSection,
+    onCommit: (edit, legs) =>
+      selectedRouteId === null
+        ? undefined
+        : actions.applyShapingEdit(selectedRouteId, edit, legs),
+    onError: (cause) => showToast(describeError(cause), "error"),
+    onContextMenu: (target, x, y) => {
+      if (selectedRouteId === null || shaping === null) return;
+      setMenu({
+        x,
+        y,
+        items:
+          target.type === "line"
+            ? [
+                legAlternativesItem(selectedRouteId, target.leg),
+                ...routeMenuItems(selectedRouteId).map((item, i) =>
+                  i === 0 ? { ...item, separatorBefore: true } : item,
+                ),
+              ]
+            : controlPointMenuItems(selectedRouteId, target.index, shaping.control),
+      });
+    },
+  });
+
+  /*
+   * Routes on offer for one leg of the selected saved route (Requirement 2).
+   * Dismissed when the selection moves elsewhere: a list of alternatives for
+   * a route no longer on screen would be a choice about nothing visible.
+   */
+  const legCandidates = useShapingStore((s) => s.legCandidates);
+  const legChoiceActive =
+    legCandidates !== null &&
+    legCandidates.routeId === selectedRouteId &&
+    (mode === "idle" || mode === "extendRoute");
+  useEffect(() => {
+    if (legCandidates !== null && legCandidates.routeId !== selectedRouteId) {
+      actions.dismissLegAlternatives();
+    }
+  }, [legCandidates, selectedRouteId]);
+  const legSummaries = useMemo(
+    () => candidateSummaries(legCandidates?.items ?? NO_CANDIDATES, settings.units),
+    [legCandidates?.items, settings.units],
+  );
+  useCandidateLayers(map, {
+    active: legChoiceActive,
+    candidates: legCandidates?.items ?? NO_CANDIDATES,
+    summaries: legSummaries,
+    selected: legCandidates?.selected ?? 0,
+    hovered: legCandidates?.hovered ?? null,
+    current: legCandidates?.current ?? null,
+    selectedColour: routeColour(selectedRoute?.colour ?? null),
+    escapeDismisses: true,
+    onSelect: (i) => useShapingStore.getState().select(i),
+    onHover: (i) => useShapingStore.getState().hover(i),
+    onDismiss: () => actions.dismissLegAlternatives(),
+  });
 
   useTrackLayers(
     map,
@@ -237,6 +427,13 @@ export function MapView(): ReactNode {
       },
     },
     { showPoints },
+  );
+
+  // Phase 10: points of interest found along a route, while the panel is open.
+  const poiHits = usePoiStore((s) => (s.scope === null ? null : (s.result?.hits ?? null)));
+  const poiFocus = usePoiStore((s) => s.focusedId);
+  usePoiLayer(map, visibility.pois === false ? NO_POI_HITS : (poiHits ?? NO_POI_HITS), poiFocus, (id) =>
+    usePoiStore.getState().focus(id),
   );
 
   useWaypointLayers(
@@ -284,12 +481,9 @@ export function MapView(): ReactNode {
     onFinish: () => {
       const editor = useEditorStore.getState();
       const tripId = editor.targetTripId;
-      const snap = editor.snapWhileDrawing;
       const points = editor.finish();
       if (tripId !== null && points.length > 0) {
-        // One call either way. It creates the route first and snaps second, so
-        // an unreachable provider costs the snap rather than the route.
-        void actions.createRouteFromDrawnPoints(tripId, points, snap);
+        void actions.createRouteFromDrawnPoints(tripId, points);
       }
     },
     onCancel: () => {
@@ -307,11 +501,67 @@ export function MapView(): ReactNode {
     routing: snapRouting,
     onAppend: (point) => actions.appendSnapPoint(point),
     onUndoLast: () => actions.undoLastSnapPoint(),
+    onUndo: () => actions.undoSnapDraft(),
     onFinish: () => void actions.finishSnapRouting(),
     onCancel: () => {
       actions.cancelSnapRouting();
       showToast("Snap routing cancelled — nothing was saved.");
     },
+  });
+
+  /*
+   * The tool's points are draggable, and its line can be dragged or clicked to
+   * add a shaping point, exactly as on a saved route (Requirement 5.4). The
+   * edits change the draft in memory; nothing is written until Enter.
+   */
+  const snapRoles = useSnapRoutingStore((s) => s.roles);
+  const snapCandidates = useSnapRoutingStore((s) => s.candidates);
+  const draftControl = useMemo(
+    () => snapControlPoints.map((point, i) => ({ point, role: snapRoles[i] ?? "via" })),
+    [snapControlPoints, snapRoles],
+  );
+  const draftLegs = useMemo(
+    () => draftLegShapes(snapControlPoints, snapLegs),
+    [snapControlPoints, snapLegs],
+  );
+  useRouteShaping(map, {
+    active: mode === "snapRoute" && snapControlPoints.length > 0,
+    control: draftControl,
+    legs: draftLegs,
+    colour: "#f59e0b",
+    live: routingStatus?.kind === "embedded",
+    busy: false,
+    endpoints: false,
+    route: actions.routeSection,
+    onCommit: (edit, legs) => actions.applySnapDraftEdit(edit, legs),
+    onError: (cause) => showToast(describeError(cause), "error"),
+  });
+
+  // The routes on offer for the newest leg (Requirement 1).
+  const draftSummaries = useMemo(
+    () => candidateSummaries(snapCandidates?.items ?? NO_CANDIDATES, settings.units),
+    [snapCandidates?.items, settings.units],
+  );
+  useCandidateLayers(map, {
+    active: mode === "snapRoute" && snapCandidates !== null,
+    candidates: snapCandidates?.items ?? NO_CANDIDATES,
+    summaries: draftSummaries,
+    selected: snapCandidates?.selected ?? 0,
+    hovered: snapCandidates?.hovered ?? null,
+    current: null,
+    selectedColour: "#f59e0b",
+    // Escape keeps its Phase 4 meaning here: it cancels the tool.
+    escapeDismisses: false,
+    onSelect: (i) => useSnapRoutingStore.getState().selectCandidate(i),
+    onHover: (i) => useSnapRoutingStore.getState().hoverCandidate(i),
+    onDismiss: () => useSnapRoutingStore.getState().clearCandidates(),
+  });
+
+  // --- extending a saved route from its end (Requirement 6.5)
+  useExtendRoute(map, {
+    active: mode === "extendRoute",
+    onAppend: (point) => void actions.extendRouteTo(point),
+    onFinish: () => void actions.stopExtendingRoute(),
   });
 
   // --- measure tool: creates nothing, so it has no undo entry
@@ -498,7 +748,10 @@ export function MapView(): ReactNode {
           break;
         }
         case "route:new":
-          actions.startDrawingRoute();
+          void actions.startDrawingRoute();
+          break;
+        case "route:newStraight":
+          actions.startStraightLineRoute();
           break;
         case "waypoint:new":
           actions.startPlacingWaypoint();
@@ -565,6 +818,10 @@ export function MapView(): ReactNode {
       {/* oxlint-disable-next-line react/refs */}
       <div ref={handle.containerRef} className="absolute inset-0" />
 
+      {/* Phase 10: postcode and place search, answered on this machine. */}
+      <SearchBox />
+      <PanelToggles />
+
       {dragOver && (
         <div className="pointer-events-none absolute inset-4 z-[700] flex items-center justify-center rounded-xl border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-surface)]/80">
           <p className="text-[14px] font-semibold text-[var(--color-text-primary)]">
@@ -594,55 +851,41 @@ export function MapView(): ReactNode {
           )}
 
           {/*
-            The snap toggle sits in the hint bar because that is where the user
-            is looking while drawing. It is only offered when a provider is
-            actually available: a control that looks functional and does
-            nothing is exactly what the honesty rule forbids.
+            Straight lines are a choice or a fallback, never silent (ADR 0018).
+            The fallback names its reason and offers the fix; the button is the
+            one interactive thing in a hint bar that otherwise lets clicks
+            through to the map.
           */}
-          {mode === "drawRoute" &&
-            (routingStatus?.available === true ? (
-              <button
-                type="button"
-                aria-pressed={snapWhileDrawing}
-                onClick={() =>
-                  useEditorStore
-                    .getState()
-                    .setSnapWhileDrawing(!snapWhileDrawing)
-                }
-                className={`ml-3 rounded border px-2 py-0.5 text-[11px] ${
-                  snapWhileDrawing
-                    ? "border-[var(--color-surface)] bg-[var(--color-surface)] font-semibold text-[var(--color-text-primary)]"
-                    : "border-[var(--color-surface)]/50 text-[var(--color-surface)]"
-                }`}
-                title={
-                  snapWhileDrawing
-                    ? "Points will be joined by road geometry when you finish"
-                    : "Points will be joined by straight lines"
-                }
-              >
-                {snapWhileDrawing
-                  ? "Snapping to roads"
-                  : "Straight lines — snap to roads"}
-              </button>
-            ) : (
+          {mode === "drawRoute" && straightBecause === "chosen" && (
+            <span className="pointer-events-none ml-2 opacity-70">
+              Straight lines — this route will not follow roads
+            </span>
+          )}
+          {mode === "drawRoute" && straightBecause !== "chosen" && (
+            <>
               <span className="pointer-events-none ml-2 opacity-70">
-                {/*
-                  The reason, not just the fact. "No routing service" was
-                  accurate when routing meant an external server; now the
-                  engine is built in and the usual cause is a missing map
-                  region, which is something the user can fix.
-                */}
                 {routingStatus?.reason === "no-map-data"
                   ? "Straight lines — no map region loaded yet"
                   : "Straight lines — road routing unavailable"}
               </span>
-            ))}
+              {routingStatus?.reason === "no-map-data" && (
+                <button
+                  type="button"
+                  onClick={() => actions.openRegionPicker()}
+                  className="pointer-events-auto ml-3 rounded border border-[var(--color-surface)]/60 px-2 py-0.5 text-[11px] text-[var(--color-surface)] hover:bg-[var(--color-surface)]/15"
+                >
+                  Add map regions…
+                </button>
+              )}
+            </>
+          )}
 
           {mode === "snapRoute" && (
             <span className="pointer-events-none">
-              Click to extend along the roads · <strong>Enter</strong> or
-              double-click to finish · <strong>Backspace</strong> removes the
-              last · <strong>Esc</strong> cancels
+              Click to extend along the roads · drag a point or the line to
+              reshape · <strong>Enter</strong> or double-click to finish ·{" "}
+              <strong>Backspace</strong> removes the last · <strong>⌘Z</strong>{" "}
+              undoes · <strong>Esc</strong> cancels
               {snapControlPoints.length > 0 && (
                 <>
                   {" · "}
@@ -650,6 +893,13 @@ export function MapView(): ReactNode {
                   {snapControlPoints.length === 1 ? "" : "s"}
                 </>
               )}
+            </span>
+          )}
+
+          {mode === "extendRoute" && (
+            <span className="pointer-events-none">
+              Click to extend the route along the roads · each point is one
+              undo step · <strong>Enter</strong> or <strong>Esc</strong> stops
             </span>
           )}
 
@@ -676,6 +926,40 @@ export function MapView(): ReactNode {
         The running total, kept separate from the hint bar so the numbers do not
         move as the hint text reflows.
       */}
+      {mode === "snapRoute" && snapCandidates !== null && (
+        <CandidateList
+          summaries={draftSummaries}
+          selected={snapCandidates.selected}
+          hovered={snapCandidates.hovered}
+          selectedColour="#f59e0b"
+          busy={false}
+          note="Click the next point, or press Enter, to use the selected route."
+          onSelect={(i) => useSnapRoutingStore.getState().selectCandidate(i)}
+          onHover={(i) => useSnapRoutingStore.getState().hoverCandidate(i)}
+        />
+      )}
+
+      {legChoiceActive && legCandidates !== null && (
+        <CandidateList
+          summaries={legSummaries}
+          selected={legCandidates.selected}
+          hovered={legCandidates.hovered}
+          selectedColour={routeColour(selectedRoute?.colour ?? null)}
+          busy={legCandidates.checking}
+          note={
+            legCandidates.checking
+              ? "Checking this route can be reproduced if the section is re-routed later…"
+              : "The dashed line is the section as it is now."
+          }
+          onSelect={(i) => useShapingStore.getState().select(i)}
+          onHover={(i) => useShapingStore.getState().hover(i)}
+          actions={{
+            onUse: () => void actions.chooseLegCandidate(),
+            onCancel: () => actions.dismissLegAlternatives(),
+          }}
+        />
+      )}
+
       {/*
         Live totals for the snap tool, in their own bar so the figures do not
         shift as the hint text reflows. The routing/failed states are reported
@@ -692,7 +976,8 @@ export function MapView(): ReactNode {
           </strong>{" "}
           along roads
           <span className="ml-2 text-[var(--color-text-secondary)]">
-            {snapLegs.length} of {snapControlPoints.length - 1} leg
+            {snapLegs.filter((leg) => leg !== null).length} of{" "}
+            {snapControlPoints.length - 1} leg
             {snapControlPoints.length === 2 ? "" : "s"} routed ·{" "}
             {snapPointCount(snapLegs).toLocaleString()} points
           </span>
@@ -706,9 +991,9 @@ export function MapView(): ReactNode {
               last leg failed — {snapError}
             </span>
           )}
-          {snapLegs.some((leg) => !leg.matched) && (
+          {snapLegs.some((leg) => leg !== null && !leg.matched) && (
             <span className="ml-2 text-[var(--color-danger)]">
-              {snapLegs.filter((leg) => !leg.matched).length} straight
+              {snapLegs.filter((leg) => leg !== null && !leg.matched).length} straight
             </span>
           )}
         </div>
@@ -773,50 +1058,6 @@ export function MapView(): ReactNode {
             −
           </button>
         </div>
-
-        {/*
-          The snap routing tool.
- 
-          Disabled rather than hidden when no provider is available, with the
-          reason in the tooltip. A tool that appears and disappears is harder to
-          understand than one that explains why it cannot run — and unlike the
-          in-draw snap toggle, which would be noise in the hint bar, a toolbar
-          slot that stays put is the thing a user goes looking for.
-        */}
-        <button
-          type="button"
-          aria-label="Snap routing"
-          aria-pressed={mode === "snapRoute"}
-          disabled={routingStatus !== null && !routingStatus.available}
-          title={
-            routingStatus === null || routingStatus.available
-              ? "Click points and follow the roads between them"
-              : (routingStatus.message ??
-                "Snap routing needs a routing service, configured in Settings.")
-          }
-          onClick={() => {
-            if (mode === "snapRoute") actions.cancelSnapRouting();
-            else void actions.startSnapRouting();
-          }}
-          className={`flex h-8 w-8 items-center justify-center rounded-md border text-[13px] shadow-md disabled:cursor-not-allowed disabled:opacity-45 ${
-            mode === "snapRoute"
-              ? "border-[var(--color-accent)] bg-[var(--color-surface)] text-[var(--color-accent)]"
-              : "border-[var(--color-border-subtle)] bg-[var(--color-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-sunken)]"
-          }`}
-        >
-          {/* A bending road between two pins. */}
-          <svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true">
-            <path
-              d="M5 17c0-4 9-3 9-7s-5-3-5-3"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-            <circle cx="5" cy="17" r="1.8" fill="currentColor" />
-            <circle cx="9" cy="4" r="1.8" fill="currentColor" />
-          </svg>
-        </button>
 
         <button
           type="button"
@@ -953,6 +1194,7 @@ export function MapView(): ReactNode {
                   ["routes", "Routes"],
                   ["tracks", "Tracks"],
                   ["waypoints", "Waypoints"],
+                  ["pois", "Points of interest"],
                 ] as const
               ).map(([key, label]) => (
                 <label
@@ -961,7 +1203,7 @@ export function MapView(): ReactNode {
                 >
                   <input
                     type="checkbox"
-                    checked={visibility[key]}
+                    checked={visibility[key] !== false}
                     onChange={(event) =>
                       void useSettingsStore.getState().set({
                         key: "layerVisibility",
@@ -998,8 +1240,9 @@ export function MapView(): ReactNode {
 
       {selected?.kind === "route" && mode === "idle" && (
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-[500] -translate-x-1/2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[11px] text-[var(--color-text-secondary)] shadow-md">
-          Drag a handle to move a point · click the line to insert · Alt-click a
-          handle to delete
+          {shaping !== null
+            ? "Drag a point or the line to reshape along the roads · click the line to add a shaping point · Alt-click a point to remove it · right-click the line for alternatives"
+            : "Drag a handle to move a point · click the line to insert · Alt-click a handle to delete"}
         </div>
       )}
 
@@ -1016,7 +1259,7 @@ export function MapView(): ReactNode {
       {!providerUsable && (
         <div
           role="status"
-          className="absolute top-3 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
+          className="absolute top-14 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
         >
           The custom tile source has no URL yet, so no map tiles are being
           drawn. Add one in Settings, or pick a different base map.
@@ -1026,7 +1269,7 @@ export function MapView(): ReactNode {
       {offline && providerUsable && (
         <div
           role="status"
-          className="absolute top-3 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
+          className="absolute top-14 left-3 z-[500] max-w-xs rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-3 py-1.5 text-[12px] text-[var(--color-text-secondary)] shadow-md"
         >
           Map tiles unavailable — your trips are still fully editable offline.
         </div>

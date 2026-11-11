@@ -1,0 +1,376 @@
+{
+  "$comment": "Test geography for TrailRT. See places.ts for what each field is for and why these points were chosen. Coordinates are decimal degrees, WGS 84; elevations are metres. Town positions are published town-centre coordinates; via points were resolved against OpenStreetMap through Nominatim rather than estimated. Nothing here is recorded GPS data.",
+  "towns": {
+    "buxton": {
+      "name": "Buxton",
+      "county": "Derbyshire",
+      "lat": 53.2588,
+      "lon": -1.911,
+      "eleM": 300
+    },
+    "macclesfield": {
+      "name": "Macclesfield",
+      "county": "Cheshire",
+      "lat": 53.2602,
+      "lon": -2.1256,
+      "eleM": 130
+    },
+    "leek": {
+      "name": "Leek",
+      "county": "Staffordshire",
+      "lat": 53.1043,
+      "lon": -2.0221,
+      "eleM": 170
+    },
+    "ashbourne": {
+      "name": "Ashbourne",
+      "county": "Derbyshire",
+      "lat": 53.0177,
+      "lon": -1.7317,
+      "eleM": 130
+    }
+  },
+  "legs": [
+    {
+      "from": "buxton",
+      "to": "macclesfield",
+      "label": "Cat and Fiddle",
+      "roads": [
+        "A53",
+        "A537"
+      ],
+      "via": [
+        {
+          "name": "Burbage",
+          "lat": 53.2533,
+          "lon": -1.9343,
+          "eleM": 330
+        },
+        {
+          "name": "Cat and Fiddle Road",
+          "lat": 53.2578,
+          "lon": -2.0327,
+          "eleM": 500
+        },
+        {
+          "name": "Walker Barn",
+          "lat": 53.261,
+          "lon": -2.0675,
+          "eleM": 330
+        }
+      ]
+    },
+    {
+      "from": "macclesfield",
+      "to": "leek",
+      "label": "Macclesfield to Leek",
+      "roads": [
+        "A523"
+      ],
+      "via": [
+        {
+          "name": "Sutton Lane Ends",
+          "lat": 53.2371,
+          "lon": -2.109,
+          "eleM": 170
+        },
+        {
+          "name": "Rushton Spencer",
+          "lat": 53.1597,
+          "lon": -2.0976,
+          "eleM": 190
+        },
+        {
+          "name": "Rudyard",
+          "lat": 53.118,
+          "lon": -2.0676,
+          "eleM": 200
+        }
+      ]
+    },
+    {
+      "from": "leek",
+      "to": "ashbourne",
+      "label": "Leek to Ashbourne",
+      "roads": [
+        "A523",
+        "A52"
+      ],
+      "via": [
+        {
+          "name": "Bottom House",
+          "lat": 53.0721,
+          "lon": -1.9405,
+          "eleM": 290
+        },
+        {
+          "name": "Waterhouses",
+          "lat": 53.0495,
+          "lon": -1.8762,
+          "eleM": 220
+        },
+        {
+          "name": "Mayfield",
+          "lat": 53.0063,
+          "lon": -1.7732,
+          "eleM": 120
+        }
+      ]
+    },
+    {
+      "from": "ashbourne",
+      "to": "buxton",
+      "label": "Ashbourne to Buxton",
+      "roads": [
+        "A515"
+      ],
+      "via": [
+        {
+          "name": "Fenny Bentley",
+          "lat": 53.0478,
+          "lon": -1.7403,
+          "eleM": 150
+        },
+        {
+          "name": "Alsop en le Dale",
+          "lat": 53.0935,
+          "lon": -1.7625,
+          "eleM": 250
+        },
+        {
+          "name": "Newhaven",
+          "lat": 53.1393,
+          "lon": -1.7535,
+          "eleM": 320
+        },
+        {
+          "name": "Brierlow Bar",
+          "lat": 53.225,
+          "lon": -1.8722,
+          "eleM": 370
+        }
+      ]
+    }
+  ],
+  "viewports": {
+    "buxton": {
+      "minLat": 53.24,
+      "minLon": -1.94,
+      "maxLat": 53.28,
+      "maxLon": -1.88
+    },
+    "loop": {
+      "minLat": 53.0,
+      "minLon": -2.16,
+      "maxLat": 53.28,
+      "maxLon": -1.7
+    },
+    "peakDistrict": {
+      "minLat": 53.0,
+      "minLon": -2.2,
+      "maxLat": 53.5,
+      "maxLon": -1.5
+    }
+  },
+  "traces": {
+    "$comment": "Points sampled from real snapped routes, so they lie on the carriageway. Map matching needs a dense on-road trace and rejects sparse waypoints with error 444 — see places.ts. a515 stays inside Derbyshire; catAndFiddle crosses into Cheshire.",
+    "a515": [
+      {
+        "lat": 53.25877,
+        "lon": -1.91102
+      },
+      {
+        "lat": 53.25833,
+        "lon": -1.91091
+      },
+      {
+        "lat": 53.25763,
+        "lon": -1.9129
+      },
+      {
+        "lat": 53.25623,
+        "lon": -1.91423
+      },
+      {
+        "lat": 53.25487,
+        "lon": -1.91536
+      },
+      {
+        "lat": 53.25412,
+        "lon": -1.91528
+      },
+      {
+        "lat": 53.25255,
+        "lon": -1.91326
+      },
+      {
+        "lat": 53.2506,
+        "lon": -1.91119
+      },
+      {
+        "lat": 53.2482,
+        "lon": -1.90949
+      },
+      {
+        "lat": 53.24784,
+        "lon": -1.90556
+      },
+      {
+        "lat": 53.24462,
+        "lon": -1.90163
+      },
+      {
+        "lat": 53.22759,
+        "lon": -1.87547
+      },
+      {
+        "lat": 53.22412,
+        "lon": -1.86738
+      },
+      {
+        "lat": 53.21505,
+        "lon": -1.85138
+      },
+      {
+        "lat": 53.20579,
+        "lon": -1.83302
+      },
+      {
+        "lat": 53.20338,
+        "lon": -1.82203
+      },
+      {
+        "lat": 53.19018,
+        "lon": -1.80442
+      },
+      {
+        "lat": 53.17541,
+        "lon": -1.78507
+      },
+      {
+        "lat": 53.1574,
+        "lon": -1.77196
+      },
+      {
+        "lat": 53.14178,
+        "lon": -1.75661
+      }
+    ],
+    "catAndFiddle": [
+      {
+        "lat": 53.25877,
+        "lon": -1.91102
+      },
+      {
+        "lat": 53.25833,
+        "lon": -1.91202
+      },
+      {
+        "lat": 53.25975,
+        "lon": -1.9146
+      },
+      {
+        "lat": 53.25847,
+        "lon": -1.91758
+      },
+      {
+        "lat": 53.25702,
+        "lon": -1.92606
+      },
+      {
+        "lat": 53.25229,
+        "lon": -1.93595
+      },
+      {
+        "lat": 53.24695,
+        "lon": -1.93928
+      },
+      {
+        "lat": 53.24598,
+        "lon": -1.94713
+      },
+      {
+        "lat": 53.24186,
+        "lon": -1.95196
+      },
+      {
+        "lat": 53.23881,
+        "lon": -1.95748
+      },
+      {
+        "lat": 53.2358,
+        "lon": -1.97397
+      },
+      {
+        "lat": 53.24389,
+        "lon": -1.99976
+      },
+      {
+        "lat": 53.2462,
+        "lon": -2.0045
+      },
+      {
+        "lat": 53.25075,
+        "lon": -2.00695
+      },
+      {
+        "lat": 53.25077,
+        "lon": -2.01248
+      },
+      {
+        "lat": 53.25368,
+        "lon": -2.01311
+      },
+      {
+        "lat": 53.25868,
+        "lon": -2.01554
+      },
+      {
+        "lat": 53.25848,
+        "lon": -2.02026
+      },
+      {
+        "lat": 53.25674,
+        "lon": -2.0237
+      },
+      {
+        "lat": 53.2582,
+        "lon": -2.03179
+      }
+    ]
+  },
+  "referenceRoads": {
+    "$comment": "Roads beyond the square, used only to calibrate and check the twistiness score (ADR 0018). Endpoints resolved against OpenStreetMap through Nominatim on 2026-11-09, not estimated. Each carries a check the live test asserts, so a route that took a different road fails rather than passing on the wrong geometry.",
+    "snakePass": {
+      "label": "A57 Snake Pass",
+      "from": {
+        "name": "Glossop",
+        "lat": 53.4433552,
+        "lon": -1.9499173
+      },
+      "to": {
+        "name": "Ladybower Inn",
+        "lat": 53.3751937,
+        "lon": -1.6938089
+      },
+      "passes": {
+        "name": "Snake Pass Inn bus stop, on the A57",
+        "lat": 53.4115399,
+        "lon": -1.8324525
+      }
+    },
+    "m6": {
+      "label": "M6, Keele to Sandbach services",
+      "from": {
+        "name": "Keele Services",
+        "lat": 52.9939787,
+        "lon": -2.2902022
+      },
+      "to": {
+        "name": "Sandbach Services",
+        "lat": 53.1394435,
+        "lon": -2.3375148
+      }
+    }
+  }
+}
