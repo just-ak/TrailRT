@@ -20,7 +20,9 @@ instead.
 | [`phase-8-windy-roads-routing/`](phase-8-windy-roads-routing/)         | Investigation complete; requirements written. Next to build.                 |
 | [`phase-9-garmin-compatibility/`](phase-9-garmin-compatibility/)       | Requirements only. Mostly investigation deliverables.                        |
 | [`phase-10-road-trip-planning/`](phase-10-road-trip-planning/)         | Requirements, design and tasks. **Complete**, including owner feedback (Reqs 14–17). |
-| [`phase-11-geotagged-photos/`](phase-11-geotagged-photos/)             | Requirements only. Photos from a linked folder, placed by their own GPS data. |
+| [`phase-11-geotagged-photos/`](phase-11-geotagged-photos/)             | Requirements, design and tasks, revised with owner feedback. **Next to build**, ahead of Phases 8 and 9 at the owner's request. |
+| [`phase-12-folder-gpx-sync/`](phase-12-folder-gpx-sync/)               | Requirements only. GPX kept in step with a linked folder.                    |
+| [`phase-13-media-flythroughs-sharing/`](phase-13-media-flythroughs-sharing/) | Requirements only. Video, flythroughs and sharing; mostly investigation. |
 
 Only the phases already built, and the next one, have a design and task
 breakdown. That is deliberate: section 20 of the source specification requires
@@ -101,6 +103,39 @@ ahead of Phases 8 and 9 without rework. Whether photos with no location should
 be placed by matching their time against a recorded track is left as an open
 question for the owner.
 
+The owner asked for it to be built next, so on 11 November 2026 it was designed
+ahead of Phases 8 and 9, as Phase 10 was. The design measured its choices
+before making them: `exifr`'s file reader fails on Node 26 and ExifTool needs
+the system Perl, so it reads EXIF with a small in-house reader for JPEG and
+HEIC. Quick Look makes the thumbnails and applies orientation, and they reach
+the renderer as bytes, so the CSP does not change. ADR 0020 records the
+decisions.
+
+The owner's feedback on that design, on 12 November 2026, widened it. Folders
+are linked per trip, with every trip's photos viewable together. The linked
+folder is **the trip's folder on disk**: the planned routes, the tracks recorded
+on the trip, and its photos, kept together where the user controls them. The
+scale is the owner's own library, about 40,000 photos and hundreds of GPX files
+over many years. Phase 11 was revised to keep one general index of each folder,
+with fingerprints so a moved photo keeps its links, and it now records the GPX
+and video files it does not read yet. ADR 0020 was revised with it, and fixes
+the rule for any later writer: TrailRT writes only files it created, never
+overwrites a file that changed since it last saw it, and never deletes outright.
+
+Two phases follow from that, with requirements only:
+
+- **Phase 12** keeps GPX files in step with the folder in both directions,
+  with a hash store so unchanged files are never reread. Tracks the user
+  brings are read in and never written. Routes planned in TrailRT are written
+  out as files TrailRT owns. A change on both sides is a conflict for the user,
+  never settled silently. Placing unlocated photos from a track by time moved
+  here from Phase 11.
+- **Phase 13** adds video to linked folders, flythrough videos of a route over
+  the terrain with the trip's photos, and sharing through the macOS share
+  sheet. TrailRT holds no social network accounts. It is mostly investigation:
+  a 3D renderer, which tile and terrain sources may be used for a published
+  video, and which encoder.
+
 ## Supporting documents
 
 - [`../../docs/adr/`](../../docs/adr/) — architectural decisions, including the
@@ -137,3 +172,4 @@ question for the owner.
 | 0017 | Per-leg alternatives, kept as shaping points; renumbering |
 | 0018 | UK county regions merged; terrain; twistiness; UK limits |
 | 0019 | Road trip itineraries; offline places, POIs and postcodes |
+| 0020 | Linked photo folders; in-house EXIF reader; Quick Look thumbnails |

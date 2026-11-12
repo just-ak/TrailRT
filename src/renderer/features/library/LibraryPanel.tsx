@@ -24,6 +24,15 @@ import {
 } from "../../stores/selectionStore";
 import { useUiStore } from "../../stores/uiStore";
 import { TreeRow, type ClickModifiers } from "./TreeRow";
+import { PhotoViewFilters } from "../photos/PhotoViewFilters";
+import { usePhotoStore } from "../../stores/photoStore";
+import {
+  askToUnlink,
+  linkFolderToTrip,
+  relink as relinkFolder,
+  rescan as rescanFolder,
+  showPhotos,
+} from "../photos/photoActions";
 import {
   allSelectable,
   describeSelection,
@@ -118,6 +127,8 @@ export function LibraryPanel(): ReactNode {
   } = useLibraryStore();
 
   const expanded = useLibraryStore((s) => s.expanded);
+  const photoFilter = useLibraryStore((s) => s.photoFilter);
+  const allTripPhotos = usePhotoStore((s) => s.allTrips);
 
   const selected = useSelectionStore((s) => s.selected);
   const selectedKeys = useSelectionStore((s) => s.selectedKeys);
@@ -201,6 +212,13 @@ export function LibraryPanel(): ReactNode {
    */
   const handleRowClick = useCallback(
     (node: TreeNode, modifiers: ClickModifiers): void => {
+      // Phase 11: the Photos view itself is selectable. It puts the map into
+      // all-trips mode: every trip's photos, and no one trip (design §8.2).
+      if (node.kind === "view" && node.viewId === "photos") {
+        setFocusPath(node.id);
+        void select(null).then(() => usePhotoStore.getState().setAllTrips(true));
+        return;
+      }
       const ref = node.ref;
       if (ref === undefined) return;
 
@@ -615,6 +633,11 @@ export function LibraryPanel(): ReactNode {
           onSelect: () => actions.startPlacingWaypoint(),
         },
         {
+          // Phase 11. Named for the folder, not photos (design §4.1).
+          label: "Link Folder…",
+          onSelect: () => void linkFolderToTrip(ref.id, node.name),
+        },
+        {
           label: "Rename…",
           separatorBefore: true,
           onSelect: () => setRenamingId(node.id),
@@ -720,6 +743,20 @@ export function LibraryPanel(): ReactNode {
           // naming what cannot be undone is the same one a batch shows.
           onSelect: () =>
             void confirmBatchDelete([{ kind: "track", id: ref.id }]),
+        },
+      ];
+    }
+
+    if (ref?.kind === "linkedFolder") {
+      return [
+        { label: "Show Photos", onSelect: () => showPhotos(ref.id) },
+        { label: "Rescan", onSelect: () => void rescanFolder(ref.id) },
+        { label: "Relink…", onSelect: () => void relinkFolder(ref.id) },
+        {
+          label: "Unlink…",
+          danger: true,
+          separatorBefore: true,
+          onSelect: () => askToUnlink(ref.id, node.name),
         },
       ];
     }
@@ -900,19 +937,25 @@ export function LibraryPanel(): ReactNode {
    * range a Shift-click selects is measured over this list, so rendering from
    * a second traversal would be an invitation for the two to disagree.
    */
-  const renderedRows = rows.map((row) => {
+  const photoFilterActive = photoFilter.year !== undefined || photoFilter.tripId !== undefined;
+
+  const renderedRows = rows.flatMap((row) => {
     const nodeKey = row.ref === null ? null : refKey(row.ref);
     const inSelection = nodeKey !== null && selectedKeys.has(nodeKey);
+    // Phase 11: the Photos view keeps its chevron while a filter is on, so a
+    // filter that matches nothing can still be changed back.
+    const isPhotosView = row.node.kind === "view" && row.node.viewId === "photos";
+    const hasChildren = row.node.children.length > 0 || (isPhotosView && photoFilterActive);
 
-    return (
+    const treeRow = (
       <TreeRow
         key={row.path}
         node={row.node}
         depth={row.depth}
-        selected={nodeKey !== null && nodeKey === selectedKey}
+        selected={(nodeKey !== null && nodeKey === selectedKey) || (isPhotosView && allTripPhotos)}
         inSelection={inSelection}
         expanded={expanded.has(row.path)}
-        hasChildren={row.node.children.length > 0}
+        hasChildren={hasChildren}
         renaming={renamingId === row.path}
         dropTarget={dropTargetId === row.path}
         focusable={tabStop === row.path}
@@ -946,6 +989,9 @@ export function LibraryPanel(): ReactNode {
         onDrop={onDrop(row.node)}
       />
     );
+    return isPhotosView && expanded.has(row.path) && hasChildren
+      ? [treeRow, <PhotoViewFilters key={`${row.path}/filters`} depth={row.depth} />]
+      : [treeRow];
   });
 
   const searching = search.trim().length > 0;

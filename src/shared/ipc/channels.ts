@@ -47,6 +47,33 @@ export const CHANNELS = {
     move: 'routes:move',
     delete: 'routes:delete',
   },
+  /**
+   * Phase 11: folders on disk linked to a trip. Named for folders, not photos,
+   * because Phase 12 syncs GPX through the same links.
+   */
+  linkedFolders: {
+    /** Opens the native chooser; returns a token, never a path to send back. */
+    chooseFolder: 'linkedFolders:chooseFolder',
+    link: 'linkedFolders:link',
+    unlink: 'linkedFolders:unlink',
+    /** Opens the chooser for a folder that has moved. */
+    relink: 'linkedFolders:relink',
+    setIncludeSubfolders: 'linkedFolders:setIncludeSubfolders',
+    rescan: 'linkedFolders:rescan',
+    cancelScan: 'linkedFolders:cancelScan',
+    list: 'linkedFolders:list',
+    get: 'linkedFolders:get',
+  },
+  /** Phase 11: photos in linked folders, always by id. */
+  photos: {
+    list: 'photos:list',
+    mapPoints: 'photos:mapPoints',
+    years: 'photos:years',
+    get: 'photos:get',
+    thumbnail: 'photos:thumbnail',
+    open: 'photos:open',
+    reveal: 'photos:reveal',
+  },
   /** Phase 10: postcode and place search, answered on this machine. */
   search: {
     query: 'search:query',
@@ -263,6 +290,10 @@ export const EVENTS = {
   regionJobProgress: 'event:regionJobProgress',
   /** Phase 10: the postcode download. */
   postcodeProgress: 'event:postcodeProgress',
+  /** Phase 11: a linked folder's scan, at most every 250 ms. */
+  linkedFolderScanProgress: 'event:linkedFolderScanProgress',
+  /** Phase 11: a folder's index or state changed; reload its counts and photos. */
+  linkedFoldersChanged: 'event:linkedFoldersChanged',
 } as const;
 
 /**
@@ -298,6 +329,8 @@ export const MENU_ACTIONS = [
   'export:copy',
   'import:open',
   'export:open',
+  /** Phase 11: links a folder on disk to the selected trip. */
+  'trip:linkFolder',
 ] as const;
 
 export type MenuAction = (typeof MENU_ACTIONS)[number];

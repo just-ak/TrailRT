@@ -51,7 +51,7 @@ export interface TripWithCounts extends Trip {
  * selectable until Phases 2 and 3, but the shape is fixed now so the properties
  * panel and map do not need reworking when they arrive.
  */
-export type ObjectKind = 'folder' | 'trip' | 'route' | 'track' | 'waypoint';
+export type ObjectKind = 'folder' | 'trip' | 'route' | 'track' | 'waypoint' | 'linkedFolder';
 
 export interface ObjectRef {
   kind: ObjectKind;
@@ -79,13 +79,17 @@ export type TreeNodeKind =
    * plan"), or a plan step with no object of its own (a ferry). Never
    * selectable: it has no `ref`.
    */
-  | 'group';
+  | 'group'
+  /** Phase 11: a folder on disk linked to a trip. Selectable; never moved by drag. */
+  | 'linkedFolder';
 
 export type ViewId =
   | 'trips'
   | 'routes'
   | 'tracks'
   | 'waypoints'
+  /** Phase 11: every linked folder across the visible trips. */
+  | 'photos'
   | 'imported'
   | 'recent';
 
@@ -114,6 +118,8 @@ export interface TreeNode {
   defaultExpanded?: boolean;
   /** Phase 10: a glyph for a `group` row, which has no object kind to show. */
   glyph?: string;
+  /** Phase 11: a longer explanation, shown when the row is hovered. */
+  hint?: string;
   children: TreeNode[];
 }
 
@@ -186,6 +192,11 @@ export interface AppSettings {
   ukDefaultSpeedLimits: boolean;
   showScaleBar: boolean;
   layerVisibility: LayerVisibility;
+  /**
+   * Phase 11: photos in a folder that is disconnected or denied are drawn
+   * dashed and faded, or not at all. Never drawn like available ones.
+   */
+  photoUnavailable: 'show' | 'hide';
   backupIntervalHours: number;
   backupRetention: number;
   /** Used for route duration estimates. Nothing is estimated without it. */
@@ -211,6 +222,8 @@ export interface LayerVisibility {
    * settings saved before Phase 10 have no such key; absent means shown.
    */
   pois?: boolean;
+  /** Phase 11: photos from linked folders. Absent means shown. */
+  photos?: boolean;
 }
 
 // ------------------------------------------------- Phase 2: routes, waypoints
@@ -224,10 +237,15 @@ export type GeometrySource = 'user' | 'import';
  * describing a real place recorded in OpenStreetMap, with its provenance in
  * the waypoint's metadata.
  */
-export type WaypointSource = GeometrySource | 'poi';
+export type WaypointSource = GeometrySource | 'poi' | 'photo';
 
+/**
+ * `photo` is a waypoint made from a linked photo's geotag (Phase 11
+ * Requirement 7): an ordinary waypoint, with the photo it came from recorded
+ * in its metadata as `photo: { folderId, relativePath, fingerprint }`.
+ */
 export function isWaypointSource(value: unknown): value is WaypointSource {
-  return value === 'user' || value === 'import' || value === 'poi';
+  return value === 'user' || value === 'import' || value === 'poi' || value === 'photo';
 }
 
 export interface RoutePoint {

@@ -8,6 +8,7 @@ import type {
   ThemePreference,
 } from '@shared/domain/types';
 import type { StagedImport } from '@shared/ipc/api';
+import type { ChosenFolder } from '@shared/domain/linkedFolders';
 import type { ExportScopeRequest } from '@shared/ipc/schemas';
 import { api, callOr } from '../lib/client';
 
@@ -45,12 +46,20 @@ export type DialogKind =
   | { kind: 'import'; staged: StagedImport[] }
   | { kind: 'export'; scope: ExportScopeRequest }
   /** Picks a downloadable map region from the visible map area. */
-  | { kind: 'regionPicker' };
+  | { kind: 'regionPicker' }
+  /** Phase 11: confirms a folder the user chose, with Include subfolders. */
+  | { kind: 'linkFolder'; tripName: string; chosen: ChosenFolder }
+  /** Phase 11: unlinking forgets the folder; its files are untouched. */
+  | { kind: 'unlinkFolder'; folderId: string; name: string };
 
 /** What a POI search runs along. */
 export type PoiScope = { kind: 'route'; routeId: string } | { kind: 'itinerary'; tripId: string };
 
-export type PlanDrawer = { kind: 'calendar'; tripId: string } | { kind: 'poi'; scope: PoiScope };
+export type PlanDrawer =
+  | { kind: 'calendar'; tripId: string }
+  | { kind: 'poi'; scope: PoiScope }
+  /** Phase 11: one linked folder's photos (design §8.3). */
+  | { kind: 'photos'; folderId: string };
 
 interface UiState {
   layout: PanelLayout;
@@ -115,6 +124,7 @@ interface UiState {
   setHighlightedPoints(indices: readonly number[]): void;
   openCalendar(tripId: string): void;
   openPoiPanel(scope: PoiScope): void;
+  openPhotoList(folderId: string): void;
   closePlanDrawer(): void;
   isDark(): boolean;
 }
@@ -197,6 +207,10 @@ export const useUiStore = create<UiState>((set, get) => ({
   },
   openPoiPanel: (scope) => {
     set({ planDrawer: { kind: 'poi', scope }, profile: null, pointTable: null, highlightedPoints: [] });
+    if (get().layout.drawerVisible === false) get().setLayout({ drawerVisible: true });
+  },
+  openPhotoList: (folderId) => {
+    set({ planDrawer: { kind: 'photos', folderId }, profile: null, pointTable: null, highlightedPoints: [] });
     if (get().layout.drawerVisible === false) get().setLayout({ drawerVisible: true });
   },
   closePlanDrawer: () => set({ planDrawer: null }),

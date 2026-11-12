@@ -26,6 +26,16 @@ import type {
   SkippedItem,
 } from '../io/types';
 import type { Itinerary, ItineraryStop, ItineraryView } from '../domain/itinerary';
+import type {
+  ChosenFolder,
+  LinkedFolderSummary,
+  Photo,
+  PhotoDetails,
+  PhotoMapPoints,
+  PhotoThumbnail,
+  PhotoYears,
+  ScanProgress,
+} from '../domain/linkedFolders';
 import type { SpeedDistribution } from '../geo/speedBands';
 import type { SearchOutcome, SearchStatus } from '../search/PlaceSearchProvider';
 import type { AlongResult, DetourEstimate, PlaceDataState, Poi } from '../poi/PoiProvider';
@@ -175,6 +185,35 @@ export interface TrailRtApi {
     listing(): Promise<Result<PostcodeRelease>>;
     update(): Promise<Result<PostcodeRelease>>;
     cancel(): Promise<Result<null>>;
+  };
+  /**
+   * Phase 11: folders on disk linked to a trip (design §4 and §7.1). Every
+   * mutation is one undo step. Choosing and relinking open the native chooser
+   * in the main process and resolve to `null` when it is cancelled.
+   */
+  linkedFolders: {
+    chooseFolder(req: Req<typeof S.linkedFolderChooseRequest>): Promise<Result<ChosenFolder | null>>;
+    link(req: Req<typeof S.linkedFolderLinkRequest>): Promise<Result<LinkedFolderSummary>>;
+    unlink(req: Req<typeof S.linkedFolderIdRequest>): Promise<Result<{ id: string }>>;
+    relink(req: Req<typeof S.linkedFolderIdRequest>): Promise<Result<LinkedFolderSummary | null>>;
+    setIncludeSubfolders(req: Req<typeof S.linkedFolderSetIncludeSubfoldersRequest>): Promise<Result<LinkedFolderSummary>>;
+    rescan(req: Req<typeof S.linkedFolderIdRequest>): Promise<Result<true>>;
+    cancelScan(req: Req<typeof S.linkedFolderIdRequest>): Promise<Result<true>>;
+    list(req: Req<typeof S.linkedFolderListRequest>): Promise<Result<LinkedFolderSummary[]>>;
+    get(req: Req<typeof S.linkedFolderIdRequest>): Promise<Result<LinkedFolderSummary>>;
+  };
+  /** Phase 11: photos, always named by id. Nothing here makes a network request. */
+  photos: {
+    list(req: Req<typeof S.photoListRequest>): Promise<Result<Photo[]>>;
+    mapPoints(req: Req<typeof S.photoMapPointsRequest>): Promise<Result<PhotoMapPoints>>;
+    years(req: Req<typeof S.photoYearsRequest>): Promise<Result<PhotoYears>>;
+    get(req: Req<typeof S.photoIdRequest>): Promise<Result<PhotoDetails>>;
+    /** JPEG bytes, made on demand by Quick Look. Wrap in a `Blob` for a `blob:` URL. */
+    thumbnail(req: Req<typeof S.photoIdRequest>): Promise<Result<PhotoThumbnail>>;
+    /** Opens the photo in the default app. */
+    open(req: Req<typeof S.photoIdRequest>): Promise<Result<true>>;
+    /** Shows the photo in Finder. */
+    reveal(req: Req<typeof S.photoIdRequest>): Promise<Result<true>>;
   };
   /** Phase 10: a trip's dated plan. `get` resolves to null for a trip without one. */
   itinerary: {
@@ -451,6 +490,10 @@ export interface TrailRtApi {
       listener: (progress: RegionJobProgress) => void,
     ): () => void;
     onPostcodeProgress(listener: (progress: PostcodeProgress) => void): () => void;
+    /** Phase 11: a linked folder's scan. */
+    onLinkedFolderScanProgress(listener: (progress: ScanProgress) => void): () => void;
+    /** Phase 11: reload this folder's counts and photos. */
+    onLinkedFoldersChanged(listener: (change: { folderId: string }) => void): () => void;
   };
 }
 

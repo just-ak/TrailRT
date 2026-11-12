@@ -11,8 +11,19 @@ Generated binary and bulk fixtures are not committed. Run:
 npm run fixtures
 ```
 
-to produce `generated/` (KMZ, FIT, the Peak District loop as GPX, and a large
-GPX). The generator is `scripts/generate-fixtures.mjs`.
+to produce `generated/` (KMZ, FIT, the Peak District loop as GPX, a large
+GPX, and the Phase 11 photo folder tree). The generator is
+`scripts/generate-fixtures.mjs`.
+
+### Photos (Phase 11)
+
+`generated/photos/` is a linked-folder tree of JPEG and HEIC photos, with a
+symbolic link out to `generated/photos-outside/`. Its contents and what each
+file proves are listed in the Phase 11 design, §13.1. Base images are made by
+`sips` from a generated BMP. EXIF is written by `photos/exifWrite.ts`, which
+tests also import as `@fixtures/photos/exifWrite`. Every position is a town in
+`places.json`; none is recorded GPS data. The HEIC files come from `sips`, the
+same ImageIO encoder an iPhone uses, so the photo fixtures need macOS.
 
 ## The test geography: the Buxton square
 

@@ -94,6 +94,14 @@ test.describe('security posture', () => {
       // Phase 10. A trip's dated plan.
       'itinerary',
       'library',
+      // Phase 11. Folders on disk linked to a trip. The chooser opens in the
+      // main process; the renderer gets a token and a path for display only,
+      // and never sends a path back.
+      'linkedFolders',
+      // Phase 11. Photos in linked folders, always named by index id. Open,
+      // Show in Finder and thumbnails act only on a path the main process
+      // resolved and checked. Nothing here touches the network.
+      'photos',
       // Phase 10. Points of interest from local place data. Its road-detour
       // estimate goes through the routing provider, under routing's consent.
       'places',
@@ -230,7 +238,7 @@ test.describe('library tree', () => {
   test('is rooted at My Collection with the specified branches', async () => {
     const { page } = harness;
     await expect(page.getByRole('treeitem', { name: /My Collection/ })).toBeVisible();
-    for (const branch of ['Trips', 'Routes', 'Tracks', 'Waypoints', 'Imported Data', 'Recently Used']) {
+    for (const branch of ['Trips', 'Routes', 'Tracks', 'Waypoints', 'Photos', 'Imported Data', 'Recently Used']) {
       await expect(
         page.getByRole('treeitem', { name: new RegExp(branch) }),
       ).toBeVisible();
@@ -246,7 +254,7 @@ test.describe('library tree', () => {
     // Everything else is implemented as of Phase 3 and must not claim
     // otherwise. Tracks and Imported Data moved into this list with the
     // import pipeline.
-    for (const branch of ['Routes', 'Tracks', 'Waypoints', 'Imported Data']) {
+    for (const branch of ['Routes', 'Tracks', 'Waypoints', 'Photos', 'Imported Data']) {
       await expect(
         harness.page.getByRole('treeitem', { name: branch, exact: true }),
       ).not.toContainText('later phase');

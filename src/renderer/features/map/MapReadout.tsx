@@ -30,7 +30,8 @@ export function MapReadout({
   if (!showScaleBar && cursor === null) return null;
 
   return (
-    <div className="pointer-events-none absolute bottom-3 left-3 z-[500] flex flex-col items-start gap-1.5">
+    // Placed by MapCornerStack (Phase 11 design §10.1), not by itself.
+    <div className="pointer-events-none flex shrink-0 flex-col items-start gap-1.5">
       {showScaleBar && scale !== null && (
         <div
           className="rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)]/90 px-2 py-1 shadow-md"

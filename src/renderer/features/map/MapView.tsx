@@ -53,8 +53,14 @@ import { useSnapRouting } from "./useSnapRouting";
 import { useTrackLayers } from "./useTrackLayers";
 import { useWaypointLayers } from "./useWaypointLayers";
 import { usePoiLayer } from "./usePoiLayer";
+import { usePhotoLayer } from "./usePhotoLayer";
+import { usePhotoStore } from "../../stores/photoStore";
+import { useLibraryStore } from "../../stores/libraryStore";
+import { mapScopeFor } from "../photos/photoMapScope";
 import { SearchBox } from "../search/SearchBox";
 import { PanelToggles } from "./PanelToggles";
+import { MapCornerStack } from "./MapCornerStack";
+import { PhotoPreview } from "../photos/PhotoPreview";
 import type { PoiHit } from "@shared/poi/PoiProvider";
 import { usePoiStore } from "../../stores/poiStore";
 
@@ -435,6 +441,41 @@ export function MapView(): ReactNode {
   usePoiLayer(map, visibility.pois === false ? NO_POI_HITS : (poiHits ?? NO_POI_HITS), poiFocus, (id) =>
     usePoiStore.getState().focus(id),
   );
+
+  // Phase 11: photos from linked folders, for the trip on the map or, while
+  // the Photos view is selected, for every trip (design §9.1).
+  const photoTripId = useGeometryStore((s) => s.tripId);
+  const allTripPhotos = usePhotoStore((s) => s.allTrips);
+  const photoFilter = useLibraryStore((s) => s.photoFilter);
+  const showArchivedTrips = useLibraryStore((s) => s.showArchived);
+  useEffect(() => {
+    void usePhotoStore.getState().loadMap(
+      mapScopeFor({
+        allTrips: allTripPhotos,
+        tripId: photoTripId,
+        filter: photoFilter,
+        includeArchived: showArchivedTrips,
+      }),
+    );
+  }, [allTripPhotos, photoTripId, photoFilter, showArchivedTrips]);
+  const photoPoints = usePhotoStore((s) => s.mapPoints);
+  const photoFolders = usePhotoStore((s) => s.folders);
+  const photoAnchor = usePhotoStore((s) => s.selection.anchor);
+  const anchorDetails = usePhotoStore((s) => s.anchorDetails);
+  const anchorDirection = useMemo(() => {
+    const photo = anchorDetails?.photo;
+    if (photo === undefined || photo.id !== photoAnchor || photo.directionDeg === null) return null;
+    return { degrees: photo.directionDeg, ref: photo.directionRef };
+  }, [anchorDetails, photoAnchor]);
+  usePhotoLayer(map, {
+    points: photoPoints,
+    folders: photoFolders,
+    visible: visibility.photos !== false,
+    showUnavailable: settings.photoUnavailable !== "hide",
+    anchorId: photoAnchor,
+    anchorDirection,
+    onSelect: selectPhotosFromMap,
+  });
 
   useWaypointLayers(
     map,
@@ -820,7 +861,6 @@ export function MapView(): ReactNode {
 
       {/* Phase 10: postcode and place search, answered on this machine. */}
       <SearchBox />
-      <PanelToggles />
 
       {dragOver && (
         <div className="pointer-events-none absolute inset-4 z-[700] flex items-center justify-center rounded-xl border-2 border-dashed border-[var(--color-accent)] bg-[var(--color-surface)]/80">
@@ -1195,6 +1235,7 @@ export function MapView(): ReactNode {
                   ["tracks", "Tracks"],
                   ["waypoints", "Waypoints"],
                   ["pois", "Points of interest"],
+                  ["photos", "Photos"],
                 ] as const
               ).map(([key, label]) => (
                 <label
@@ -1214,6 +1255,21 @@ export function MapView(): ReactNode {
                   {label}
                 </label>
               ))}
+
+              <label className="flex cursor-pointer items-center gap-2 py-1.5 pr-3 pl-8 text-[13px] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)]">
+                <input
+                  type="checkbox"
+                  checked={settings.photoUnavailable !== "hide"}
+                  disabled={visibility.photos === false}
+                  onChange={(event) =>
+                    void useSettingsStore.getState().set({
+                      key: "photoUnavailable",
+                      value: event.target.checked ? "show" : "hide",
+                    })
+                  }
+                />
+                Show unavailable photos
+              </label>
 
               <div className="my-1 h-px bg-[var(--color-border-subtle)]" />
               <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-[13px] text-[var(--color-text-primary)] hover:bg-[var(--color-surface-sunken)]">
@@ -1246,11 +1302,16 @@ export function MapView(): ReactNode {
         </div>
       )}
 
-      <MapReadout
-        readout={readout}
-        units={settings.units}
-        showScaleBar={settings.showScaleBar}
-      />
+      {/* Phase 11: one stack in the bottom-left corner, preview on top. */}
+      <MapCornerStack>
+        <MapReadout
+          readout={readout}
+          units={settings.units}
+          showScaleBar={settings.showScaleBar}
+        />
+        <PanelToggles />
+        <PhotoPreview />
+      </MapCornerStack>
 
       {/*
         A selected provider with no tile template shows no tiles, and says so
@@ -1285,4 +1346,9 @@ export function MapView(): ReactNode {
       )}
     </div>
   );
+}
+
+/** Module-level, so the photo layer's handler keeps one identity. */
+function selectPhotosFromMap(ids: readonly string[]): void {
+  usePhotoStore.getState().selectFromMap(ids);
 }

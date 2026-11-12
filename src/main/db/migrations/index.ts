@@ -4,6 +4,7 @@ import routingAndAttributes from './0002_routing_and_attributes.sql?raw';
 import controlPointRoles from './0003_control_point_roles.sql?raw';
 import itinerary from './0004_itinerary.sql?raw';
 import legModes from './0005_leg_modes.sql?raw';
+import linkedFolders from './0006_linked_folders.sql?raw';
 
 export interface Migration {
   /** Monotonic. Recorded in `schema_migrations` once applied. */
@@ -35,6 +36,9 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 5, name: '0004_itinerary', sql: itinerary },
   // Phase 10 feedback: each leg is by road, a chosen route, or other transport.
   { version: 6, name: '0005_leg_modes', sql: legModes },
+  // Phase 11: linked folders, the file index and photo metadata. Three new
+  // tables; nothing existing changes. ADR 0020, design §2.
+  { version: 7, name: '0006_linked_folders', sql: linkedFolders },
 ];
 
 /** drizzle-kit's statement separator. */

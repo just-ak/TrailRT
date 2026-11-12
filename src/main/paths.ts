@@ -39,6 +39,8 @@ export interface AppPaths {
   databaseFile: string;
   backupsDir: string;
   attachmentsDir: string;
+  /** Phase 11 preview thumbnails. Rebuildable; made on demand. */
+  photoThumbnailsDir: string;
 }
 
 let cached: AppPaths | null = null;
@@ -52,6 +54,7 @@ export function appPaths(): AppPaths {
     databaseFile: join(userData, 'trailrt.db'),
     backupsDir: join(userData, 'backups'),
     attachmentsDir: join(userData, 'attachments'),
+    photoThumbnailsDir: join(userData, 'photo-thumbnails'),
   };
 
   mkdirSync(paths.userData, { recursive: true });

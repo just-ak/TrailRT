@@ -12,6 +12,7 @@ import type { WaypointWithTrip } from '@shared/ipc/api';
 /** Matches the main process `ObjectSortKey`. Distance arrived with tracks. */
 export type ObjectSortKey = 'name' | 'distance' | 'updatedAt';
 import { api, call, callOr } from '../lib/client';
+import { usePhotoStore } from './photoStore';
 
 /**
  * The library tree, its expansion state, sorting and search.
@@ -39,6 +40,8 @@ interface LibraryState {
    * one control that is wrong for half the tree.
    */
   objectSortKey: ObjectSortKey;
+  /** Phase 11: the Photos view's Year and Trip filters (design §8.2). Not persisted. */
+  photoFilter: PhotoFilter;
 
   search: string;
   searchResults: TripWithCounts[] | null;
@@ -52,7 +55,14 @@ interface LibraryState {
   setSort(key: TripSortKey, direction: SortDirection): void;
   setObjectSort(key: ObjectSortKey): void;
   setShowArchived(show: boolean): void;
+  setPhotoFilter(filter: PhotoFilter): void;
   setSearch(query: string): Promise<void>;
+}
+
+/** A year, or photos with no date; and a trip. Absent means "all". */
+export interface PhotoFilter {
+  year?: number | 'none';
+  tripId?: string;
 }
 
 let expandedTimer: ReturnType<typeof setTimeout> | undefined;
@@ -82,6 +92,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   sortDirection: DEFAULT_SETTINGS.tripSortDirection,
   showArchived: DEFAULT_SETTINGS.showArchivedTrips,
   objectSortKey: 'name',
+  photoFilter: {},
 
   search: '',
   searchResults: null,
@@ -103,9 +114,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         api().library.tree({
           includeArchived: get().showArchived,
           sortKey: get().objectSortKey,
+          photos: get().photoFilter,
         }),
       );
       set({ tree, loading: false });
+      // Phase 11: the Photos view's Year and Trip choices follow the tree.
+      if (get().expanded.has('view:photos')) void usePhotoStore.getState().loadFilterOptions(get().showArchived);
       // Rows marked to open by default (a dated trip's days) open the first
       // time they appear; collapsing one afterwards is respected.
       const fresh: string[] = [];
@@ -163,6 +177,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       api().settings.set({ key: 'showArchivedTrips', value: showArchived }),
       null,
     );
+    void get().refresh();
+  },
+
+  setPhotoFilter: (photoFilter) => {
+    set({ photoFilter });
     void get().refresh();
   },
 

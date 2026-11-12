@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { app, dialog } from 'electron';
+import { app, dialog, shell } from 'electron';
 import { CHANNELS } from '@shared/ipc/channels';
 import type { AppInfo, LicenceEntry } from '@shared/ipc/api';
 import type { TrackSegment, UndoState } from '@shared/domain/types';
@@ -39,6 +39,13 @@ import * as routingService from '../services/routingService';
 import * as shapingService from '../services/shapingService';
 import * as settingsService from '../services/settingsService';
 import * as tripService from '../services/tripService';
+import { folderScanner, reconcileFolders } from '../linkedFolders/runtime';
+import { resolveFilePath } from '../linkedFolders/resolve';
+import { thumbnailCache } from '../photoCache/runtime';
+import * as linkedFolderService from '../services/linkedFolderService';
+import * as photoService from '../services/photoService';
+import type { LinkedFolder, LinkedFolderSummary, PhotoMapScope } from '@shared/domain/linkedFolders';
+import { assertNotInLinkedFolder } from '../linkedFolders/writeGuard';
 import * as undoService from '../services/undoService';
 import * as waypointService from '../services/waypointService';
 import { readLoadedRegion, writeLoadedRegion } from '../routing/embedded';
@@ -250,12 +257,64 @@ function terrainFor(paths: { terrainDir: string }): TerrainStore {
   return terrainStore.store;
 }
 
+// ------------------------------------------------- Phase 11: linked folders
+
+/** One folder as the renderer sees it, with its counts and runtime state. */
+function summaryOf(folder: LinkedFolder): LinkedFolderSummary {
+  const summary = photoService
+    .folderSummaries(ctx().handle.db, folder.tripId, (id) => folderScanner()?.runtime(id) ?? null)
+    .find((s) => s.id === folder.id);
+  if (summary === undefined) throw new ServiceError('NOT_FOUND', 'That linked folder could not be found.');
+  return summary;
+}
+
+/** The Photos view filter without the keys zod leaves `undefined`. */
+function photoFilter(raw: { year?: number | 'none' | undefined; tripId?: string | undefined }): libraryService.PhotoViewFilter {
+  const filter: libraryService.PhotoViewFilter = {};
+  if (raw.year !== undefined) filter.year = raw.year;
+  if (raw.tripId !== undefined) filter.tripId = raw.tripId;
+  return filter;
+}
+
+/** The native folder chooser. Its path goes to the service, never to the renderer. */
+async function chooseDirectory(title: string, buttonLabel: string): Promise<string | null> {
+  const chosen = await dialog.showOpenDialog({
+    title,
+    buttonLabel,
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return chosen.canceled || chosen.filePaths[0] === undefined ? null : chosen.filePaths[0];
+}
+
+/** The path guard of design §7.2, with the scanner's view of whether the folder is there. */
+function resolvePhoto(photoId: string) {
+  return resolveFilePath(ctx().handle.db, photoId, (id) => folderScanner()?.runtime(id)?.state ?? null);
+}
+
+function thumbnails() {
+  return thumbnailCache(ctx().paths.photoThumbnailsDir);
+}
+
+/**
+ * After anything that may have added or removed folder rows without going
+ * through the link handlers (undo, redo, restoring a backup): the scanner
+ * catches up, and thumbnails of folders no longer linked go.
+ */
+function afterFolderRowsChanged(): void {
+  reconcileFolders();
+  void thumbnails()
+    .removeOrphanFolders(ctx().handle.db)
+    .catch((cause: unknown) => console.error('[photos] could not remove old thumbnails:', cause));
+}
+
 export function registerIpcHandlers(): void {
   // ------------------------------------------------------------- library
   handle(CHANNELS.library.tree, S.libraryTreeRequest, (req) =>
     libraryService.tree(ctx().handle.db, {
       includeArchived: req.includeArchived,
       sortKey: req.sortKey,
+      ...(req.photos === undefined ? {} : { photos: photoFilter(req.photos) }),
+      folderState: (id) => folderScanner()?.runtime(id)?.state ?? null,
     }),
   );
 
@@ -347,6 +406,7 @@ export function registerIpcHandlers(): void {
     if (chosen.canceled || chosen.filePath === undefined) {
       return { cancelled: true, path: null };
     }
+    await assertNotInLinkedFolder(current.handle.db, chosen.filePath);
     await backupService.createBackupAt(current.handle, chosen.filePath);
     return { cancelled: false, path: chosen.filePath };
   });
@@ -362,6 +422,8 @@ export function registerIpcHandlers(): void {
       retention,
     });
     reopenDatabase();
+    // The restored database has its own folder rows (Phase 11 Requirement 10.2).
+    afterFolderRowsChanged();
     // The undo stack describes a database that no longer exists. Applying any
     // of it would corrupt the restored data, so it is discarded.
     const undoState = undoService.clear();
@@ -500,6 +562,7 @@ export function registerIpcHandlers(): void {
       filters: [{ name: 'iCalendar', extensions: ['ics'] }],
     });
     if (chosen.canceled || chosen.filePath === undefined) return { cancelled: true as const, fileName: null };
+    await assertNotInLinkedFolder(db, chosen.filePath);
     await writeFile(chosen.filePath, output.text, 'utf8');
     return {
       cancelled: false as const,
@@ -897,6 +960,7 @@ export function registerIpcHandlers(): void {
       };
     }
 
+    await assertNotInLinkedFolder(ctx().handle.db, chosen.filePath);
     const payload =
       result.bytes ?? Buffer.from(result.text ?? '', 'utf8');
     await writeFile(chosen.filePath, payload);
@@ -1215,11 +1279,125 @@ export function registerIpcHandlers(): void {
     },
   );
 
+  // ---------------------------------------------- Phase 11: linked folders
+  handle(CHANNELS.linkedFolders.chooseFolder, S.linkedFolderChooseRequest, async (req) => {
+    const db = ctx().handle.db;
+    // The trip is checked before the chooser opens, not after the user has picked.
+    tripService.get(db, req.tripId);
+    const path = await chooseDirectory('Link Folder to Trip', 'Choose');
+    if (path === null) return null;
+    return linkedFolderService.chooseFolder(db, {
+      tripId: req.tripId,
+      path,
+      appDataDir: ctx().paths.userData,
+    });
+  });
+
+  handle(CHANNELS.linkedFolders.link, S.linkedFolderLinkRequest, (req) => {
+    const folder = commit(linkedFolderService.link(ctx().handle.db, req));
+    reconcileFolders();
+    return summaryOf(folder);
+  });
+
+  handle(CHANNELS.linkedFolders.unlink, S.linkedFolderIdRequest, async (req) => {
+    const result = commit(linkedFolderService.unlink(ctx().handle.db, req.folderId));
+    reconcileFolders();
+    // The files on disk are untouched; only TrailRT's own thumbnails go (§4.4).
+    await thumbnails().removeFolder(req.folderId);
+    return result;
+  });
+
+  handle(CHANNELS.linkedFolders.relink, S.linkedFolderIdRequest, async (req) => {
+    const db = ctx().handle.db;
+    const folder = linkedFolderService.get(db, req.folderId);
+    const path = await chooseDirectory(`Relink ${folder.name}`, 'Relink');
+    if (path === null) return null;
+    const mutation = await linkedFolderService.relink(db, {
+      folderId: req.folderId,
+      path,
+      appDataDir: ctx().paths.userData,
+    });
+    const relinked = commit(mutation);
+    reconcileFolders();
+    return summaryOf(relinked);
+  });
+
+  handle(CHANNELS.linkedFolders.setIncludeSubfolders, S.linkedFolderSetIncludeSubfoldersRequest, (req) => {
+    const folder = commit(linkedFolderService.setIncludeSubfolders(ctx().handle.db, req.folderId, req.include));
+    reconcileFolders();
+    return summaryOf(folder);
+  });
+
+  handle(CHANNELS.linkedFolders.rescan, S.linkedFolderIdRequest, (req) => {
+    linkedFolderService.get(ctx().handle.db, req.folderId);
+    folderScanner()?.rescan(req.folderId);
+    return true as const;
+  });
+
+  handle(CHANNELS.linkedFolders.cancelScan, S.linkedFolderIdRequest, (req) => {
+    folderScanner()?.cancel(req.folderId);
+    return true as const;
+  });
+
+  handle(CHANNELS.linkedFolders.get, S.linkedFolderIdRequest, (req) =>
+    summaryOf(linkedFolderService.get(ctx().handle.db, req.folderId)),
+  );
+
+  handle(CHANNELS.linkedFolders.list, S.linkedFolderListRequest, (req) =>
+    photoService.folderSummaries(ctx().handle.db, req.tripId, (id) => folderScanner()?.runtime(id) ?? null),
+  );
+
+  // ------------------------------------------------------ Phase 11: photos
+  handle(CHANNELS.photos.list, S.photoListRequest, (req) =>
+    photoService.listPhotos(ctx().handle.db, req.folderId),
+  );
+
+  handle(CHANNELS.photos.mapPoints, S.photoMapPointsRequest, (req) => {
+    let scope: PhotoMapScope;
+    if ('all' in req) {
+      scope = { all: true, includeArchived: req.includeArchived };
+      if (req.year !== undefined) scope.year = req.year;
+      if (req.tripId !== undefined) scope.tripId = req.tripId;
+    } else {
+      scope = { tripId: req.tripId };
+    }
+    return photoService.mapPoints(ctx().handle.db, scope);
+  });
+
+  handle(CHANNELS.photos.years, S.photoYearsRequest, (req) =>
+    photoService.years(ctx().handle.db, req.includeArchived),
+  );
+
+  handle(CHANNELS.photos.get, S.photoIdRequest, (req) =>
+    photoService.details(ctx().handle.db, req.photoId),
+  );
+
+  handle(CHANNELS.photos.thumbnail, S.photoIdRequest, (req) =>
+    thumbnails().get(ctx().handle.db, req.photoId, resolvePhoto),
+  );
+
+  // "Open" and "Show in Finder" act only on a path the main process resolved
+  // from the photo's id (Requirement 8.4).
+  handle(CHANNELS.photos.open, S.photoIdRequest, async (req) => {
+    const { path } = await resolvePhoto(req.photoId);
+    const failure = await shell.openPath(path);
+    if (failure !== '') throw new ServiceError('IO_ERROR', 'That photo could not be opened.', failure);
+    return true as const;
+  });
+
+  handle(CHANNELS.photos.reveal, S.photoIdRequest, async (req) => {
+    const { path } = await resolvePhoto(req.photoId);
+    shell.showItemInFolder(path);
+    return true as const;
+  });
+
   // ----------------------------------------------------------------- undo
   handleNoArgs(CHANNELS.undo.state, () => undoService.state());
 
   handleNoArgs(CHANNELS.undo.undo, () => {
     const next = undoService.undo(ctx().handle.db);
+    // An undo may have linked, unlinked or relinked a folder (Phase 11 §4.4).
+    afterFolderRowsChanged();
     ctx().notifyLibraryChanged();
     publishUndoState(next);
     return next;
@@ -1227,6 +1405,7 @@ export function registerIpcHandlers(): void {
 
   handleNoArgs(CHANNELS.undo.redo, () => {
     const next = undoService.redo(ctx().handle.db);
+    afterFolderRowsChanged();
     ctx().notifyLibraryChanged();
     publishUndoState(next);
     return next;
@@ -1287,6 +1466,7 @@ export function registerIpcHandlers(): void {
       return { cancelled: true as const, fileName: null };
     }
 
+    await assertNotInLinkedFolder(ctx().handle.db, chosen.filePath);
     await writeFile(chosen.filePath, bytes);
     // Basename only: a label to display, not a location.
     return { cancelled: false as const, fileName: basename(chosen.filePath) };

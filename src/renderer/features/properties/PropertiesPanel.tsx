@@ -1,4 +1,4 @@
-import { Download, MapPinPlus, Route, Upload } from "lucide-react";
+import { Download, FolderPlus, MapPinPlus, Route, Upload } from "lucide-react";
 import { IconButton } from "../../components/IconButton";
 import { useState, type ReactNode } from "react";
 import { formatTimestamp } from "@shared/geo/units";
@@ -13,6 +13,8 @@ import { ItinerarySection } from "../itinerary/ItinerarySection";
 import { RouteProperties } from "./RouteProperties";
 import { TrackProperties } from "./TrackProperties";
 import { WaypointProperties } from "./WaypointProperties";
+import { LinkedFolderProperties } from "../photos/LinkedFolderProperties";
+import { linkFolderToTrip } from "../photos/photoActions";
 
 /**
  * The right panel.
@@ -175,6 +177,12 @@ function TripDetails({ trip }: { trip: TripWithCounts }): ReactNode {
           <IconButton hint="Export the trip" onClick={() => actions.openExportDialog({ kind: "trips", tripIds: [trip.id] })}>
             <Download size={16} aria-hidden="true" />
           </IconButton>
+          <IconButton
+            hint="Link a folder on disk: the trip's photos, and its tracks later"
+            onClick={() => void linkFolderToTrip(trip.id, trip.name)}
+          >
+            <FolderPlus size={16} aria-hidden="true" />
+          </IconButton>
         </div>
       </Field>
 
@@ -208,7 +216,7 @@ function FolderDetails({ folder }: { folder: Folder }): ReactNode {
 }
 
 export function PropertiesPanel(): ReactNode {
-  const { selected, trip, folder, route, track, waypoint, loading, reload } =
+  const { selected, trip, folder, route, track, waypoint, linkedFolder, loading, reload } =
     useSelectionStore();
   const refresh = useLibraryStore((s) => s.refresh);
   const showToast = useUiStore((s) => s.showToast);
@@ -279,6 +287,17 @@ export function PropertiesPanel(): ReactNode {
       );
     }
     return <TrackProperties track={track} units={settings.units} />;
+  }
+
+  if (selected.kind === "linkedFolder") {
+    if (linkedFolder === null) {
+      return (
+        <div className="p-4 text-[12px] text-[var(--color-text-muted)]">
+          Loading…
+        </div>
+      );
+    }
+    return <LinkedFolderProperties folder={linkedFolder} />;
   }
 
   if (selected.kind !== "trip" && selected.kind !== "folder") {

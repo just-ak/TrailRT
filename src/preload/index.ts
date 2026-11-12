@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { CHANNELS, EVENTS, type MenuAction } from '@shared/ipc/channels';
 import type { PostcodeProgress, TrailRtApi } from '@shared/ipc/api';
 import type { UndoState } from '@shared/domain/types';
+import type { ScanProgress } from '@shared/domain/linkedFolders';
 import type { ImportProgress } from '@shared/io/types';
 import type {
   RegionJobProgress,
@@ -102,6 +103,26 @@ const api: TrailRtApi = {
     listing: () => call(CHANNELS.postcodes.listing),
     update: () => call(CHANNELS.postcodes.update),
     cancel: () => call(CHANNELS.postcodes.cancel),
+  },
+  linkedFolders: {
+    chooseFolder: (req) => call(CHANNELS.linkedFolders.chooseFolder, req),
+    link: (req) => call(CHANNELS.linkedFolders.link, req),
+    unlink: (req) => call(CHANNELS.linkedFolders.unlink, req),
+    relink: (req) => call(CHANNELS.linkedFolders.relink, req),
+    setIncludeSubfolders: (req) => call(CHANNELS.linkedFolders.setIncludeSubfolders, req),
+    rescan: (req) => call(CHANNELS.linkedFolders.rescan, req),
+    cancelScan: (req) => call(CHANNELS.linkedFolders.cancelScan, req),
+    list: (req) => call(CHANNELS.linkedFolders.list, req),
+    get: (req) => call(CHANNELS.linkedFolders.get, req),
+  },
+  photos: {
+    list: (req) => call(CHANNELS.photos.list, req),
+    mapPoints: (req) => call(CHANNELS.photos.mapPoints, req),
+    years: (req) => call(CHANNELS.photos.years, req),
+    get: (req) => call(CHANNELS.photos.get, req),
+    thumbnail: (req) => call(CHANNELS.photos.thumbnail, req),
+    open: (req) => call(CHANNELS.photos.open, req),
+    reveal: (req) => call(CHANNELS.photos.reveal, req),
   },
   itinerary: {
     get: (req) => call(CHANNELS.itinerary.get, req),
@@ -251,6 +272,10 @@ const api: TrailRtApi = {
       subscribe<[RegionJobProgress]>(EVENTS.regionJobProgress, listener),
     onPostcodeProgress: (listener) =>
       subscribe<[PostcodeProgress]>(EVENTS.postcodeProgress, listener),
+    onLinkedFolderScanProgress: (listener) =>
+      subscribe<[ScanProgress]>(EVENTS.linkedFolderScanProgress, listener),
+    onLinkedFoldersChanged: (listener) =>
+      subscribe<[{ folderId: string }]>(EVENTS.linkedFoldersChanged, listener),
   },
 };
 

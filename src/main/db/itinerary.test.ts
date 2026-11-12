@@ -106,7 +106,7 @@ describe('migration 0004', () => {
     sqlite.close();
 
     const upgraded = createDatabase({ file });
-    expect(upgraded.migration.applied).toEqual([5, 6]);
+    expect(upgraded.migration.applied).toEqual([5, 6, 7]);
     expect(tripRepo.findTrip(upgraded.db, existing.id)?.name).toBe('Before Phase 10');
     expect(itineraryRepo.findItinerary(upgraded.db, existing.id)).toBeNull();
     upgraded.close();

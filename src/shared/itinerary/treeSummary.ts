@@ -2,6 +2,7 @@ import type { ItineraryView, OtherTransport } from '../domain/itinerary';
 import type { TreeNode } from '../domain/types';
 import { isoWeekday, utcToWallClock } from '../time/zoned';
 import { formatDateRange } from './format';
+import { CAMERA_TIME_HINT, dayPhotoText } from '../photos/library';
 
 /**
  * A dated trip in the library tree, as a summary of its plan. Phase 10
@@ -74,11 +75,15 @@ interface Event {
   node: TreeNode;
 }
 
+/** Phase 11: a day's photos from the trip's linked folders, by wall-clock date (design §8.4). */
+export type PhotoDays = ReadonlyMap<string, { count: number; cameraTime: number }>;
+
 export function itineraryTreeChildren(
   view: ItineraryView,
   contents: TripContents,
   path: string,
   build: SummaryBuilders,
+  photoDays: PhotoDays = new Map(),
 ): TreeNode[] {
   const { stops, timeline } = view;
   const zone = timeline.calendarZone;
@@ -148,12 +153,15 @@ export function itineraryTreeChildren(
     if (day.driveSeconds > 0) parts.push(`${duration(day.driveSeconds)} driving`);
     if (day.otherSeconds > 0) parts.push(`${duration(day.otherSeconds)} other transport`);
     if (day.driveSeconds === 0 && day.otherSeconds === 0) parts.push('no travel');
+    const photos = photoDays.get(day.date);
+    if (photos !== undefined && photos.count > 0) parts.push(dayPhotoText(photos));
     children.push({
       id: dayPath,
       kind: 'group',
       glyph: '📅',
       name: dayName(day.date),
       detail: parts.join(' · '),
+      ...(photos !== undefined && photos.cameraTime > 0 ? { hint: CAMERA_TIME_HINT } : {}),
       defaultExpanded: true,
       children: inDay.map((e) => ({ ...e.node, id: `${dayPath}/${e.node.id.slice(path.length + 1)}` })),
     });

@@ -434,6 +434,95 @@ export const itineraryStops = sqliteTable(
   ],
 );
 
+/**
+ * Phase 11. A folder on disk linked to a trip: the trip's folder on disk.
+ * ADR 0020. Its availability (reachable, missing, refused by macOS) is worked
+ * out at runtime and deliberately not stored (design §2).
+ */
+export const linkedFolders = sqliteTable(
+  'linked_folders',
+  {
+    id: text('id').primaryKey(),
+    tripId: text('trip_id')
+      .notNull()
+      .references(() => trips.id, { onDelete: 'cascade' }),
+    /** Absolute, as chosen. Never sent to the renderer to be read. */
+    path: text('path').notNull(),
+    /** `realpath`, NFC: containment checks and all-trips de-duplication. */
+    realPath: text('real_path').notNull(),
+    name: text('name').notNull(),
+    includeSubfolders: integer('include_subfolders', { mode: 'boolean' }).notNull().default(true),
+    lastScanAt: integer('last_scan_at'),
+    lastSeenAt: integer('last_seen_at'),
+    createdAt: integer('created_at').notNull().default(now),
+    updatedAt: integer('updated_at').notNull().default(now),
+  },
+  (t) => [
+    unique('uq_linked_folders_trip_path').on(t.tripId, t.realPath),
+    index('idx_linked_folders_trip').on(t.tripId),
+  ],
+);
+
+/**
+ * Phase 11. The file index: one row per recognised file in a linked folder,
+ * of any kind. Phases 12 and 13 add their own records beside it (design §2).
+ */
+export const folderFiles = sqliteTable(
+  'folder_files',
+  {
+    id: text('id').primaryKey(),
+    folderId: text('folder_id')
+      .notNull()
+      .references(() => linkedFolders.id, { onDelete: 'cascade' }),
+    /** POSIX separators, NFC. */
+    relativePath: text('relative_path').notNull(),
+    kind: text('kind').notNull(),
+    format: text('format').notNull(),
+    sizeBytes: integer('size_bytes').notNull(),
+    /** REAL, not INTEGER: `stat` gives fractional milliseconds, compared exactly. */
+    mtimeMs: real('mtime_ms').notNull(),
+    /** Design §5.3. Null for a file not read. */
+    fingerprint: text('fingerprint'),
+  },
+  (t) => [
+    unique('uq_folder_files_path').on(t.folderId, t.relativePath),
+    index('idx_folder_files_kind').on(t.folderId, t.kind),
+    index('idx_folder_files_fingerprint').on(t.folderId, t.fingerprint),
+    check('folder_files_kind_valid', sql`${t.kind} in ('photo', 'geodata', 'video')`),
+  ],
+);
+
+/** Phase 11. What was read from a photo. A cache, rebuilt from the file. */
+export const photoMetadata = sqliteTable(
+  'photo_metadata',
+  {
+    fileId: text('file_id')
+      .primaryKey()
+      .references(() => folderFiles.id, { onDelete: 'cascade' }),
+    state: text('state').notNull(),
+    reason: text('reason'),
+    lat: real('lat'),
+    lon: real('lon'),
+    altitudeM: real('altitude_m'),
+    accuracyM: real('accuracy_m'),
+    directionDeg: real('direction_deg'),
+    directionRef: text('direction_ref'),
+    takenLocal: text('taken_local'),
+    takenOffsetMin: integer('taken_offset_min'),
+    orientation: integer('orientation'),
+  },
+  (t) => [
+    index('idx_photo_metadata_taken').on(t.takenLocal),
+    index('idx_photo_metadata_state').on(t.state),
+    check('photo_metadata_state_valid', sql`${t.state} in ('located', 'unlocated', 'unreadable', 'not-downloaded')`),
+    check('photo_metadata_coordinates_paired', sql`(${t.lat} is null) = (${t.lon} is null)`),
+    check('photo_metadata_located_has_position', sql`${t.state} <> 'located' or ${t.lat} is not null`),
+    check('photo_metadata_direction_paired', sql`(${t.directionDeg} is null) = (${t.directionRef} is null)`),
+    check('photo_metadata_direction_ref_valid', sql`${t.directionRef} is null or ${t.directionRef} in ('T', 'M')`),
+    check('photo_metadata_orientation_valid', sql`${t.orientation} is null or ${t.orientation} between 1 and 8`),
+  ],
+);
+
 export type FolderRow = typeof folders.$inferSelect;
 export type TripRow = typeof trips.$inferSelect;
 export type SettingsRow = typeof settings.$inferSelect;

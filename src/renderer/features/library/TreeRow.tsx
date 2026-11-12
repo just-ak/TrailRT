@@ -75,6 +75,9 @@ function Icon({ node }: { node: TreeNode }): ReactNode {
   if (node.kind === "track") return <span aria-hidden="true">📈</span>;
   if (node.kind === "waypoint") return <span aria-hidden="true">📍</span>;
   if (node.kind === "group") return <span aria-hidden="true">{node.glyph ?? "▫️"}</span>;
+  // A folder on disk, distinct from a library folder (📁), which holds trips.
+  if (node.kind === "linkedFolder") return <span aria-hidden="true">🖼️</span>;
+  if (node.kind === "view" && node.viewId === "photos") return <span aria-hidden="true">🖼️</span>;
   return <span aria-hidden="true">🔖</span>;
 }
 
@@ -156,6 +159,7 @@ export function TreeRow({
       onDoubleClick={() => {
         if (hasChildren) onToggle();
       }}
+      title={node.hint}
       style={{ paddingLeft: depth * INDENT + 6 }}
       className={`group flex h-[26px] cursor-default items-center gap-1.5 pr-2 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] focus-visible:ring-inset ${background} ${unavailable ? "opacity-55" : ""}`}
     >

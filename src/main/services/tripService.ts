@@ -9,6 +9,7 @@ import type {
 import type { DeleteTripResult } from '@shared/ipc/api';
 import type { Db } from '../db/client';
 import * as folderRepo from '../db/repositories/folders';
+import * as linkedFolderRepo from '../db/repositories/linkedFolders';
 import * as repo from '../db/repositories/trips';
 import { notFound } from './errors';
 import type { Mutation } from './folderService';
@@ -157,6 +158,9 @@ export function duplicate(db: Db, id: string): Mutation<Trip> {
     });
     // Phase 2 and 3: copy routes, route points, tracks, track points,
     // waypoints and attachments here, inside this same transaction.
+    // Phase 11: the trip's linked folders come with it, index and all, so the
+    // copy shows the same photos. No file is touched (design §4.4).
+    linkedFolderRepo.copyLinkedFoldersForTrip(db, source.id, copy.id, Date.now());
     return copy;
   });
 

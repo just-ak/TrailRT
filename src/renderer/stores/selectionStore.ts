@@ -9,6 +9,7 @@ import type {
   TripWithCounts,
   Waypoint,
 } from '@shared/domain/types';
+import type { LinkedFolderSummary } from '@shared/domain/linkedFolders';
 import { api, callOr } from '../lib/client';
 import { useGeometryStore } from './geometryStore';
 
@@ -60,7 +61,8 @@ export function keyToRef(key: string): ObjectRef | null {
     kind !== 'trip' &&
     kind !== 'route' &&
     kind !== 'track' &&
-    kind !== 'waypoint'
+    kind !== 'waypoint' &&
+    kind !== 'linkedFolder'
   ) {
     return null;
   }
@@ -97,6 +99,8 @@ interface SelectionState {
   route: RouteWithPoints | null;
   track: TrackWithPoints | null;
   waypoint: Waypoint | null;
+  /** Phase 11: a folder on disk linked to a trip. */
+  linkedFolder: LinkedFolderSummary | null;
   loading: boolean;
 
   /** A plain click: replaces the selection and becomes the anchor. */
@@ -119,6 +123,7 @@ const EMPTY = {
   route: null,
   track: null,
   waypoint: null,
+  linkedFolder: null,
 } as const;
 
 /** Ensures the map is showing the trip that owns the selected object. */
@@ -303,6 +308,19 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
           ...(track === null ? forget() : {}),
         });
         await ensureGeometry(track?.tripId ?? null);
+        return;
+      }
+      case 'linkedFolder': {
+        // Selecting a folder loads its trip on the map, as selecting a route
+        // in the Routes view does (design §8.2).
+        const linkedFolder = await callOr(api().linkedFolders.get({ folderId: ref.id }), null);
+        set({
+          ...EMPTY,
+          linkedFolder,
+          loading: false,
+          ...(linkedFolder === null ? forget() : {}),
+        });
+        await ensureGeometry(linkedFolder?.tripId ?? null);
         return;
       }
       default: {

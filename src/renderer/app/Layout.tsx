@@ -9,6 +9,7 @@ import { drawerAfterSelection } from "../features/profile/drawerTarget";
 import { ProfilePanel } from "../features/profile/ProfilePanel";
 import { CalendarPanel } from "../features/itinerary/CalendarPanel";
 import { PoiPanel } from "../features/poi/PoiPanel";
+import { PhotoListPanel } from "../features/photos/PhotoListPanel";
 import { PropertiesPanel } from "../features/properties/PropertiesPanel";
 import { useSelectionStore } from "../stores/selectionStore";
 import { useUiStore } from "../stores/uiStore";
@@ -44,6 +45,8 @@ export function Layout(): ReactNode {
       selected,
     );
     if (patch !== null) useUiStore.setState(patch);
+    // Phase 11: selecting a linked folder lists its photos (design §8.3).
+    if (selected?.kind === "linkedFolder") ui.openPhotoList(selected.id);
   }, [selected]);
 
   /*
@@ -78,6 +81,8 @@ export function Layout(): ReactNode {
       <CalendarPanel tripId={planDrawer.tripId} onClose={closePlanDrawer} />
     ) : planDrawer?.kind === "poi" ? (
       <PoiPanel scope={planDrawer.scope} onClose={closePlanDrawer} />
+    ) : planDrawer?.kind === "photos" ? (
+      <PhotoListPanel folderId={planDrawer.folderId} onClose={closePlanDrawer} />
     ) : null;
 
   return (

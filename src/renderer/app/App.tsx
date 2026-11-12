@@ -16,6 +16,9 @@ import { useUiStore } from "../stores/uiStore";
 import { useRoutingStore } from "../stores/routingStore";
 import { useUndoStore } from "../stores/undoStore";
 import { Layout } from "./Layout";
+import { LinkFolderDialog } from "../features/photos/LinkFolderDialog";
+import { UnlinkFolderDialog } from "../features/photos/UnlinkFolderDialog";
+import { linkFolderToSelectedTrip, subscribeToFolderEvents } from "../features/photos/photoActions";
 
 /**
  * Root component: hydration, theme, global menu wiring and dialog hosting.
@@ -95,6 +98,9 @@ export function App(): ReactNode {
     });
   }, []);
 
+  // Phase 11: scan progress and folder changes from the main process.
+  useEffect(() => subscribeToFolderEvents(), []);
+
   // --- native menu actions that belong to the shell rather than a feature
   useEffect(() => {
     return api().events.onMenuAction((action) => {
@@ -117,6 +123,9 @@ export function App(): ReactNode {
           break;
         case "import:open":
           void actions.chooseFilesToImport();
+          break;
+        case "trip:linkFolder":
+          linkFolderToSelectedTrip();
           break;
         case "export:open":
           void (() => {
@@ -208,6 +217,12 @@ export function App(): ReactNode {
         />
       )}
       {dialog.kind === "export" && <ExportDialog scope={dialog.scope} />}
+      {dialog.kind === "linkFolder" && (
+        <LinkFolderDialog key={dialog.chosen.token} tripName={dialog.tripName} chosen={dialog.chosen} />
+      )}
+      {dialog.kind === "unlinkFolder" && (
+        <UnlinkFolderDialog folderId={dialog.folderId} name={dialog.name} />
+      )}
       {dialog.kind === "regionPicker" && (
         <RegionPickerDialog
           onClose={() => useUiStore.getState().closeDialog()}

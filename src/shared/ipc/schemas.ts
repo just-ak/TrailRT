@@ -39,6 +39,7 @@ export const layerVisibilitySchema = z
     tracks: z.boolean(),
     waypoints: z.boolean(),
     pois: z.boolean().optional(),
+    photos: z.boolean().optional(),
   })
   .strict();
 
@@ -54,6 +55,14 @@ export const libraryTreeRequest = z
      * objects that have one.
      */
     sortKey: z.enum(['name', 'distance', 'updatedAt']).default('name'),
+    /** Phase 11: the Photos view's Year and Trip filters (design §8.2). */
+    photos: z
+      .object({
+        year: z.union([z.number().int().min(1800).max(2200), z.literal('none')]).optional(),
+        tripId: z.uuid().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -258,6 +267,7 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
     .object({ key: z.literal('transportMode'), value: transportModeSchema })
     .strict(),
   z.object({ key: z.literal('showScaleBar'), value: z.boolean() }).strict(),
+  z.object({ key: z.literal('photoUnavailable'), value: z.enum(['show', 'hide']) }).strict(),
   z.object({ key: z.literal('routeAlternatives'), value: z.boolean() }).strict(),
   z.object({ key: z.literal('ukDefaultSpeedLimits'), value: z.boolean() }).strict(),
   z
@@ -1170,3 +1180,42 @@ export const itinerarySetLegModeRequest = z
     label: z.string().trim().max(200).nullable().optional(),
   })
   .strict();
+
+// --------------------------------------------- Phase 11: linked folders, photos
+
+export const linkedFolderChooseRequest = z.object({ tripId: idSchema }).strict();
+
+/** The token is the one `chooseFolder` returned; the path never comes back. */
+export const linkedFolderLinkRequest = z
+  .object({ token: idSchema, includeSubfolders: z.boolean() })
+  .strict();
+
+export const linkedFolderIdRequest = z.object({ folderId: idSchema }).strict();
+
+export const linkedFolderSetIncludeSubfoldersRequest = z
+  .object({ folderId: idSchema, include: z.boolean() })
+  .strict();
+
+export const linkedFolderListRequest = z.object({ tripId: idSchema.optional() }).strict();
+
+export const photoListRequest = z.object({ folderId: idSchema }).strict();
+
+/** A photo is named by its index row's id, never by a path (design §7.2). */
+export const photoIdRequest = z.object({ photoId: idSchema }).strict();
+
+/** A year the Photos view can filter on, or photos with no date. */
+export const photoYearSchema = z.union([z.number().int().min(1800).max(2200), z.literal('none')]);
+
+export const photoMapPointsRequest = z.union([
+  z.object({ tripId: idSchema }).strict(),
+  z
+    .object({
+      all: z.literal(true),
+      includeArchived: z.boolean().default(false),
+      year: photoYearSchema.optional(),
+      tripId: idSchema.optional(),
+    })
+    .strict(),
+]);
+
+export const photoYearsRequest = z.object({ includeArchived: z.boolean().default(false) }).strict();

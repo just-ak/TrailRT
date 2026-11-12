@@ -120,8 +120,10 @@ export const collectionWaypointSchema = z.object({
   description: nullableText,
   symbol: nullableText,
   notes: nullableText,
-  // Phase 10 adds `poi`: a waypoint added from the place data.
-  source: z.enum(['user', 'import', 'poi']),
+  // Phase 10 adds `poi`: a waypoint added from the place data. Phase 11 adds
+  // `photo`: a waypoint made from a linked photo's geotag. The photo's path
+  // is never written (Phase 11 design §11.3).
+  source: z.enum(['user', 'import', 'poi', 'photo']),
   createdAt: z.number().int(),
   updatedAt: z.number().int(),
   metadata,

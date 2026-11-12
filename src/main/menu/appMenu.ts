@@ -99,6 +99,13 @@ export function buildApplicationMenu(undo: UndoState = NO_UNDO): Menu {
           accelerator: 'Shift+Cmd+E',
           click: dispatch('export:open'),
         },
+        {
+          // Phase 11. Named for the folder and the trip, not photos, so it
+          // stays right when Phase 12 syncs GPX through the same link. Acts on
+          // the selected trip, like the Trip menu's items.
+          label: 'Link Folder to Trip…',
+          click: dispatch('trip:linkFolder'),
+        },
         { type: 'separator' },
         {
           // Not "Save": there is no unsaved state to flush. ADR 0001.
