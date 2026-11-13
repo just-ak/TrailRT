@@ -1,13 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { BUXTON, MACCLESFIELD } from '@fixtures/places';
-import {
+import { editSelection,
   cleanup,
   close,
   createTripViaUi,
   launch,
   makeUserDataDir,
-  type Harness,
-} from './helpers';
+  type Harness, tripAction,
+  openTrip } from './helpers';
 
 /**
  * Phase 4 acceptance criteria, against the built application.
@@ -141,11 +141,7 @@ test.describe('map controls', () => {
     const { page } = harness;
 
     // A waypoint to hide. Placed through the UI so the whole path is exercised.
-    await page.getByRole('treeitem', { name: 'Phase Four Trip' }).click();
-    await page
-      .getByRole('treeitem', { name: 'Phase Four Trip' })
-      .click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'New Waypoint' }).click();
+    await tripAction(page, 'Phase Four Trip', 'New Waypoint');
     await clickMap(page, 300, 220);
 
     const markers = page.locator('.leaflet-marker-pane > *');
@@ -231,11 +227,7 @@ test.describe('routing with the engine present but no map region', () => {
   test('refuses a snap with a distinguishable error code', async () => {
     const { page } = harness;
 
-    await page.getByRole('treeitem', { name: 'Phase Four Trip' }).click();
-    await page
-      .getByRole('treeitem', { name: 'Phase Four Trip' })
-      .click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'New Route' }).click();
+    await tripAction(page, 'Phase Four Trip', 'New Route');
     await clickMap(page, 250, 210);
     await clickMap(page, 350, 270);
     await page.keyboard.press('Enter');
@@ -441,6 +433,7 @@ test.describe('road data and profile', () => {
       .getByRole('treeitem', { name: /Route/ })
       .first()
       .click();
+    await editSelection(page);
     await page.getByRole('button', { name: 'Profile and points' }).click();
 
     const drawer = page.getByRole('region', { name: 'Route profile' });
@@ -497,7 +490,8 @@ test.describe('Waze hand-off', () => {
       .first()
       .click();
 
-    // A small icon now, not a full-width button.
+    // A small icon now, not a full-width button, in the route's editor.
+    await editSelection(page);
     await page.getByRole('button', { name: 'Navigate in Waze' }).click();
     const items = page.getByRole('menuitem');
     await expect(items).toHaveText([
@@ -548,7 +542,7 @@ test.describe('the snap routing tool', () => {
 
     await expect(page.getByRole('button', { name: 'Snap routing' })).toHaveCount(0);
 
-    await page.getByRole('treeitem', { name: /Phase Four Trip/ }).click();
+    await openTrip(page, /Phase Four Trip/);
     await page.getByRole('button', { name: 'New route', exact: true }).click();
     await expect(page.getByText(/no map region loaded yet/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add map regions…' })).toBeVisible();

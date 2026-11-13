@@ -120,6 +120,8 @@ export interface TreeNode {
   glyph?: string;
   /** Phase 11: a longer explanation, shown when the row is hovered. */
   hint?: string;
+  /** Phase 14: a group label in a list (Coming up, Ideas, a year), drawn as a heading. */
+  heading?: boolean;
   children: TreeNode[];
 }
 
@@ -197,6 +199,12 @@ export interface AppSettings {
    * dashed and faded, or not at all. Never drawn like available ones.
    */
   photoUnavailable: 'show' | 'hide';
+  /** Phase 14: the rail's section shown in the left panel. */
+  librarySection: LibrarySection;
+  /** Phase 14: the trip open in the Trips section; ignored when it has gone. */
+  openTripId: string | null;
+  /** Phase 14: the trip page's tab. */
+  tripTab: TripTab;
   backupIntervalHours: number;
   backupRetention: number;
   /** Used for route duration estimates. Nothing is estimated without it. */
@@ -211,6 +219,11 @@ export interface AppSettings {
 }
 
 export type SettingsKey = keyof AppSettings;
+
+/** Phase 14: the rail's sections. Recent arrives later and is not a stored choice. */
+export type LibrarySection = 'trips' | 'routes' | 'tracks' | 'waypoints' | 'photos' | 'imported';
+export const LIBRARY_SECTIONS: readonly LibrarySection[] = ['trips', 'routes', 'tracks', 'waypoints', 'photos', 'imported'];
+export type TripTab = 'plan' | 'objects' | 'photos';
 
 /** Per-object-kind map visibility. Requirement 4.2. */
 export interface LayerVisibility {

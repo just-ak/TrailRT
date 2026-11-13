@@ -3,8 +3,11 @@ import {
   cleanup,
   close,
   createTripViaUi,
+  editSelection,
   launch,
   makeUserDataDir,
+  openTrip,
+  showTripList,
   type Harness,
 } from './helpers';
 
@@ -54,9 +57,12 @@ test.describe('application shell', () => {
 
   test('renders all three panels', async () => {
     const { page } = harness;
-    await expect(page.getByRole('tree', { name: 'Trip library' })).toBeVisible();
+    // Phase 14: the rail of sections, and the Trips section's list.
+    await expect(page.getByRole('navigation', { name: 'Library sections' })).toBeVisible();
+    await expect(page.getByRole('tree', { name: 'Trips' })).toBeVisible();
     await expect(page.locator('.leaflet-container')).toBeVisible();
-    await expect(page.getByText('Select a trip or folder')).toBeVisible();
+    // The right panel answers "when": with no trip open, the year.
+    await expect(page.getByTestId('year-view')).toBeVisible();
   });
 });
 
@@ -234,31 +240,28 @@ test.describe('map', () => {
   });
 });
 
-test.describe('library tree', () => {
-  test('is rooted at My Collection with the specified branches', async () => {
+test.describe('library sections', () => {
+  // Phase 14 (ADR 0021): the tree rooted at My Collection became a rail of
+  // sections. The cross-trip sections are still views (ADR 0004).
+  test('has a rail with every section, and no My Collection root', async () => {
     const { page } = harness;
-    await expect(page.getByRole('treeitem', { name: /My Collection/ })).toBeVisible();
-    for (const branch of ['Trips', 'Routes', 'Tracks', 'Waypoints', 'Photos', 'Imported Data', 'Recently Used']) {
-      await expect(
-        page.getByRole('treeitem', { name: new RegExp(branch) }),
-      ).toBeVisible();
+    await expect(page.getByRole('treeitem', { name: /My Collection/ })).toHaveCount(0);
+    for (const section of ['Trips', 'Routes', 'Tracks', 'Waypoints', 'Photos', 'Imported Data']) {
+      await expect(page.getByRole('tab', { name: section, exact: true })).toBeVisible();
     }
   });
 
-  test('marks later-phase branches rather than showing them as broken', async () => {
-    // Recently Used is still to come, so that branch says so.
-    await expect(
-      harness.page.getByRole('treeitem', { name: 'Recently Used', exact: true }),
-    ).toContainText('later phase');
+  test('says Recently Used arrives later, rather than showing it as broken', async () => {
+    await expect(harness.page.getByRole('button', { name: 'Recently Used arrives in a later version' })).toBeDisabled();
+  });
 
-    // Everything else is implemented as of Phase 3 and must not claim
-    // otherwise. Tracks and Imported Data moved into this list with the
-    // import pipeline.
-    for (const branch of ['Routes', 'Tracks', 'Waypoints', 'Photos', 'Imported Data']) {
-      await expect(
-        harness.page.getByRole('treeitem', { name: branch, exact: true }),
-      ).not.toContainText('later phase');
-    }
+  test('switches sections, and each cross-trip section is a list of its own', async () => {
+    const { page } = harness;
+    await page.getByRole('tab', { name: 'Routes', exact: true }).click();
+    await expect(page.getByRole('tab', { name: 'Routes', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tree', { name: 'Routes' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Trips', exact: true }).click();
+    await expect(page.getByRole('tree', { name: 'Trips' })).toBeVisible();
   });
 });
 
@@ -272,16 +275,14 @@ test.describe('trip lifecycle', () => {
       page.getByRole('treeitem', { name: /Dolomites Traverse/ }),
     ).toBeVisible();
 
-    // The properties panel reflects the selection.
-    await expect(page.locator('input').first()).toBeVisible();
-
-    // --- rename, via the properties panel name field
-    const nameField = page
-      .locator('div')
-      .filter({ hasText: /^Name$/ })
-      .locator('input');
+    // --- rename, in the trip's editor behind the right panel's pencil
+    await openTrip(page, /Dolomites Traverse/);
+    await editSelection(page);
+    const nameField = page.getByTestId('companion').getByRole('textbox', { name: 'Name' });
     await nameField.fill('Alta Via 1');
     await nameField.blur();
+    await expect(page.getByTestId('trip-header')).toContainText('Alta Via 1');
+    await showTripList(page);
     await expect(page.getByRole('treeitem', { name: /Alta Via 1/ })).toBeVisible();
 
     // --- delete, with confirmation
@@ -325,9 +326,12 @@ test.describe('trip lifecycle', () => {
 
     await expect(page.getByRole('treeitem', { name: /Old Route/ })).toHaveCount(0);
 
+    // Phase 14: Archived is in the library's options.
+    await page.getByRole('button', { name: 'Library options' }).click();
     await page.getByLabel('Archived').check();
     await expect(page.getByRole('treeitem', { name: /Old Route/ })).toBeVisible();
     await page.getByLabel('Archived').uncheck();
+    await page.keyboard.press('Escape');
   });
 
   test('searching filters to matching trips', async () => {

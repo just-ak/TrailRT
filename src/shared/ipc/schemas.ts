@@ -268,6 +268,9 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
     .strict(),
   z.object({ key: z.literal('showScaleBar'), value: z.boolean() }).strict(),
   z.object({ key: z.literal('photoUnavailable'), value: z.enum(['show', 'hide']) }).strict(),
+  z.object({ key: z.literal('librarySection'), value: z.enum(['trips', 'routes', 'tracks', 'waypoints', 'photos', 'imported']) }).strict(),
+  z.object({ key: z.literal('openTripId'), value: idSchema.nullable() }).strict(),
+  z.object({ key: z.literal('tripTab'), value: z.enum(['plan', 'objects', 'photos']) }).strict(),
   z.object({ key: z.literal('routeAlternatives'), value: z.boolean() }).strict(),
   z.object({ key: z.literal('ukDefaultSpeedLimits'), value: z.boolean() }).strict(),
   z
@@ -1219,3 +1222,9 @@ export const photoMapPointsRequest = z.union([
 ]);
 
 export const photoYearsRequest = z.object({ includeArchived: z.boolean().default(false) }).strict();
+
+// --------------------------------------------------- Phase 14: the library
+
+export const tripsOverviewRequest = z.object({ includeArchived: z.boolean().default(false) }).strict();
+
+export const photosForTripRequest = z.object({ tripId: idSchema }).strict();

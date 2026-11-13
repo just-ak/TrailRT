@@ -46,6 +46,11 @@ export function listPhotos(db: Db, folderId: string): Photo[] {
   return photosRepo.listPhotos(db, folderId);
 }
 
+/** Every photo of a trip's linked folders, in taken order (Phase 14). */
+export function listForTrip(db: Db, tripId: string): Photo[] {
+  return photosRepo.listPhotosForTrip(db, tripId);
+}
+
 export function details(db: Db, photoId: string): PhotoDetails {
   const photo = photosRepo.findPhoto(db, photoId);
   if (photo === null) throw notFound('That photo');

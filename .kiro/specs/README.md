@@ -23,6 +23,7 @@ instead.
 | [`phase-11-geotagged-photos/`](phase-11-geotagged-photos/)             | Requirements, design and tasks, revised with owner feedback. **Next to build**, ahead of Phases 8 and 9 at the owner's request. |
 | [`phase-12-folder-gpx-sync/`](phase-12-folder-gpx-sync/)               | Requirements only. GPX kept in step with a linked folder.                    |
 | [`phase-13-media-flythroughs-sharing/`](phase-13-media-flythroughs-sharing/) | Requirements only. Video, flythroughs and sharing; mostly investigation. |
+| [`phase-14-library-day-companion/`](phase-14-library-day-companion/) | Requirements, design and tasks. **In build**, ahead of Phase 11's last two tasks at the owner's request. |
 
 Only the phases already built, and the next one, have a design and task
 breakdown. That is deliberate: section 20 of the source specification requires
@@ -136,6 +137,23 @@ Two phases follow from that, with requirements only:
   a 3D renderer, which tile and terrain sources may be used for a published
   video, and which encoder.
 
+Phase 14 is the library and the day companion, from the owner's verdict that
+the left panel was "cumbersome and not fluid". A design review weighed eight
+directions and drew six options (`docs/design/library-panel/`); the owner
+chose the day companion and asked for it to be built at once. The left panel
+becomes a rail of sections and a page per trip, and the right panel answers
+"when" for whatever is selected, with today's editors behind its pencil. It
+retires the Phase 10 calendar drawer and the tree of Phase 1 Requirement 4.
+Phase 11's tasks 12 and 13 wait and finish against the new panels. ADR 0021
+records the decision.
+
+The owner's feedback on its first five tasks, on 13 November 2026, added two
+requirements. Routes, tracks, waypoints and photo folders can now stand
+outside any trip and be worked on from their sections. ADR 0022 keeps them in
+one hidden holder rather than making five foreign keys nullable. The build
+also follows the chosen drawings closely, line icons and day cards included.
+The phase grew from ten tasks to twelve.
+
 ## Supporting documents
 
 - [`../../docs/adr/`](../../docs/adr/) — architectural decisions, including the
@@ -173,3 +191,5 @@ Two phases follow from that, with requirements only:
 | 0018 | UK county regions merged; terrain; twistiness; UK limits |
 | 0019 | Road trip itineraries; offline places, POIs and postcodes |
 | 0020 | Linked photo folders; in-house EXIF reader; Quick Look thumbnails |
+| 0021 | The library becomes a rail, a trip page and a day companion |
+| 0022 | Items outside a trip are kept by one hidden holder        |

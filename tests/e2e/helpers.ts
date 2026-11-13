@@ -62,9 +62,30 @@ export function cleanup(userDataDir: string): void {
   rmSync(userDataDir, { recursive: true, force: true });
 }
 
-/** Creates a trip through the library context menu, as a user would. */
+/** Shows the trip list: the rail's Trips section, with no trip open (Phase 14). */
+export async function showTripList(page: Page): Promise<void> {
+  await page.getByRole('tab', { name: 'Trips' }).click();
+  const back = page.getByRole('button', { name: 'Back to trips' });
+  if (await back.isVisible()) await back.click();
+}
+
+/** Opens a trip's page by selecting it in the trip list (Phase 14). Nothing to do if it is open. */
+export async function openTrip(page: Page, name: string | RegExp): Promise<void> {
+  const heading = page.getByTestId('trip-header').getByRole('heading', { name });
+  if ((await heading.count()) > 0 && (await page.getByRole('tab', { name: 'Trips' }).getAttribute('aria-selected')) === 'true') {
+    // Already open: select the trip itself, as clicking its row used to.
+    await heading.click();
+    return;
+  }
+  await showTripList(page);
+  await page.getByRole('treeitem', { name }).first().click();
+  await page.getByTestId('trip-header').waitFor();
+}
+
+/** Creates a trip from the header's More menu, as a user would, and names it in place. */
 export async function createTripViaUi(page: Page, name: string): Promise<void> {
-  await page.getByRole('treeitem', { name: /^Trips/ }).click({ button: 'right' });
+  await showTripList(page);
+  await page.getByRole('button', { name: 'More actions' }).click();
   await page.getByRole('menuitem', { name: 'New Trip' }).click();
 
   // Creation drops straight into an inline rename with the text selected.
@@ -73,4 +94,30 @@ export async function createTripViaUi(page: Page, name: string): Promise<void> {
   await input.fill(name);
   await input.press('Enter');
   await page.getByRole('treeitem', { name: new RegExp(name) }).waitFor();
+}
+
+/** Opens a trip and chooses an item from its page's More menu (Phase 14). */
+export async function tripAction(page: Page, trip: string | RegExp, item: string): Promise<void> {
+  await openTrip(page, trip);
+  await page.getByRole('button', { name: 'More for this trip' }).click();
+  await page.getByRole('menuitem', { name: item, exact: true }).click();
+}
+
+/**
+ * Opens the right panel's editor for what is selected: the pencil on its card
+ * (Phase 14 Requirement 5.1). Nothing to do if the editor is already open; it
+ * stays open while the selection moves between objects.
+ */
+export async function editSelection(page: Page): Promise<void> {
+  const companion = page.getByTestId('companion');
+  await companion.waitFor();
+  if ((await companion.getAttribute('data-view')) === 'edit') return;
+  await companion.getByRole('button', { name: /^Edit/ }).first().click();
+  await page.locator('[data-testid="companion"][data-view="edit"]').waitFor();
+}
+
+/** Puts the editor away, back to the companion's reading view. */
+export async function closeEditor(page: Page): Promise<void> {
+  const back = page.getByRole('button', { name: 'Close the editor' });
+  if (await back.isVisible()) await back.click();
 }

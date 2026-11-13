@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 668" width="1080" height="668" role="img" aria-labelledby="t09-undated d09-undated">
+<title id="t09-undated">A trip with no dates</title>
+<desc id="d09-undated">No plan yet: the right panel asks for a start date and explains what it will show.</desc>
+
+<style>
+  .bg{fill:var(--ui-surface,#ffffff)} .sunk{fill:var(--ui-sunken,#f1f5f9)}
+  .ln{fill:none;stroke:var(--ui-border,#e2e8f0)} .bdf{fill:var(--ui-border,#e2e8f0)}
+  .t1{fill:var(--ui-text,#0f172a)} .t2{fill:var(--ui-text2,#475569)} .t3{fill:var(--ui-text3,#94a3b8)}
+  .acc{fill:var(--ui-accent,#2563eb)} .acct{fill:var(--ui-accent,#2563eb)}
+  .accl{fill:var(--ui-accent,#2563eb);fill-opacity:.13} .accr{fill:none;stroke:var(--ui-accent,#2563eb);stroke-width:2}
+  .on{fill:#ffffff} .onm{fill:#ffffff;fill-opacity:.78} .ph{fill:var(--ui-photo,#0d9488)} .dng{fill:#dc2626}
+  .rail{fill:none;stroke:var(--ui-text3,#94a3b8);stroke-width:2}
+  .mapbg{fill:var(--ui-map,#e9efe1)} .mapg{fill:var(--ui-map-green,#d3e4c1)} .mapw{fill:none;stroke:var(--ui-map-water,#a9cbee);stroke-width:5;stroke-linecap:round}
+  .road{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:4;stroke-linecap:round} .road2{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:2.2;stroke-linecap:round}
+  .rte{fill:none;stroke:#7c3aed;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round} .rtec{fill:none;stroke:#ffffff;stroke-width:8;stroke-linecap:round;stroke-opacity:.9}
+  .i{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i2{stroke:var(--ui-text2,#475569)} .i3{stroke:var(--ui-text3,#94a3b8)} .ia{stroke:var(--ui-accent,#2563eb)}
+  .iw{stroke:#ffffff} .ip{stroke:var(--ui-photo,#0d9488)} .ir{stroke:#7c3aed} .it{stroke:#ea580c} .iy{stroke:#dc2626} .id{stroke:#dc2626}
+  .co{fill:#f59e0b} .cot{fill:#1f2937;font-size:11px;font-weight:700}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<style>@media (prefers-color-scheme: dark){svg{--ui-surface:#0f172a;--ui-sunken:#080d17;--ui-border:#2a3550;--ui-text:#f1f5f9;--ui-text2:#94a3b8;--ui-text3:#64748b;--ui-accent:#60a5fa;--ui-photo:#2dd4bf;--ui-map:#162030;--ui-map-green:#1b2f25;--ui-map-water:#1f4069;--ui-map-road:#2c3b54}}</style>
+<rect x="0" y="0" width="1080" height="668" rx="12" class="bg" />
+<rect x="0.5" y="0.5" width="1079" height="667" rx="12" class="ln"/>
+<line x1="0" y1="30" x2="1080" y2="30" class="ln" />
+<circle cx="18" cy="15" r="6" fill="#ff5f57"/>
+<circle cx="38" cy="15" r="6" fill="#febc2e"/>
+<circle cx="58" cy="15" r="6" fill="#28c840"/>
+<text x="86" y="20" class="t1" font-size="13" font-weight="600" text-anchor="start" >TrailRT</text>
+<rect x="0" y="30" width="52" height="638" rx="0" class="sunk" />
+<line x1="52" y1="30" x2="52" y2="668" class="ln" />
+<rect x="9" y="42" width="34" height="32" rx="8" class="accl" />
+<g transform="translate(18 50) scale(0.6666666666666666)" class="i ia"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<g transform="translate(18 90) scale(0.6666666666666666)" class="i i2"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<g transform="translate(18 130) scale(0.6666666666666666)" class="i i2"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<g transform="translate(18 170) scale(0.6666666666666666)" class="i i2"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<g transform="translate(18 210) scale(0.6666666666666666)" class="i i2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<g transform="translate(18 250) scale(0.6666666666666666)" class="i i2"><path d="M4 13l2.5-7h11L20 13v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/></g>
+<g transform="translate(18 290) scale(0.6666666666666666)" class="i i3"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g>
+<g transform="translate(18 632) scale(0.6666666666666666)" class="i i2"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></g>
+<g transform="translate(62 42) scale(0.5833333333333334)" class="i ia"><path d="M15 6l-6 6 6 6"/></g>
+<text x="77" y="54" class="acct" font-size="12.5" font-weight="500" text-anchor="start" >Trips</text>
+<g transform="translate(207.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 11v5M9.5 13.5h5"/></g>
+<g transform="translate(236.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></g>
+<g transform="translate(265.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></g>
+<g transform="translate(294.0 43.0) scale(0.6666666666666666)" class="i i2"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></g>
+<text x="66" y="82" class="t1" font-size="18" font-weight="700" text-anchor="start" >Hope Valley idea</text>
+<text x="66" y="102" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >No dates · 2 waypoints · 1 route</text>
+<rect x="62" y="116" width="252" height="26" rx="7" class="sunk" />
+<rect x="64.0" y="118" width="82.66666666666667" height="22" rx="6" class="bg" />
+<text x="105.33333333333334" y="133" class="t1" font-size="12" font-weight="600" text-anchor="middle" >Plan</text>
+<text x="188.00000000000003" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Objects 3</text>
+<text x="270.6666666666667" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Photos</text>
+<rect x="60" y="168" width="256" height="92" rx="8" class="sunk" />
+<g transform="translate(72 182) scale(0.75)" class="i i3"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g>
+<text x="98" y="196" class="t1" font-size="13" font-weight="600" text-anchor="start" >No plan yet</text>
+<text x="72" y="220" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >Give the trip a start date and its stops</text>
+<text x="72" y="236" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >are laid out day by day.</text>
+<text x="66" y="280" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">IN THIS TRIP</text>
+<text x="310" y="280" class="t3" font-size="11" font-weight="400" text-anchor="end" >3</text>
+<g transform="translate(68 296) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="90" y="307.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Monsal Head</text>
+<g transform="translate(68 324) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="90" y="335.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Hathersage</text>
+<g transform="translate(68 352) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="90" y="363.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Monsal Head → Hathersage</text>
+<text x="308" y="363.5" class="t3" font-size="11" font-weight="400" text-anchor="end" >18 km</text>
+<clipPath id="e09m1"><rect x="324" y="30" width="440" height="638"/></clipPath><g clip-path="url(#e09m1)">
+<rect x="324" y="30" width="440" height="638" rx="0" class="mapbg" />
+<ellipse cx="544" cy="180" rx="150" ry="70" class="mapg"/>
+<ellipse cx="564" cy="360" rx="170" ry="110" class="mapg"/>
+<ellipse cx="414" cy="550" rx="120" ry="60" class="mapg"/>
+<path d="M584 30 C564 180 624 290 594 410 S644 590 614 668" class="mapw"/>
+<path d="M324 330 C474 320 624 350 764 330" class="road2"/>
+<path d="M354 30 C374 230 344 430 384 668" class="road2"/>
+<circle cx="474" cy="230" r="7" fill="#dc2626" stroke="#fff" stroke-width="2"/>
+<text x="486" y="234" class="t2" font-size="11.5" font-weight="600" text-anchor="start" paint-order="stroke" stroke="var(--ui-map,#e9efe1)" stroke-width="3">Monsal Head</text>
+<circle cx="624" cy="370" r="7" fill="#dc2626" stroke="#fff" stroke-width="2"/>
+<text x="636" y="374" class="t2" font-size="11.5" font-weight="600" text-anchor="start" paint-order="stroke" stroke="var(--ui-map,#e9efe1)" stroke-width="3">Hathersage</text>
+<rect x="336" y="42" width="210" height="30" rx="7" class="bg" />
+<g transform="translate(345 49) scale(0.625)" class="i i3"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<text x="366" y="61" class="t3" font-size="12" font-weight="400" text-anchor="start" >Postcode, town or street</text>
+<rect x="722" y="42" width="30" height="60" rx="7" class="bg" />
+<g transform="translate(729 50) scale(0.6666666666666666)" class="i i2"><path d="M12 5v14M5 12h14"/></g>
+<g transform="translate(729 78) scale(0.6666666666666666)" class="i i2"><path d="M5 12h14"/></g>
+<rect x="336" y="624" width="84" height="30" rx="7" class="bg" />
+<text x="378" y="643" class="t3" font-size="11" font-weight="400" text-anchor="middle" >▢ ▭ ▢</text>
+</g>
+<line x1="324" y1="30" x2="324" y2="668" class="ln" />
+<line x1="764" y1="30" x2="764" y2="668" class="ln" />
+<text x="780" y="60" class="t1" font-size="16" font-weight="700" text-anchor="start" >When is it?</text>
+<text x="780" y="80" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >This side of the window shows time. With</text>
+<text x="780" y="96" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >a start date, the trip appears here by the hour.</text>
+<text x="780" y="120" class="t3" font-size="11" font-weight="400" text-anchor="start" >Start date</text>
+<rect x="780" y="126" width="140" height="26" rx="6" class="sunk" />
+<text x="789" y="143.5" class="t3" font-size="12.5" font-weight="400" text-anchor="start" >dd / mm / yyyy</text>
+<text x="930" y="120" class="t3" font-size="11" font-weight="400" text-anchor="start" >Leave at</text>
+<rect x="930" y="126" width="134" height="26" rx="6" class="sunk" />
+<text x="939" y="143.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >09:00</text>
+<rect x="780" y="172" width="130" height="32" rx="8" class="acc" />
+<text x="845" y="192.5" class="on" font-size="12.5" font-weight="600" text-anchor="middle" >Plan by date</text>
+<line x1="780" y1="234" x2="1064" y2="234" class="ln" />
+<text x="780" y="258" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">UNTIL THEN</text>
+<text x="780" y="280" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >Stops can be ordered without dates, and</text>
+<text x="780" y="296" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >drives are measured, but not timed.</text>
+<rect x="780" y="312" width="284" height="56" rx="8" class="sunk" />
+<g transform="translate(792 324) scale(0.625)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="814" y="335" class="t1" font-size="12" font-weight="600" text-anchor="start" >Monsal Head → Hathersage</text>
+<text x="814" y="353" class="t3" font-size="11" font-weight="400" text-anchor="start" >18 km · about 30 min by road</text>
+</svg>

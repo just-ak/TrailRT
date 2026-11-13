@@ -1,5 +1,6 @@
 import { api, call, describeError } from '../../lib/client';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { useNavStore } from '../../stores/navStore';
 import { usePhotoStore } from '../../stores/photoStore';
 import { useSelectionStore } from '../../stores/selectionStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -23,6 +24,7 @@ async function refreshFolders(): Promise<void> {
     useSelectionStore.getState().reload(),
     usePhotoStore.getState().reloadList(),
     usePhotoStore.getState().reloadMap(),
+    usePhotoStore.getState().loadTripPhotos(usePhotoStore.getState().tripPhotos.tripId),
   ]);
 }
 
@@ -61,12 +63,12 @@ export function linkFolderToSelectedTrip(): void {
 export async function confirmLink(token: string, includeSubfolders: boolean): Promise<boolean> {
   try {
     const folder = await call(api().linkedFolders.link({ token, includeSubfolders }));
-    // Show the folder just linked: its trip and the trip's Linked folders row
-    // open, so the new row is in view rather than inside a collapsed group.
+    // Show the folder just linked: its trip's page, on the Photos tab
+    // (Phase 14), where the trip's linked folders are listed.
     const library = useLibraryStore.getState();
-    library.setExpanded(`trip:${folder.tripId}`, true);
-    library.setExpanded(`trip:${folder.tripId}/linked-folders`, true);
     await library.refresh();
+    useNavStore.getState().openTrip(folder.tripId);
+    useNavStore.getState().setTab('photos');
     await useSelectionStore.getState().select({ kind: 'linkedFolder', id: folder.id });
     toast(`Linked ${folder.name}. TrailRT reads it and never changes it.`);
     return true;

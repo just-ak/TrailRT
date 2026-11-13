@@ -1,12 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import {
+import { editSelection,
   cleanup,
   close,
   createTripViaUi,
   launch,
   makeUserDataDir,
-  type Harness,
-} from './helpers';
+  type Harness, openTrip, tripAction } from './helpers';
 
 /**
  * Phase 2 acceptance criteria, exercised against the built application:
@@ -54,11 +53,7 @@ test.describe('route drawing', () => {
     const { page } = harness;
 
     // Select the trip, then start drawing from its context menu.
-    await page.getByRole('treeitem', { name: 'Phase Two Trip' }).click();
-    await page
-      .getByRole('treeitem', { name: 'Phase Two Trip' })
-      .click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'New Route' }).click();
+    await tripAction(page, 'Phase Two Trip', 'New Route');
 
     /*
      * The hint bar must be explicit that nothing is snapped to a road.
@@ -108,11 +103,7 @@ test.describe('route drawing', () => {
       return r.ok ? r.data.length : -1;
     });
 
-    await page.getByRole('treeitem', { name: 'Phase Two Trip' }).click();
-    await page
-      .getByRole('treeitem', { name: 'Phase Two Trip' })
-      .click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'New Route' }).click();
+    await tripAction(page, 'Phase Two Trip', 'New Route');
 
     await clickMap(page, 260, 300);
     await clickMap(page, 300, 330);
@@ -130,21 +121,16 @@ test.describe('route drawing', () => {
   test('shows the route in the library under its trip and in the Routes view', async () => {
     const { page } = harness;
 
-    // Routes are children of their trip, so the trip has to be expanded.
-    await page
-      .getByRole('treeitem', { name: 'Phase Two Trip' })
-      .dblclick();
-    await expect(
-      page.getByRole('treeitem', { name: 'New Route' }).first(),
-    ).toBeVisible();
+    // Routes belong to their trip: they are on its page (Phase 14).
+    await openTrip(page, 'Phase Two Trip');
+    await expect(page.getByRole('treeitem', { name: 'New Route' }).first()).toBeVisible();
 
-    // The cross-trip view lists the same route, annotated with its trip.
-    await page.getByRole('treeitem', { name: 'Routes', exact: true }).dblclick();
-    const rows = page.getByRole('treeitem', { name: 'New Route' });
-    await expect(rows.first()).toBeVisible();
-    // Once under the trip, once in the view — distinct tree positions for the
-    // same object.
-    expect(await rows.count()).toBeGreaterThanOrEqual(2);
+    // The cross-trip Routes section lists the same route, annotated with its trip.
+    await page.getByRole('tab', { name: 'Routes', exact: true }).click();
+    const row = page.getByRole('tree', { name: 'Routes' }).getByRole('treeitem', { name: 'New Route' }).first();
+    await expect(row).toBeVisible();
+    await expect(row).toContainText('Phase Two Trip');
+    await page.getByRole('tab', { name: 'Trips', exact: true }).click();
   });
 });
 
@@ -239,17 +225,15 @@ test.describe('waypoints', () => {
   test('creates a waypoint by map click and shows a marker', async () => {
     const { page } = harness;
 
-    await page.getByRole('treeitem', { name: 'Phase Two Trip' }).click();
-    await page
-      .getByRole('treeitem', { name: 'Phase Two Trip' })
-      .click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'New Waypoint' }).click();
+    await tripAction(page, 'Phase Two Trip', 'New Waypoint');
 
     await expect(page.getByText(/Click the map to place a waypoint/i)).toBeVisible();
     await clickMap(page, 300, 240);
 
     await expect(page.locator('.trailrt-waypoint-marker').first()).toBeVisible();
-    // The properties panel switches to the new waypoint.
+    // The right panel shows the new waypoint; its editor has the position.
+    await expect(page.getByTestId('object-card')).toBeVisible();
+    await editSelection(page);
     await expect(page.getByLabel('Latitude')).toBeVisible();
   });
 

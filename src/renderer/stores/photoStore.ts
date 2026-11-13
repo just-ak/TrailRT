@@ -65,6 +65,8 @@ interface PhotoState {
    * burst when one was opened, otherwise the anchor's folder (design §10.3).
    */
   sequence: string[];
+  /** Phase 14: every photo of the open trip, in taken order, for its Photos tab and day counts. */
+  tripPhotos: { tripId: string | null; photos: Photo[] };
 
   setProgress(progress: ScanProgress): void;
   clearProgress(folderId: string): void;
@@ -83,6 +85,7 @@ interface PhotoState {
   step(delta: -1 | 1): void;
   /** Closes the preview: no photo is selected. */
   closePreview(): void;
+  loadTripPhotos(tripId: string | null): Promise<void>;
 }
 
 let listSeq = 0;
@@ -103,6 +106,7 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
   burst: null,
   anchorDetails: null,
   sequence: [],
+  tripPhotos: { tripId: null, photos: [] },
 
   setProgress: (progress) => set({ progress: { ...get().progress, [progress.folderId]: progress } }),
 
@@ -186,6 +190,15 @@ export const usePhotoStore = create<PhotoState>((set, get) => ({
     if (next === undefined) return;
     set({ selection: { ids: new Set([next]), anchor: next } });
     void loadAnchor();
+  },
+
+  loadTripPhotos: async (tripId) => {
+    if (tripId === null) {
+      set({ tripPhotos: { tripId: null, photos: [] } });
+      return;
+    }
+    const photos = await callOr(api().photos.forTrip({ tripId }), [] as Photo[]);
+    set({ tripPhotos: { tripId, photos } });
   },
 
   closePreview: () => {

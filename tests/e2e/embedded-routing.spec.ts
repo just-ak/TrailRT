@@ -10,7 +10,9 @@ import {
   launch,
   makeUserDataDir,
   type Harness,
-} from './helpers';
+  editSelection,
+  openTrip,
+  tripAction } from './helpers';
 
 /**
  * Snapping against the **embedded** routing engine — ADR 0013.
@@ -365,8 +367,7 @@ test.describe('embedded routing engine', () => {
     // Following roads is the default (ADR 0018): no separate tool, no toggle.
     await expect(page.getByRole('button', { name: 'Snap routing' })).toHaveCount(0);
 
-    await page.getByRole('treeitem', { name: 'Embedded Routing Trip' }).click();
-    await page.getByRole('button', { name: 'New route', exact: true }).click();
+    await tripAction(page, 'Embedded Routing Trip', 'New Route');
     // The direct answer to "is the UI wired to the engine": the road tool,
     // not straight lines.
     await expect(page.getByText(/Click to extend along the roads/)).toBeVisible();
@@ -390,15 +391,15 @@ test.describe('embedded routing engine', () => {
     await page.reload();
     await page.waitForSelector('[role="tree"]');
 
-    // Routes are children of their trip, so the trip has to be expanded
-    // before the route exists as a tree row to click.
-    await page
-      .getByRole('treeitem', { name: 'Embedded Routing Trip' })
-      .dblclick();
+    // Routes are on their trip's page (Phase 14).
+    await openTrip(page, 'Embedded Routing Trip');
 
     // Already following roads: it re-routes itself when edited, so there is no
     // button to press (ADR 0018).
     await page.getByRole('treeitem', { name: /To snap/ }).first().click();
+    // The route's editor, behind the right panel's pencil (Phase 14).
+    await editSelection(page);
+    await expect(page.getByRole('button', { name: 'Route details' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Follow roads' })).toHaveCount(0);
 
     // Looked up on selection with no button pressed: the engine is local, so

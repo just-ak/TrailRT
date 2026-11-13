@@ -10,7 +10,8 @@ import {
   launch,
   makeUserDataDir,
   type Harness,
-} from './helpers';
+  openTrip,
+  tripAction } from './helpers';
 
 /**
  * Phase 6 end to end: routes on offer, choosing one, shaping, undo, restart.
@@ -106,7 +107,7 @@ test.describe('route alternatives and shaping', () => {
     );
     await harness.page.reload();
     await harness.page.waitForSelector('[role="tree"]');
-    await harness.page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
+    await openTrip(harness.page, new RegExp(TRIP));
   });
 
   test.afterAll(async () => {
@@ -118,7 +119,7 @@ test.describe('route alternatives and shaping', () => {
     const { page } = harness;
 
     // Following roads is the default (ADR 0018): New Route is the tool.
-    await page.getByRole('button', { name: 'New route', exact: true }).click();
+    await tripAction(page, new RegExp(TRIP), 'New Route');
     for (const at of [START, END]) {
       const { x, y } = await pixelOf(page, at);
       await page.mouse.click(x, y);

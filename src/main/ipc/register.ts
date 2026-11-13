@@ -350,6 +350,10 @@ export function registerIpcHandlers(): void {
   handle(CHANNELS.trips.delete, S.tripDeleteRequest, (req) =>
     commit(tripService.remove(ctx().handle.db, req.id)));
 
+  handle(CHANNELS.trips.overview, S.tripsOverviewRequest, (req) =>
+    libraryService.overview(ctx().handle.db, { includeArchived: req.includeArchived }),
+  );
+
   handle(CHANNELS.trips.search, S.tripSearchRequest, (req) =>
     tripService.search(ctx().handle.db, req.query),
   );
@@ -1367,6 +1371,11 @@ export function registerIpcHandlers(): void {
   handle(CHANNELS.photos.years, S.photoYearsRequest, (req) =>
     photoService.years(ctx().handle.db, req.includeArchived),
   );
+
+  handle(CHANNELS.photos.forTrip, S.photosForTripRequest, (req) => {
+    tripService.get(ctx().handle.db, req.tripId);
+    return photoService.listForTrip(ctx().handle.db, req.tripId);
+  });
 
   handle(CHANNELS.photos.get, S.photoIdRequest, (req) =>
     photoService.details(ctx().handle.db, req.photoId),

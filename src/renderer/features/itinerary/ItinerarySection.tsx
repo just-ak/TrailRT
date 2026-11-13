@@ -6,7 +6,6 @@ import type { TimedStop } from "@shared/itinerary/timeline";
 import {
   ArrowDown,
   ArrowUp,
-  CalendarDays,
   CalendarPlus,
   ListPlus,
   RefreshCw,
@@ -18,6 +17,7 @@ import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { api, call, describeError } from "../../lib/client";
 import { useGeometryStore } from "../../stores/geometryStore";
+import { saveToCalendar } from "../companion/companionActions";
 import { useItineraryStore } from "../../stores/itineraryStore";
 import { useLibraryStore } from "../../stores/libraryStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -110,7 +110,6 @@ function Plan({ view }: { view: ItineraryView }): ReactNode {
   const { itinerary, stops, timeline } = view;
   const units = useSettingsStore((s) => s.settings.units);
   const geometry = useGeometryStore((s) => (s.tripId === itinerary.tripId ? s.geometry : null));
-  const openCalendar = useUiStore((s) => s.openCalendar);
   const openPoiPanel = useUiStore((s) => s.openPoiPanel);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [adding, setAdding] = useState("");
@@ -224,9 +223,6 @@ function Plan({ view }: { view: ItineraryView }): ReactNode {
       <PlanSettings view={view} units={units} />
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5" data-testid="itinerary-actions">
-        <IconButton hint="Calendar" onClick={() => openCalendar(tripId)}>
-          <CalendarDays size={16} aria-hidden="true" />
-        </IconButton>
         <IconButton hint="Find places along the way" onClick={() => openPoiPanel({ kind: "itinerary", tripId })}>
           <Search size={16} aria-hidden="true" />
         </IconButton>
@@ -236,18 +232,7 @@ function Plan({ view }: { view: ItineraryView }): ReactNode {
         >
           <RefreshCw size={16} aria-hidden="true" />
         </IconButton>
-        <IconButton
-          hint="Export to a calendar file"
-          onClick={() =>
-            void call(api().itinerary.exportIcs({ tripId, includeLegs: true }))
-              .then((result) => {
-                if (result.cancelled) return;
-                const left = result.omitted.length === 0 ? "" : ` ${result.omitted.length} left out because their times are unknown.`;
-                useUiStore.getState().showToast(`Saved ${result.fileName}: ${result.eventCount} events.${left}`);
-              })
-              .catch((cause: unknown) => useUiStore.getState().showToast(describeError(cause), "error"))
-          }
-        >
+        <IconButton hint="Export to a calendar file" onClick={() => saveToCalendar(tripId)}>
           <CalendarPlus size={16} aria-hidden="true" />
         </IconButton>
         {confirmRemove ? (
@@ -750,3 +735,6 @@ function PlanSettings({ view, units }: { view: ItineraryView; units: UnitSystem 
     </details>
   );
 }
+
+/** The same change-then-reload, for the companion's undated prompt. */
+export { run as runPlanChange };

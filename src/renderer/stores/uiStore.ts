@@ -56,7 +56,6 @@ export type DialogKind =
 export type PoiScope = { kind: 'route'; routeId: string } | { kind: 'itinerary'; tripId: string };
 
 export type PlanDrawer =
-  | { kind: 'calendar'; tripId: string }
   | { kind: 'poi'; scope: PoiScope }
   /** Phase 11: one linked folder's photos (design §8.3). */
   | { kind: 'photos'; folderId: string };
@@ -99,7 +98,7 @@ interface UiState {
   highlightedPoints: readonly number[];
   /**
    * Phase 10: the planning drawer below the map, in the slot the profile
-   * uses, so the map stays in view. One of profile, calendar or POIs at a
+   * uses, so the map stays in view. One of profile, POIs or photos at a
    * time; opening one closes the others.
    */
   planDrawer: PlanDrawer | null;
@@ -122,7 +121,6 @@ interface UiState {
   openPointTable(ownerType: 'route' | 'track', ownerId: string): void;
   closePointTable(): void;
   setHighlightedPoints(indices: readonly number[]): void;
-  openCalendar(tripId: string): void;
   openPoiPanel(scope: PoiScope): void;
   openPhotoList(folderId: string): void;
   closePlanDrawer(): void;
@@ -201,10 +199,6 @@ export const useUiStore = create<UiState>((set, get) => ({
   setMapOffline: (mapOffline) => set({ mapOffline }),
 
   // Opening something below the map shows that panel again if it was hidden.
-  openCalendar: (tripId) => {
-    set({ planDrawer: { kind: 'calendar', tripId }, profile: null, pointTable: null, highlightedPoints: [] });
-    if (get().layout.drawerVisible === false) get().setLayout({ drawerVisible: true });
-  },
   openPoiPanel: (scope) => {
     set({ planDrawer: { kind: 'poi', scope }, profile: null, pointTable: null, highlightedPoints: [] });
     if (get().layout.drawerVisible === false) get().setLayout({ drawerVisible: true });

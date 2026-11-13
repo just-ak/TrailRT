@@ -2,14 +2,14 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import {
+import { editSelection,
   cleanup,
   close,
   createTripViaUi,
   launch,
   makeUserDataDir,
   type Harness,
-} from './helpers';
+  openTrip } from './helpers';
 
 /**
  * Phase 5 acceptance criteria, against the built application:
@@ -172,21 +172,6 @@ async function makeRoutes(
   );
 }
 
-/**
- * Expands a branch if it is collapsed, and leaves it alone if not.
- *
- * A bare double-click *toggles*, so calling it on an already-open branch
- * closes it — and a collapsed branch's children are not in the DOM at all, so
- * the failure shows up later as a missing row rather than here.
- */
-async function ensureExpanded(page: Page, name: RegExp): Promise<void> {
-  const row = page.getByRole('treeitem', { name }).first();
-  await row.waitFor({ timeout: 20_000 });
-  if ((await row.getAttribute('aria-expanded')) === 'false') {
-    await row.dblclick();
-  }
-}
-
 async function undoState(
   page: Page,
 ): Promise<{ canUndo: boolean; undoLabel: string | null } | null> {
@@ -203,7 +188,8 @@ async function undoState(
 test.describe('multi-selection in the library', () => {
   test.beforeAll(async () => {
     await makeRoutes(harness.page, tripId, 3, 'Plain');
-    await ensureExpanded(harness.page, /^Objects Trip/);
+    // Phase 14: a trip's objects are on its page.
+    await openTrip(harness.page, /^Objects Trip/);
   });
 
   test('a plain click selects one object and marks only it', async () => {
@@ -308,11 +294,14 @@ test.describe('multi-selection in the library', () => {
 
     await page.getByRole('treeitem', { name: /^Plain 1/ }).click();
     // Requirement 1.3: a container's deletion cascades, so batching one behind
-    // a keystroke is not offered. The modifier click behaves as a plain one.
+    // a keystroke is not offered. In the trip list a modifier click on a trip
+    // behaves as a plain one: it opens the trip, alone.
+    await page.getByRole('button', { name: 'Back to trips' }).click();
     await page
       .getByRole('treeitem', { name: /^Objects Trip/ })
       .click({ modifiers: ['Meta'] });
 
+    await expect(page.getByTestId('trip-header')).toContainText('Objects Trip');
     await expect(page.getByText(/ selected$/)).toHaveCount(0);
   });
 });
@@ -738,11 +727,12 @@ test.describe('the point table for a route', () => {
    */
   test.beforeEach(async () => {
     const { page } = harness;
-    await ensureExpanded(page, /^Objects Trip/);
+    await openTrip(page, /^Objects Trip/);
     await page.getByRole('treeitem', { name: /^Tabled 1/ }).click();
 
     if ((await page.getByRole('grid', { name: 'Route point list' }).count()) === 0) {
       // Points are edited in the profile drawer, under the chart.
+      await editSelection(page);
       await page.getByRole('button', { name: 'Profile and points' }).click();
       await page.getByRole('button', { name: 'Edit points', exact: true }).click();
     }
@@ -878,7 +868,7 @@ test.describe('the point table for a route', () => {
 
     // Something with no profile closes the drawer rather than leaving it
     // describing a route that is no longer selected.
-    await page.getByRole('treeitem', { name: /^Objects Trip/ }).click();
+    await openTrip(page, /^Objects Trip/);
     await expect(drawer).toHaveCount(0);
   });
 
@@ -919,15 +909,15 @@ test.describe('the point table for a track', () => {
   test('says the data is recorded and offers the original back', async () => {
     const { page } = harness;
 
-    // Reached through the cross-trip Tracks view rather than hunting for the
-    // trip the import created. A collapsed branch is not in the DOM, so the
-    // view has to be expanded before its children can be clicked.
-    await ensureExpanded(page, /^Tracks/);
+    // Reached through the cross-trip Tracks section rather than hunting for
+    // the trip the import created (Phase 14: a section of the rail).
+    await page.getByRole('tab', { name: 'Tracks', exact: true }).click();
     await page
       .getByRole('treeitem', { name: /^Two Segments/ })
       .first()
       .click();
 
+    await editSelection(page);
     await page.getByRole('button', { name: 'Profile and points' }).click();
     await page.getByRole('button', { name: 'Edit points', exact: true }).click();
 

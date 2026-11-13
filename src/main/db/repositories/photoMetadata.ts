@@ -8,7 +8,7 @@ import type {
   PhotoState,
 } from '@shared/domain/linkedFolders';
 import type { Db } from '../client';
-import { folderFiles, photoMetadata } from '../schema';
+import { folderFiles, linkedFolders, photoMetadata } from '../schema';
 
 /**
  * Storage for what was read from each photo. Phase 11, design §2, §8 and §9.
@@ -76,6 +76,34 @@ export function listPhotos(db: Db, folderId: string): Photo[] {
     .orderBy(sql`${photoMetadata.takenLocal} is null`, asc(photoMetadata.takenLocal), asc(folderFiles.relativePath))
     .all()
     .map(rowToPhoto);
+}
+
+/**
+ * Every photo of every folder linked to a trip, in taken-time order, undated
+ * last (Phase 14 design §3.2). For the trip's Photos tab, its day cards and
+ * the hour scale's photo times.
+ */
+export function listPhotosForTrip(db: Db, tripId: string): Photo[] {
+  return db
+    .select()
+    .from(folderFiles)
+    .innerJoin(photoMetadata, eq(photoMetadata.fileId, folderFiles.id))
+    .innerJoin(linkedFolders, eq(linkedFolders.id, folderFiles.folderId))
+    .where(and(eq(linkedFolders.tripId, tripId), eq(folderFiles.kind, 'photo')))
+    .orderBy(sql`${photoMetadata.takenLocal} is null`, asc(photoMetadata.takenLocal), asc(folderFiles.relativePath))
+    .all()
+    .map((row) => rowToPhoto({ folder_files: row.folder_files, photo_metadata: row.photo_metadata }));
+}
+
+/** Photos per trip, in one query, for the trip list (Phase 14 design §3.2). */
+export function photoCountsByTrip(db: Db): Map<string, number> {
+  const rows = db.all<{ trip_id: string; n: number }>(sql`
+    select lf.trip_id, count(*) as n
+    from photo_metadata pm
+    join folder_files ff on ff.id = pm.file_id
+    join linked_folders lf on lf.id = ff.folder_id
+    group by lf.trip_id`);
+  return new Map(rows.map((r) => [r.trip_id, r.n]));
 }
 
 export function countsByState(db: Db, folderId: string): Record<PhotoState, number> {

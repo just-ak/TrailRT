@@ -9,8 +9,7 @@ import {
   createTripViaUi,
   launch,
   makeUserDataDir,
-  type Harness,
-} from './helpers';
+  type Harness, tripAction } from './helpers';
 
 /**
  * Finishing a new route, every way a user can start and finish one.
@@ -74,10 +73,9 @@ async function clickAt(page: Page, index: number): Promise<void> {
   await page.mouse.click(x, y);
 }
 
-/** Starts New Route from the trip's properties panel. */
+/** Starts New Route from the trip page's More menu (Phase 14). */
 async function newRoute(page: Page): Promise<void> {
-  await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
-  await page.getByRole('button', { name: 'New route', exact: true }).click();
+  await tripAction(page, new RegExp(TRIP), 'New Route');
   await expect(page.getByText(/Click to extend along the roads/)).toBeVisible();
 }
 
@@ -155,8 +153,7 @@ test.describe('finishing a new route', () => {
   test('a double-click on a straight-line route adds its last point once', async () => {
     const { page } = harness;
 
-    await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click({ button: 'right' });
-    await page.getByRole('menuitem', { name: 'New Straight-Line Route' }).click();
+    await tripAction(page, new RegExp(TRIP), 'New Straight-Line Route');
     await clickAt(page, 3);
     const { x, y } = await pixelOf(page, at(13));
     await page.mouse.dblclick(x, y);

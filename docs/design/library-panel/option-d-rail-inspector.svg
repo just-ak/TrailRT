@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 668" width="1080" height="668" role="img" aria-labelledby="option-d-rail-inspector-t option-d-rail-inspector-d">
+<title id="option-d-rail-inspector-t">Option D, Rail with inspector</title>
+<desc id="option-d-rail-inspector-d">Section rail and trip page on the left; the right panel inspects the selected stop, with its timing, place, photos and notes together.</desc>
+
+<style>
+  .bg{fill:var(--ui-surface,#ffffff)} .sunk{fill:var(--ui-sunken,#f1f5f9)}
+  .ln{fill:none;stroke:var(--ui-border,#e2e8f0)} .bdf{fill:var(--ui-border,#e2e8f0)}
+  .t1{fill:var(--ui-text,#0f172a)} .t2{fill:var(--ui-text2,#475569)} .t3{fill:var(--ui-text3,#94a3b8)}
+  .acc{fill:var(--ui-accent,#2563eb)} .acct{fill:var(--ui-accent,#2563eb)}
+  .accl{fill:var(--ui-accent,#2563eb);fill-opacity:.13} .accr{fill:none;stroke:var(--ui-accent,#2563eb);stroke-width:2}
+  .on{fill:#ffffff} .onm{fill:#ffffff;fill-opacity:.78} .ph{fill:var(--ui-photo,#0d9488)} .dng{fill:#dc2626}
+  .rail{fill:none;stroke:var(--ui-text3,#94a3b8);stroke-width:2}
+  .mapbg{fill:var(--ui-map,#e9efe1)} .mapg{fill:var(--ui-map-green,#d3e4c1)} .mapw{fill:none;stroke:var(--ui-map-water,#a9cbee);stroke-width:5;stroke-linecap:round}
+  .road{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:4;stroke-linecap:round} .road2{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:2.2;stroke-linecap:round}
+  .rte{fill:none;stroke:#7c3aed;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round} .rtec{fill:none;stroke:#ffffff;stroke-width:8;stroke-linecap:round;stroke-opacity:.9}
+  .i{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i2{stroke:var(--ui-text2,#475569)} .i3{stroke:var(--ui-text3,#94a3b8)} .ia{stroke:var(--ui-accent,#2563eb)}
+  .iw{stroke:#ffffff} .ip{stroke:var(--ui-photo,#0d9488)} .ir{stroke:#7c3aed} .it{stroke:#ea580c} .iy{stroke:#dc2626} .id{stroke:#dc2626}
+  .co{fill:#f59e0b} .cot{fill:#1f2937;font-size:11px;font-weight:700}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<style>@media (prefers-color-scheme: dark){svg{--ui-surface:#0f172a;--ui-sunken:#080d17;--ui-border:#2a3550;--ui-text:#f1f5f9;--ui-text2:#94a3b8;--ui-text3:#64748b;--ui-accent:#60a5fa;--ui-photo:#2dd4bf;--ui-map:#162030;--ui-map-green:#1b2f25;--ui-map-water:#1f4069;--ui-map-road:#2c3b54}}</style>
+<rect x="0" y="0" width="1080" height="668" rx="12" class="bg" />
+<rect x="0.5" y="0.5" width="1079" height="667" rx="12" class="ln"/>
+<line x1="0" y1="30" x2="1080" y2="30" class="ln" />
+<circle cx="18" cy="15" r="6" fill="#ff5f57"/>
+<circle cx="38" cy="15" r="6" fill="#febc2e"/>
+<circle cx="58" cy="15" r="6" fill="#28c840"/>
+<text x="86" y="20" class="t1" font-size="13" font-weight="600" text-anchor="start" >TrailRT</text>
+<rect x="0" y="30" width="52" height="638" rx="0" class="sunk" />
+<line x1="52" y1="30" x2="52" y2="668" class="ln" />
+<rect x="9" y="42" width="34" height="32" rx="8" class="accl" />
+<g transform="translate(18 50) scale(0.6666666666666666)" class="i ia"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<g transform="translate(18 90) scale(0.6666666666666666)" class="i i2"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<g transform="translate(18 130) scale(0.6666666666666666)" class="i i2"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<g transform="translate(18 170) scale(0.6666666666666666)" class="i i2"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<g transform="translate(18 210) scale(0.6666666666666666)" class="i i2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<g transform="translate(18 250) scale(0.6666666666666666)" class="i i2"><path d="M4 13l2.5-7h11L20 13v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/></g>
+<g transform="translate(18 290) scale(0.6666666666666666)" class="i i3"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g>
+<g transform="translate(18 632) scale(0.6666666666666666)" class="i i2"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></g>
+<g transform="translate(62 42) scale(0.5833333333333334)" class="i ia"><path d="M15 6l-6 6 6 6"/></g>
+<text x="77" y="54" class="acct" font-size="12.5" font-weight="500" text-anchor="start" >Trips</text>
+<text x="66" y="82" class="t1" font-size="18" font-weight="700" text-anchor="start" >Idea1</text>
+<g transform="translate(207.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 11v5M9.5 13.5h5"/></g>
+<g transform="translate(236.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></g>
+<g transform="translate(265.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></g>
+<g transform="translate(294.0 43.0) scale(0.6666666666666666)" class="i i2"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></g>
+<text x="66" y="102" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >Thu 12 Nov 2026 · 1 day · 33 km</text>
+<rect x="62" y="116" width="252" height="26" rx="7" class="sunk" />
+<rect x="64" y="118" width="78" height="22" rx="6" class="bg" />
+<text x="103" y="133" class="t1" font-size="12" font-weight="600" text-anchor="middle" >Plan</text>
+<text x="184" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Objects 4</text>
+<text x="266" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Photos 1</text>
+<text x="66" y="164" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">THU 12 NOV</text>
+<text x="310" y="164" class="t3" font-size="11" font-weight="400" text-anchor="end" >36 min driving</text>
+<line x1="78" y1="180" x2="78" y2="288" class="rail" />
+<circle cx="78" cy="186" r="5" class="bg" stroke="#dc2626" stroke-width="2"/>
+<text x="94" y="190" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Leek</text>
+<text x="310" y="190" class="t3" font-size="11" font-weight="400" text-anchor="end" >09:00</text>
+<g transform="translate(92 208) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="112" y="219" class="t2" font-size="12" font-weight="400" text-anchor="start" >Drive · 36 min · 33 km</text>
+<rect x="88" y="234" width="226" height="28" rx="6" class="acc" />
+<circle cx="78" cy="248" r="6" fill="#dc2626" stroke="#fff" stroke-width="2"/>
+<text x="98" y="252.5" class="on" font-size="12.5" font-weight="600" text-anchor="start" >Lathkill Dale Campsite</text>
+<text x="306" y="252.5" class="onm" font-size="11" font-weight="400" text-anchor="end" >09:35</text>
+<clipPath id="dc1"><rect x="94" y="270" width="34" height="26" rx="4"/></clipPath>
+<g clip-path="url(#dc1)"><rect x="94" y="270" width="34" height="26" fill="#9cc9e8"/><path d="M94 286.12 Q104.2 279.1 112.7 284.3 T128 281.7 V296 H94z" fill="#5f8f4e"/><path d="M94 292.1 Q111.0 288.2 128 291.32 V296 H94z" fill="#3f6b35"/></g>
+<text x="136" y="287" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >1 photo · 10:12</text>
+<line x1="52" y1="314" x2="324" y2="314" class="ln" />
+<g transform="translate(64 328) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(80 326) scale(0.625)" class="i i3"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g>
+<text x="102" y="339" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Not in the plan</text>
+<text x="310" y="339" class="t3" font-size="11.5" font-weight="400" text-anchor="end" >2</text>
+<g transform="translate(64 358) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(80 356) scale(0.625)" class="i ip"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<text x="102" y="369" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Idea1</text>
+<text x="310" y="369" class="t3" font-size="11" font-weight="400" text-anchor="end" >linked folder · up to date</text>
+<clipPath id="dm2"><rect x="324" y="30" width="440" height="638"/></clipPath><g clip-path="url(#dm2)">
+<rect x="324" y="30" width="440" height="638" rx="0" class="mapbg" />
+<ellipse cx="414" cy="150" rx="120" ry="70" class="mapg"/>
+<ellipse cx="654" cy="230" rx="140" ry="90" class="mapg"/>
+<ellipse cx="524" cy="500" rx="150" ry="80" class="mapg"/>
+<ellipse cx="724" cy="550" rx="90" ry="60" class="mapg"/>
+<path d="M574 30 C554 150 624 230 604 360 S654 550 624 668" class="mapw"/>
+<path d="M324 410 C444 390 544 450 764 420" class="road"/>
+<path d="M384 30 C414 230 364 430 434 668" class="road"/>
+<path d="M324 180 C474 200 624 150 764 170" class="road"/>
+<path d="M524 90 L684 330" class="road2"/>
+<path d="M464 280 L764 290" class="road2"/>
+<path d="M420 482 C474 430 494 360 554 330 S644 280 662 244" class="rtec"/><path d="M420 482 C474 430 494 360 554 330 S644 280 662 244" class="rte"/>
+<text x="420" y="508" class="t2" font-size="11.5" font-weight="600" text-anchor="start" paint-order="stroke" stroke="var(--ui-map,#e9efe1)" stroke-width="3">Leek</text>
+<text x="680" y="226" class="t2" font-size="11.5" font-weight="600" text-anchor="start" paint-order="stroke" stroke="var(--ui-map,#e9efe1)" stroke-width="3">Lathkill Dale</text>
+<text x="624" y="122" class="t2" font-size="11.5" font-weight="600" text-anchor="start" paint-order="stroke" stroke="var(--ui-map,#e9efe1)" stroke-width="3">Bakewell</text>
+<text x="364" y="100" class="t2" font-size="11.5" font-weight="600" text-anchor="start" paint-order="stroke" stroke="var(--ui-map,#e9efe1)" stroke-width="3">Buxton</text>
+<circle cx="420" cy="482" r="7" fill="#dc2626" stroke="#fff" stroke-width="2"/>
+<circle cx="662" cy="244" r="17" class="accl"/><circle cx="662" cy="244" r="9" fill="#dc2626" stroke="#fff" stroke-width="2.5"/>
+<circle cx="696" cy="266" r="9" class="ph" stroke="#fff" stroke-width="2"/>
+<g transform="translate(690 260) scale(0.5)" class="i iw"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<rect x="336" y="42" width="210" height="30" rx="7" class="bg" filter="none"/>
+<g transform="translate(345 49) scale(0.625)" class="i i3"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<text x="366" y="61" class="t3" font-size="12" font-weight="400" text-anchor="start" >Postcode, town or street</text>
+<rect x="722" y="42" width="30" height="60" rx="7" class="bg" />
+<g transform="translate(729 50) scale(0.6666666666666666)" class="i i2"><path d="M12 5v14M5 12h14"/></g>
+<g transform="translate(729 78) scale(0.6666666666666666)" class="i i2"><path d="M5 12h14"/></g>
+<rect x="336" y="624" width="84" height="30" rx="7" class="bg" />
+<text x="378" y="643" class="t3" font-size="11" font-weight="400" text-anchor="middle" >▢ ▭ ▢</text>
+</g>
+<line x1="324" y1="30" x2="324" y2="668" class="ln" />
+<line x1="764" y1="30" x2="764" y2="668" class="ln" />
+<text x="780" y="54" class="acct" font-size="11.5" font-weight="500" text-anchor="start" >Idea1</text>
+<text x="814" y="54" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >›</text>
+<text x="824" y="54" class="acct" font-size="11.5" font-weight="500" text-anchor="start" >Thu 12 Nov</text>
+<text x="886" y="54" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >›</text>
+<text x="896" y="54" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >Stop 2 of 2</text>
+<g transform="translate(780 68) scale(0.75)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="806" y="83" class="t1" font-size="16" font-weight="700" text-anchor="start" >Lathkill Dale Campsite</text>
+<text x="806" y="101" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >Waypoint · campsite · in the plan</text>
+<line x1="764" y1="122" x2="1080" y2="122" class="ln" />
+<text x="780" y="144" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">STOP</text>
+<text x="780" y="162" class="t3" font-size="11" font-weight="400" text-anchor="start" >Arrive</text>
+<text x="780" y="184" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Thu 09:35</text>
+<text x="930" y="162" class="t3" font-size="11" font-weight="400" text-anchor="start" >Arrive by</text>
+<rect x="930" y="168" width="134" height="26" rx="6" class="sunk" />
+<text x="939" y="185.5" class="t3" font-size="12.5" font-weight="400" text-anchor="start" >none</text>
+<text x="780" y="208" class="t3" font-size="11" font-weight="400" text-anchor="start" >Stay</text>
+<rect x="780" y="214" width="284" height="26" rx="6" class="sunk" />
+<text x="789" y="231.5" class="t3" font-size="12.5" font-weight="400" text-anchor="start" >Last stop: until the end of the trip</text>
+<line x1="780" y1="254" x2="1064" y2="254" class="ln" />
+<text x="780" y="276" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">PLACE</text>
+<text x="780" y="294" class="t3" font-size="11" font-weight="400" text-anchor="start" >Coordinates</text>
+<rect x="780" y="300" width="284" height="26" rx="6" class="sunk" />
+<text x="789" y="317.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >53.19250° N, 1.70510° W</text>
+<text x="780" y="340" class="t3" font-size="11" font-weight="400" text-anchor="start" >Elevation</text>
+<rect x="780" y="346" width="132" height="26" rx="6" class="sunk" />
+<text x="789" y="363.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >210 m</text>
+<text x="930" y="340" class="t3" font-size="11" font-weight="400" text-anchor="start" >Symbol</text>
+<rect x="930" y="346" width="134" height="26" rx="6" class="sunk" />
+<text x="939" y="363.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Campsite</text>
+<line x1="780" y1="386" x2="1064" y2="386" class="ln" />
+<text x="780" y="408" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">PHOTOS HERE</text>
+<text x="1064" y="408" class="t3" font-size="11" font-weight="400" text-anchor="end" >1 · within 200 m</text>
+<clipPath id="dc3"><rect x="780" y="418" width="64" height="48" rx="4"/></clipPath>
+<g clip-path="url(#dc3)"><rect x="780" y="418" width="64" height="48" fill="#9cc9e8"/><path d="M780 447.76 Q799.2 434.8 815.2 444.4 T844 439.6 V466 H780z" fill="#5f8f4e"/><path d="M780 458.8 Q812.0 451.6 844 457.36 V466 H780z" fill="#3f6b35"/></g>
+<text x="854" y="438" class="t1" font-size="12" font-weight="400" text-anchor="start" >IMG_2041.HEIC</text>
+<text x="854" y="455" class="t3" font-size="11" font-weight="400" text-anchor="start" >Thu 10:12 · Idea1 folder</text>
+<line x1="780" y1="482" x2="1064" y2="482" class="ln" />
+<text x="780" y="504" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">NOTES</text>
+<rect x="780" y="512" width="284" height="40" rx="6" class="sunk" />
+<text x="789" y="536" class="t1" font-size="12" font-weight="400" text-anchor="start" >Pitch 14 · check in from 12:00</text>
+<line x1="764" y1="622" x2="1080" y2="622" class="ln" />
+<g transform="translate(782.0 637.0) scale(0.6666666666666666)" class="i i2"><path d="M3 11l18-8-8 18-2-8z"/></g>
+<g transform="translate(816.0 637.0) scale(0.6666666666666666)" class="i i2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<g transform="translate(850.0 637.0) scale(0.6666666666666666)" class="i i2"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></g>
+<g transform="translate(884.0 637.0) scale(0.6666666666666666)" class="i i2"><path d="M3.5 5h17v15h-17z"/><path d="M3.5 10h17M9 14l6 4M15 14l-6 4"/></g>
+<g transform="translate(1046.0 637.0) scale(0.6666666666666666)" class="i id"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></g>
+<circle cx="44" cy="50" r="10" class="co"/>
+<text x="44" y="54" class="cot" font-size="11" font-weight="700" text-anchor="middle" >1</text>
+<circle cx="314" cy="226" r="10" class="co"/>
+<text x="314" y="230" class="cot" font-size="11" font-weight="700" text-anchor="middle" >2</text>
+<circle cx="636" cy="246" r="10" class="co"/>
+<text x="636" y="250" class="cot" font-size="11" font-weight="700" text-anchor="middle" >3</text>
+<circle cx="960" cy="50" r="10" class="co"/>
+<text x="960" y="54" class="cot" font-size="11" font-weight="700" text-anchor="middle" >4</text>
+<circle cx="1062" cy="143" r="10" class="co"/>
+<text x="1062" y="147" class="cot" font-size="11" font-weight="700" text-anchor="middle" >5</text>
+</svg>

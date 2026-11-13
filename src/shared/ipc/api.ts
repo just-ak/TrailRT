@@ -26,6 +26,7 @@ import type {
   SkippedItem,
 } from '../io/types';
 import type { Itinerary, ItineraryStop, ItineraryView } from '../domain/itinerary';
+import type { TripOverview } from '../domain/library';
 import type {
   ChosenFolder,
   LinkedFolderSummary,
@@ -128,6 +129,8 @@ export interface TrailRtApi {
     search(
       req: Req<typeof S.tripSearchRequest>,
     ): Promise<Result<TripWithCounts[]>>;
+    /** Phase 14: every visible trip with its dates, length and counts. */
+    overview(req: Req<typeof S.tripsOverviewRequest>): Promise<Result<TripOverview[]>>;
   };
   folders: {
     list(): Promise<Result<Folder[]>>;
@@ -214,6 +217,8 @@ export interface TrailRtApi {
     open(req: Req<typeof S.photoIdRequest>): Promise<Result<true>>;
     /** Shows the photo in Finder. */
     reveal(req: Req<typeof S.photoIdRequest>): Promise<Result<true>>;
+    /** Phase 14: every photo of a trip's linked folders, in taken order. */
+    forTrip(req: Req<typeof S.photosForTripRequest>): Promise<Result<Photo[]>>;
   };
   /** Phase 10: a trip's dated plan. `get` resolves to null for a trip without one. */
   itinerary: {

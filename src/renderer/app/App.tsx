@@ -16,6 +16,7 @@ import { useUiStore } from "../stores/uiStore";
 import { useRoutingStore } from "../stores/routingStore";
 import { useUndoStore } from "../stores/undoStore";
 import { Layout } from "./Layout";
+import { useNavStore } from "../stores/navStore";
 import { LinkFolderDialog } from "../features/photos/LinkFolderDialog";
 import { UnlinkFolderDialog } from "../features/photos/UnlinkFolderDialog";
 import { linkFolderToSelectedTrip, subscribeToFolderEvents } from "../features/photos/photoActions";
@@ -47,6 +48,7 @@ export function App(): ReactNode {
         ).matches;
         useUiStore.getState().hydrate(settings, prefersDark);
         useLibraryStore.getState().hydrate(settings);
+        useNavStore.getState().hydrate(settings);
         setReady(true);
       } catch (cause) {
         setFatal(describeError(cause));

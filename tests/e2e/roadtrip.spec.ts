@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { A515_TRACE } from '@fixtures/places';
-import { cleanup, close, createTripViaUi, launch, makeUserDataDir, type Harness } from './helpers';
+import { cleanup, close, closeEditor, createTripViaUi, editSelection, launch, makeUserDataDir, type Harness, openTrip, showTripList } from './helpers';
 
 /**
  * Phase 10 in the running app: road trip planning, places along the route,
@@ -69,7 +69,7 @@ test.beforeAll(async () => {
   seed(userDataDir);
   await start();
   await createTripViaUi(harness.page, TRIP);
-  await harness.page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
+  await openTrip(harness.page, new RegExp(TRIP));
 });
 
 test.afterAll(async () => {
@@ -87,7 +87,7 @@ test('finds a postcode offline and adds it as a waypoint', async () => {
   await option.click();
   await page.getByTestId('search-chosen').getByRole('button', { name: 'Add as a waypoint' }).click();
   // Waypoints are children of their trip, so the trip has to be expanded.
-  await page.getByRole('treeitem', { name: new RegExp(TRIP) }).dblclick();
+  await openTrip(page, new RegExp(TRIP));
   await expect(page.getByRole('treeitem', { name: /SK17 6AA/ })).toBeVisible();
 });
 
@@ -137,10 +137,14 @@ test('plans a trip by date, with a timed leg', async () => {
     },
     { trip: id, trace: A515_TRACE },
   );
-  await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
+  await openTrip(page, new RegExp(TRIP));
 
   await page.getByRole('textbox', { name: 'Start date' }).fill('2026-10-23');
   await page.getByRole('button', { name: 'Plan by date' }).click();
+  // The trip now has dates, so the right panel shows it by the hour; its
+  // plan is edited behind the pencil.
+  await expect(page.getByTestId('trip-view')).toBeVisible();
+  await editSelection(page);
   const itinerary = page.getByTestId('itinerary');
   await expect(itinerary).toBeVisible();
 
@@ -159,7 +163,8 @@ test('plans a trip by date, with a timed leg', async () => {
   await expect(itinerary.getByTestId('plan-issue')).toHaveCount(0);
   await expect(itinerary.getByTestId('stop').nth(1)).toContainText('Arrive Fri 23 Oct, 09:');
   await expect(itinerary.getByTestId('itinerary-dates')).toHaveText('23 Oct 2026');
-  await expect(page.getByRole('treeitem', { name: new RegExp(TRIP) })).toContainText('23 Oct 2026');
+  // Phase 14: the trip's page header gives its dates.
+  await expect(page.getByTestId('trip-header')).toContainText('Fri 23 Oct');
 });
 
 test('the library summarises a dated trip by day', async () => {
@@ -171,24 +176,43 @@ test('the library summarises a dated trip by day', async () => {
   await expect(rows).toHaveText([/SK17 6AA.*leave/, /A515 south/, /South of Buxton.*arrive/]);
 });
 
-test('shows the plan as a calendar, and selecting a drive selects its route', async () => {
+test('shows the trip by the hour in the right panel, and selecting a drive selects its route', async () => {
   const { page } = harness;
-  await page.getByTestId('itinerary').getByRole('button', { name: 'Calendar', exact: true }).click();
-  const calendar = page.getByTestId('calendar');
-  await expect(calendar).toBeVisible();
-  await expect(calendar.locator('[data-date="2026-10-23"]').first()).toBeVisible();
-  await expect(calendar.getByTestId('block-leg')).toHaveCount(1);
-  await calendar.getByRole('button', { name: 'Month' }).click();
-  await expect(calendar.getByTestId('calendar-range')).toHaveText('October 2026');
-  await calendar.getByRole('button', { name: 'Week' }).click();
-  await calendar.getByTestId('block-leg').click();
+  // Phase 14: the calendar drawer is retired; the right panel shows the trip.
+  await openTrip(page, new RegExp(TRIP));
+  await closeEditor(page);
+  const trip = page.getByTestId('trip-view');
+  await expect(trip).toBeVisible();
+  await expect(trip.locator('[data-date="2026-10-23"]').first()).toBeVisible();
+  await expect(trip.getByTestId('block-leg')).toHaveCount(1);
+  await trip.getByRole('button', { name: 'Month' }).click();
+  await expect(trip.getByTestId('month-label')).toHaveText('October 2026');
+  await trip.getByRole('button', { name: 'Days' }).click();
+  await trip.getByTestId('block-leg').click();
   await expect(page.getByRole('treeitem', { name: /A515 south/ })).toHaveAttribute('aria-selected', 'true');
-  await calendar.getByRole('button', { name: 'Close calendar' }).click();
+  await expect(page.getByTestId('object-card')).toContainText('A515 south');
+});
+
+test('with no trip open, the right panel shows the year with the trip’s day marked', async () => {
+  const { page } = harness;
+  await showTripList(page);
+  const year = page.getByTestId('year-view');
+  await expect(year).toBeVisible();
+  await year.getByRole('button', { name: 'The year before' }).click();
+  await year.getByRole('button', { name: 'The year after' }).click();
+  await expect(year.getByTestId('year')).toHaveText('2026');
+  const day = year.getByRole('button', { name: `${TRIP}, Fri 23 Oct` });
+  await expect(day).toBeVisible();
+  // Selecting a marked day opens its trip.
+  await day.click();
+  await expect(page.getByTestId('trip-header')).toContainText(TRIP);
+  await expect(page.getByTestId('trip-view')).toBeVisible();
 });
 
 test('finds fuel and a hotel along the way, and adds the hotel as a stop', async () => {
   const { page } = harness;
-  await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
+  await openTrip(page, new RegExp(TRIP));
+  await editSelection(page);
   await page.getByTestId('itinerary').getByRole('button', { name: 'Find places along the way' }).click();
   const panel = page.getByTestId('poi-panel');
   await expect(panel.getByTestId('poi-row').first()).toBeVisible();
@@ -215,6 +239,8 @@ test('finds fuel and a hotel along the way, and adds the hotel as a stop', async
 
 test('a leg marked as other transport is not planned by road', async () => {
   const { page } = harness;
+  await openTrip(page, new RegExp(TRIP));
+  await editSelection(page);
   const itinerary = page.getByTestId('itinerary');
   const issues = itinerary.getByTestId('plan-issue');
   const before = await issues.count();
@@ -232,16 +258,16 @@ test('a leg marked as other transport is not planned by road', async () => {
 
 test('icon buttons say what they do, on hover and on focus', async () => {
   const { page } = harness;
-  const calendar = page.getByTestId('itinerary').getByRole('button', { name: 'Calendar', exact: true });
-  await calendar.hover();
-  await expect(page.getByRole('tooltip')).toHaveText('Calendar');
+  const button = page.getByTestId('trip-header').getByRole('button', { name: 'Export the trip' });
+  await button.hover();
+  await expect(page.getByRole('tooltip')).toHaveText('Export the trip');
   await page.mouse.move(0, 0);
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   // Keyboard focus shows it at once; a mouse click's focus does not.
   await page.keyboard.press('Shift');
-  await calendar.focus();
-  await expect(page.getByRole('tooltip')).toHaveText('Calendar');
-  await calendar.blur();
+  await button.focus();
+  await expect(page.getByRole('tooltip')).toHaveText('Export the trip');
+  await button.blur();
 });
 
 test('the library, properties and the panel below the map can be hidden and shown', async () => {
@@ -252,27 +278,30 @@ test('the library, properties and the panel below the map can be hidden and show
   await page.getByRole('button', { name: 'Show the library' }).click();
   await expect(tree).toBeVisible();
 
-  const itinerary = page.getByTestId('itinerary');
+  await openTrip(page, new RegExp(TRIP));
+  await closeEditor(page);
+  const companion = page.getByTestId('companion');
   await page.getByRole('button', { name: 'Hide the properties' }).click();
-  await expect(itinerary).toBeHidden();
+  await expect(companion).toBeHidden();
   await page.getByRole('button', { name: 'Show the properties' }).click();
-  await expect(itinerary).toBeVisible();
+  await expect(companion).toBeVisible();
 
-  await itinerary.getByRole('button', { name: 'Calendar', exact: true }).click();
-  const calendar = page.getByTestId('calendar');
-  await expect(calendar).toBeVisible();
+  await companion.getByRole('button', { name: 'Places along the trip' }).click();
+  const panel = page.getByTestId('poi-panel');
+  await expect(panel).toBeVisible();
   await page.getByRole('button', { name: 'Hide the panel below the map' }).click();
-  await expect(calendar).toBeHidden();
+  await expect(panel).toBeHidden();
   await page.getByRole('button', { name: 'Show the panel below the map' }).click();
-  await expect(calendar).toBeVisible();
-  await calendar.getByRole('button', { name: 'Close calendar' }).click();
+  await expect(panel).toBeVisible();
+  await panel.getByRole('button', { name: 'Close' }).click();
 });
 
 test('everything is still there after a restart', async () => {
   await close(harness);
   await start();
   const { page } = harness;
-  await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
+  await openTrip(page, new RegExp(TRIP));
+  await editSelection(page);
   const itinerary = page.getByTestId('itinerary');
   await expect(itinerary.getByTestId('stop')).toHaveCount(3);
   await expect(itinerary).toContainText('Palace Hotel');

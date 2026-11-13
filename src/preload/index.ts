@@ -55,6 +55,7 @@ const api: TrailRtApi = {
     setStatus: (req) => call(CHANNELS.trips.setStatus, req),
     delete: (req) => call(CHANNELS.trips.delete, req),
     search: (req) => call(CHANNELS.trips.search, req),
+    overview: (req) => call(CHANNELS.trips.overview, req),
   },
   folders: {
     list: () => call(CHANNELS.folders.list),
@@ -123,6 +124,7 @@ const api: TrailRtApi = {
     thumbnail: (req) => call(CHANNELS.photos.thumbnail, req),
     open: (req) => call(CHANNELS.photos.open, req),
     reveal: (req) => call(CHANNELS.photos.reveal, req),
+    forTrip: (req) => call(CHANNELS.photos.forTrip, req),
   },
   itinerary: {
     get: (req) => call(CHANNELS.itinerary.get, req),

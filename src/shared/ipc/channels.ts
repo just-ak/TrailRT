@@ -16,6 +16,8 @@ export const CHANNELS = {
     setStatus: 'trips:setStatus',
     delete: 'trips:delete',
     search: 'trips:search',
+    /** Phase 14: every visible trip with its dates, length and counts. */
+    overview: 'trips:overview',
   },
   folders: {
     list: 'folders:list',
@@ -73,6 +75,8 @@ export const CHANNELS = {
     thumbnail: 'photos:thumbnail',
     open: 'photos:open',
     reveal: 'photos:reveal',
+    /** Phase 14: every photo of a trip's linked folders, in taken order. */
+    forTrip: 'photos:forTrip',
   },
   /** Phase 10: postcode and place search, answered on this machine. */
   search: {

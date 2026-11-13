@@ -7,6 +7,7 @@ import type {
   Waypoint,
 } from '@shared/domain/types';
 import type { FolderState, LinkedFolder, PhotoState } from '@shared/domain/linkedFolders';
+import type { TripOverview } from '@shared/domain/library';
 import { folderDetail, LINKED_FOLDERS_GROUP } from '@shared/photos/library';
 import type { Db } from '../db/client';
 import * as linkedFolderRepo from '../db/repositories/linkedFolders';
@@ -220,6 +221,78 @@ export interface PhotoViewFilter {
   tripId?: string;
 }
 
+/**
+ * Every dated trip's itinerary, timed. Settings are read only when some trip
+ * is scheduled; the end date needs the timeline, which needs the planning
+ * speeds.
+ */
+function allPlans(db: Db): Map<string, ItineraryView> {
+  const itineraries = itineraryService.listAll(db);
+  const plans = new Map<string, ItineraryView>();
+  if (itineraries.size === 0) return plans;
+  const settings = settingsService.all(db);
+  const planning = { walkingSpeedKmh: settings.planningSpeedKmh, transportMode: settings.transportMode };
+  for (const tripId of itineraries.keys()) {
+    const view = itineraryService.get(db, tripId, planning);
+    if (view !== null) plans.set(tripId, view);
+  }
+  return plans;
+}
+
+/** The planned length of a trip by road and other transport: the sum of its timed legs. */
+function plannedDistance(view: ItineraryView): number | null {
+  let metres = 0;
+  let any = false;
+  for (const stop of view.timeline.stops) {
+    if (stop.index === 0 || stop.legDistanceM === null) continue;
+    metres += stop.legDistanceM;
+    any = true;
+  }
+  return any ? metres : null;
+}
+
+/**
+ * Every visible trip as the library lists it (Phase 14 design §3.2): its
+ * dates, length and counts, in one call. Missing values stay missing: an
+ * undated trip has no dates and no length, and a trip whose drives are not
+ * all timed has no end date.
+ */
+export function overview(db: Db, options: { includeArchived: boolean }): TripOverview[] {
+  const trips = tripService.list(db, { includeArchived: options.includeArchived, sortKey: 'name', sortDirection: 'asc' });
+  const plans = allPlans(db);
+  const photos = photoRepo.photoCountsByTrip(db);
+  const folders = new Map<string, number>();
+  for (const folder of linkedFolderRepo.listLinkedFolders(db)) {
+    folders.set(folder.tripId, (folders.get(folder.tripId) ?? 0) + 1);
+  }
+  return trips.map((trip) => {
+    const plan = plans.get(trip.id) ?? null;
+    const endDate = plan?.timeline.endDate ?? null;
+    return {
+      id: trip.id,
+      name: trip.name,
+      folderId: trip.folderId,
+      status: trip.status,
+      startDate: plan?.itinerary.startDate ?? null,
+      endDate,
+      days: plan !== null && endDate !== null ? plan.timeline.days.length : null,
+      distanceM: plan === null ? null : plannedDistance(plan),
+      driveSeconds: plan === null || !plan.timeline.complete ? null : plan.timeline.days.reduce((sum, d) => sum + d.driveSeconds, 0),
+      startPlace: plan?.stops[0]?.place?.name ?? null,
+      startTime: plan?.itinerary.startTime ?? null,
+      counts: {
+        routes: trip.routeCount,
+        tracks: trip.trackCount,
+        waypoints: trip.waypointCount,
+        photos: photos.get(trip.id) ?? 0,
+        linkedFolders: folders.get(trip.id) ?? 0,
+      },
+      createdAt: trip.createdAt,
+      updatedAt: trip.updatedAt,
+    };
+  });
+}
+
 export function tree(
   db: Db,
   options: {
@@ -270,16 +343,7 @@ export function tree(
 
   // Settings are read only when some trip is scheduled; the end date needs the
   // timeline, which needs the planning speeds.
-  const itineraries = itineraryService.listAll(db);
-  const plans = new Map<string, ItineraryView>();
-  if (itineraries.size > 0) {
-    const settings = settingsService.all(db);
-    const planning = { walkingSpeedKmh: settings.planningSpeedKmh, transportMode: settings.transportMode };
-    for (const tripId of itineraries.keys()) {
-      const view = itineraryService.get(db, tripId, planning);
-      if (view !== null) plans.set(tripId, view);
-    }
-  }
+  const plans = allPlans(db);
 
   // Phase 11: linked folders, their photo counts in one query, and photos per
   // day for the dated trips only.

@@ -48,7 +48,7 @@ const MALFORMED: unknown[] = [
   { folderId: VALID, photoId: VALID, tripId: VALID, token: VALID, include: true, includeSubfolders: true, extra: 1 },
 ];
 
-const CHANNELS_UNDER_TEST = [...Object.values(CHANNELS.linkedFolders), ...Object.values(CHANNELS.photos)];
+const CHANNELS_UNDER_TEST = [...Object.values(CHANNELS.linkedFolders), ...Object.values(CHANNELS.photos), CHANNELS.trips.overview];
 
 describe('Phase 11 handlers', () => {
   it('registers every linked-folder and photo channel', () => {

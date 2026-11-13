@@ -20,8 +20,10 @@ interface Props {
   hasChildren: boolean;
   renaming: boolean;
   dropTarget: boolean;
-  /** The single tab stop in the tree. See the roving tabIndex in LibraryPanel. */
+  /** The single tab stop in the tree. See the roving tabIndex in LibraryList. */
   focusable: boolean;
+  /** Phase 14: a trip in the trip list, with its dates and size on a second line. */
+  twoLine?: boolean;
   onToggle: () => void;
   onSelect: (modifiers: ClickModifiers) => void;
   onContextMenu: (event: React.MouseEvent) => void;
@@ -91,6 +93,7 @@ export function TreeRow({
   renaming,
   dropTarget,
   focusable,
+  twoLine = false,
   onToggle,
   onSelect,
   onContextMenu,
@@ -104,6 +107,7 @@ export function TreeRow({
 }: Props): ReactNode {
   const unavailable = node.kind === "view" && node.available === false;
   const archived = node.status === "archived";
+  const heading = node.heading === true;
 
   /*
    * Three visual states, not two.
@@ -161,7 +165,7 @@ export function TreeRow({
       }}
       title={node.hint}
       style={{ paddingLeft: depth * INDENT + 6 }}
-      className={`group flex h-[26px] cursor-default items-center gap-1.5 pr-2 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] focus-visible:ring-inset ${background} ${unavailable ? "opacity-55" : ""}`}
+      className={`group flex ${twoLine ? "h-[46px]" : heading ? "mt-2 h-[24px]" : "h-[26px]"} cursor-default items-center gap-1.5 pr-2 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] focus-visible:ring-inset ${background} ${unavailable ? "opacity-55" : ""}`}
     >
       <button
         type="button"
@@ -181,9 +185,11 @@ export function TreeRow({
         <Chevron open={expanded} />
       </button>
 
-      <span className="shrink-0 text-[12px]">
-        <Icon node={node} />
-      </span>
+      {!heading && (
+        <span className="shrink-0 text-[12px]">
+          <Icon node={node} />
+        </span>
+      )}
 
       {renaming ? (
         <input
@@ -203,6 +209,19 @@ export function TreeRow({
           onClick={(event) => event.stopPropagation()}
           className="min-w-0 flex-1 rounded border border-[var(--color-accent)] bg-[var(--color-surface)] px-1 py-0 text-[13px] text-[var(--color-text-primary)] outline-none"
         />
+      ) : heading ? (
+        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+          {node.name}
+        </span>
+      ) : twoLine ? (
+        <span className="flex min-w-0 flex-1 flex-col leading-tight">
+          <span className="truncate font-semibold">{node.name}</span>
+          {node.detail !== undefined && (
+            <span className={`truncate text-[11px] ${selected ? "text-white/75" : "text-[var(--color-text-muted)]"}`}>
+              {node.detail}
+            </span>
+          )}
+        </span>
       ) : (
         <span className="min-w-0 flex-1 truncate">
           {node.name}

@@ -8,6 +8,7 @@ import type {
   TripWithCounts,
 } from '@shared/domain/types';
 import type { WaypointWithTrip } from '@shared/ipc/api';
+import type { TripOverview } from '@shared/domain/library';
 
 /** Matches the main process `ObjectSortKey`. Distance arrived with tracks. */
 export type ObjectSortKey = 'name' | 'distance' | 'updatedAt';
@@ -25,6 +26,8 @@ import { usePhotoStore } from './photoStore';
 
 interface LibraryState {
   tree: TreeNode | null;
+  /** Phase 14: every visible trip with its dates, length and counts. */
+  overview: TripOverview[];
   loading: boolean;
   error: string | null;
 
@@ -56,6 +59,8 @@ interface LibraryState {
   setObjectSort(key: ObjectSortKey): void;
   setShowArchived(show: boolean): void;
   setPhotoFilter(filter: PhotoFilter): void;
+  /** Opens these rows the first time they appear; later collapsing is respected. */
+  offerExpansion(ids: readonly string[]): void;
   setSearch(query: string): Promise<void>;
 }
 
@@ -84,6 +89,7 @@ let searchSeq = 0;
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   tree: null,
+  overview: [],
   loading: false,
   error: null,
 
@@ -110,14 +116,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   refresh: async () => {
     set({ loading: true, error: null });
     try {
-      const tree = await call(
-        api().library.tree({
-          includeArchived: get().showArchived,
-          sortKey: get().objectSortKey,
-          photos: get().photoFilter,
-        }),
-      );
-      set({ tree, loading: false });
+      const [tree, overview] = await Promise.all([
+        call(
+          api().library.tree({
+            includeArchived: get().showArchived,
+            sortKey: get().objectSortKey,
+            photos: get().photoFilter,
+          }),
+        ),
+        callOr(api().trips.overview({ includeArchived: get().showArchived }), [] as TripOverview[]),
+      ]);
+      set({ tree, overview, loading: false });
       // Phase 11: the Photos view's Year and Trip choices follow the tree.
       if (get().expanded.has('view:photos')) void usePhotoStore.getState().loadFilterOptions(get().showArchived);
       // Rows marked to open by default (a dated trip's days) open the first
@@ -178,6 +187,15 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       null,
     );
     void get().refresh();
+  },
+
+  offerExpansion: (ids) => {
+    const fresh = ids.filter((id) => !offeredExpansion.has(id));
+    if (fresh.length === 0) return;
+    for (const id of fresh) offeredExpansion.add(id);
+    const next = new Set(get().expanded);
+    for (const id of fresh) next.add(id);
+    set({ expanded: next });
   },
 
   setPhotoFilter: (photoFilter) => {

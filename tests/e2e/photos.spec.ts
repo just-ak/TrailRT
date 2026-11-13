@@ -1,8 +1,8 @@
 import { cpSync, existsSync, mkdtempSync, renameSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
-import { cleanup, close, createTripViaUi, launch, makeUserDataDir, type Harness } from './helpers';
+import { expect, test } from '@playwright/test';
+import { editSelection, cleanup, close, createTripViaUi, launch, makeUserDataDir, openTrip, type Harness } from './helpers';
 
 /**
  * Phase 11, task 9: a folder linked to a trip, seen in the library.
@@ -51,12 +51,6 @@ async function sendMenuAction(action: string): Promise<void> {
   }, action);
 }
 
-async function expand(row: ReturnType<Page['getByRole']>): Promise<void> {
-  await row.waitFor();
-  if ((await row.getAttribute('aria-expanded')) === 'true') return;
-  await row.locator('button').first().click();
-  await expect(row).toHaveAttribute('aria-expanded', 'true');
-}
 
 test.describe.configure({ mode: 'serial' });
 
@@ -68,10 +62,10 @@ test('File › Link Folder to Trip… with no trip selected says what to do', as
 test('links a folder to a trip from the trip’s properties, and scans it', async () => {
   const { page } = harness;
   await createTripViaUi(page, 'Peak District');
-  await page.getByRole('treeitem', { name: /Peak District/ }).first().click();
+  await openTrip(page, /Peak District/);
 
   await stubFolderChooser(folder);
-  await page.getByRole('button', { name: /Link a folder on disk/ }).click();
+  await page.getByTestId('trip-header').getByRole('button', { name: 'Link a folder on disk to this trip' }).click();
 
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText('Peak 2026', { exact: true })).toBeVisible();
@@ -83,6 +77,7 @@ test('links a folder to a trip from the trip’s properties, and scans it', asyn
   // which 9 are not on the map (5 with no location, 4 unreadable).
   const row = page.getByRole('treeitem', { name: 'Peak 2026' }).first();
   await expect(row).toContainText('29 photos · 9 without location', { timeout: 20_000 });
+  await editSelection(page);
   await expect(page.getByTestId('linked-folder-files')).toContainText('2 GPX and track files');
   await expect(page.getByTestId('linked-folder-files')).toContainText('1 video');
 });
@@ -190,6 +185,7 @@ test('an unplugged folder’s photo says so and still shows its saved thumbnail'
   await expect(page.getByTestId('photo-preview-image')).toBeVisible();
   renameSync(folder, `${folder}-unplugged`);
   try {
+    await editSelection(page);
     await page.getByTestId('linked-folder-actions').getByRole('button', { name: /Rescan/ }).click();
     const preview = page.getByTestId('photo-preview');
     await expect(preview.getByTestId('photo-preview-status')).toHaveText('Unavailable — Peak 2026 is not connected', {
@@ -223,26 +219,26 @@ test('the Layers menu hides and shows the photos', async () => {
 
 test('selecting the Photos view shows every trip’s photos, and selecting a trip goes back', async () => {
   const { page } = harness;
-  const view = page.getByRole('treeitem', { name: 'Photos', exact: true });
+  // Phase 14: the rail's Photos section is all-trips mode.
+  const view = page.getByRole('tab', { name: 'Photos', exact: true });
   await view.click();
   await expect(view).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.trailrt-photo-marker, .trailrt-photo-cluster').first()).toBeVisible();
-  await page.getByRole('treeitem', { name: /Peak District/ }).first().click();
+  await openTrip(page, /Peak District/);
   await expect(view).toHaveAttribute('aria-selected', 'false');
 });
 
 test('refuses the same folder twice for one trip, with its reason', async () => {
   const { page } = harness;
-  await page.getByRole('treeitem', { name: /Peak District/ }).first().click();
+  await openTrip(page, /Peak District/);
   await stubFolderChooser(folder);
-  await page.getByRole('button', { name: /Link a folder on disk/ }).click();
+  await page.getByTestId('trip-header').getByRole('button', { name: 'Link a folder on disk to this trip' }).click();
   await expect(page.getByText('This folder is already linked to Peak District.')).toBeVisible();
 });
 
 test('shows every linked folder in the Photos view, annotated with its trip, with filters', async () => {
   const { page } = harness;
-  const view = page.getByRole('treeitem', { name: 'Photos', exact: true });
-  await expand(view);
+  await page.getByRole('tab', { name: 'Photos', exact: true }).click();
   await expect(page.getByTestId('photo-view-filters')).toBeVisible();
   const rows = page.locator('[data-path^="view:photos/linkedFolder:"]');
   await expect(rows).toHaveCount(1);
@@ -257,11 +253,17 @@ test('shows every linked folder in the Photos view, annotated with its trip, wit
 test('unlinks after confirmation, and undo brings the folder back', async () => {
   const { page } = harness;
   await page.getByRole('treeitem', { name: 'Peak 2026' }).first().click();
+  await editSelection(page);
   await page.getByRole('button', { name: /Unlink the folder/ }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog).toContainText('The files stay where they are on disk.');
   await dialog.getByRole('button', { name: 'Unlink' }).dispatchEvent('click');
-  await expect(page.locator('[data-path$="/linked-folders"]')).toHaveCount(0);
+  // Phase 14: the trip's linked folders are on its page's Photos tab.
+  await openTrip(page, /Peak District/);
+  await page.getByTestId('trip-tabs').getByRole('tab', { name: /^Photos/ }).click();
+  const folders = page.getByRole('tree', { name: 'Peak District linked folders' });
+  await expect(folders).toBeVisible();
+  await expect(folders.getByRole('treeitem')).toHaveCount(0);
 
   await page.evaluate(() => window.trailrt.undo.undo());
   const row = page.getByRole('treeitem', { name: 'Peak 2026' }).first();

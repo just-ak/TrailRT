@@ -2,12 +2,14 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import {
+import { editSelection,
   cleanup,
   close,
   launch,
   makeUserDataDir,
   type Harness,
+  openTrip,
+  showTripList,
 } from './helpers';
 
 /**
@@ -92,23 +94,6 @@ async function clickAndReplaceModal(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name }).dispatchEvent('click');
 }
 
-/**
- * Expands a tree view so its children are rendered.
- *
- * Collapsed branches are not in the DOM, so a row inside one simply does not
- * exist for a locator. Creating a trip through the UI expands the branch as a
- * side effect; importing does not, so the test has to.
- */
-async function expandView(page: Page, label: RegExp): Promise<void> {
-  const row = page.getByRole('treeitem', { name: label });
-  await row.waitFor();
-  if ((await row.getAttribute('aria-expanded')) === 'true') return;
-  // The chevron is aria-hidden by design — expansion is already conveyed by
-  // the row's aria-expanded — so it is reached positionally.
-  await row.locator('button').first().click();
-  await expect(row).toHaveAttribute('aria-expanded', 'true');
-}
-
 /** Runs the import and waits for the report. */
 async function confirmImport(page: Page): Promise<void> {
   await clickAndReplaceModal(page, 'Confirm import');
@@ -140,10 +125,12 @@ test.describe('import', () => {
     await closeReport(page);
 
     // A trip named after the file, containing what the file held.
-    await expandView(page, /^Trips/);
+    // Phase 14: the trip list, then the trip's page.
+    await showTripList(page);
     const trip = page.getByRole('treeitem', { name: /alps-full/ });
     await expect(trip).toBeVisible();
     await trip.click();
+    await expect(page.getByTestId('trip-header')).toContainText('alps-full');
 
     const counts = await page.evaluate(async () => {
       const trips = await window.trailrt.trips.list({ includeArchived: true });
@@ -165,8 +152,7 @@ test.describe('import', () => {
 
   test('draws the imported track on the map', async () => {
     const { page } = harness;
-    await expandView(page, /^Trips/);
-    await page.getByRole('treeitem', { name: /alps-full/ }).click();
+    await openTrip(page, /alps-full/);
 
     /*
      * Polylines are drawn to a **canvas**, not to SVG, so there is no `path`
@@ -222,10 +208,11 @@ test.describe('import', () => {
 
   test('shows a track in the cross-trip Tracks view', async () => {
     const { page } = harness;
-    const tracks = page.getByRole('treeitem', { name: /^Tracks/ });
-    await tracks.click();
-    // The view is populated as of Phase 3, not marked unavailable.
-    await expect(tracks).not.toHaveAttribute('aria-disabled', 'true');
+    // Phase 14: the rail's Tracks section, a list across trips.
+    await page.getByRole('tab', { name: 'Tracks', exact: true }).click();
+    const list = page.getByRole('tree', { name: 'Tracks' });
+    await expect(list.getByRole('treeitem').first()).toContainText('alps-full');
+    await page.getByRole('tab', { name: 'Trips', exact: true }).click();
   });
 
   test('selecting a track shows its properties, with honest gaps', async () => {
@@ -237,18 +224,14 @@ test.describe('import', () => {
     });
     expect(trackName).not.toBeNull();
 
-    await expandView(page, /^Trips/);
-    const trip = page.getByRole('treeitem', { name: /alps-full/ });
-    await trip.click();
-    if ((await trip.getAttribute('aria-expanded')) !== 'true') {
-      await trip.locator('button').first().click();
-    }
+    await openTrip(page, /alps-full/);
 
     await page
       .getByRole('treeitem', { name: new RegExp(trackName as string) })
       .first()
       .click();
 
+    await editSelection(page);
     await expect(page.getByRole('heading', { name: 'Track' })).toBeVisible();
     await expect(page.getByLabel('Track name')).toHaveValue(
       trackName as string,
