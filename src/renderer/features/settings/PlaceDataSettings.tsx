@@ -67,7 +67,7 @@ export function PlaceDataStatus(): ReactNode {
               .finally(() => setBusy(false));
           }}
         >
-          {busy ? "Rebuilding… this downloads the regions again" : "Rebuild regions"}
+          {busy ? "Rebuilding… regions downloaded in the last 30 days are reused" : "Rebuild regions"}
         </Button>
       ) : (
         <p className={hint}>These regions came from a file. Import it again to build its place data.</p>

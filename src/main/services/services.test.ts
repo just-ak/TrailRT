@@ -387,6 +387,8 @@ describe('libraryService.tree', () => {
       'Routes',
       'Tracks',
       'Waypoints',
+      // Phase 11: every linked folder across the visible trips.
+      'Photos',
       'Imported Data',
       'Recently Used',
     ]);

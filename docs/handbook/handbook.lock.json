@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "generated": "2026-11-11T22:37:15Z",
+  "entries": [
+    {
+      "spec_id": "SPEC-PHASE-1-FOUNDATION",
+      "title": "Phase 1: Application Foundation — Requirements",
+      "content_hash": "6c4cae18f2c463da7150b33b17e44cb3f7a19c5852c9088ba731ccf6c55ae173",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-10-ROAD-TRIP-PLANNING",
+      "title": "Phase 10: Road Trip Planning — Requirements",
+      "content_hash": "20f876a861fc821fb974c3c6cc19673085674aabe046ea2800757c7766ae3c76",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-11-GEOTAGGED-PHOTOS",
+      "title": "Phase 11: Geotagged Photos from a Linked Folder — Requirements",
+      "content_hash": "a710b1fe492c3f52321b09277fa3c6299aaadeff9695d4cafd4c799d224ecc16",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-2-ROUTES-WAYPOINTS",
+      "title": "Phase 2: Routes and Waypoints — Requirements",
+      "content_hash": "bc02cf6821cbd1e7c7282f0a2fa46be29ae6638a73fc4dc653a297fd05a7f7fd",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-3-TRACKS-IMPORT-EXPORT",
+      "title": "Phase 3: Tracks and Import/Export — Requirements",
+      "content_hash": "ebfa09fe7a3e1b8a04e509f81cafc8f6b082a0822c86c7eb4903e55089f021ff",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-4-ADVANCED-MAPPING",
+      "title": "Phase 4: Advanced Mapping — Requirements",
+      "content_hash": "03ffd2260a70133c40c8805e7c468157fc56da689ad12cd59f4b9e2aed3e5b59",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-5-OBJECT-POINT-MANAGEMENT",
+      "title": "Phase 5: Object and point management — Requirements",
+      "content_hash": "f6ec723c1561296bdac7fae5901d218f8ec38000d625482ae636186f87646564",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-6-ROUTE-ALTERNATIVES-SHAPING",
+      "title": "Phase 6: Route alternatives and shaping — Requirements",
+      "content_hash": "4a5b4cdbfe064ba091d968d484d4651ba6cad6471784b3ee9264c64bf56bf97a",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-7-REGIONS-PROFILE",
+      "title": "Phase 7: UK regions, road-following by default, and a fuller profile — Requirements",
+      "content_hash": "c85eee9569b5f9c331ad51cc4164864f4fc42248ff5a7d009013656e61282558",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-8-WINDY-ROADS-ROUTING",
+      "title": "Phase 8: Intelligent Windy Roads Routing — Requirements",
+      "content_hash": "dd0dbc3fcb8e42620fdd80ae655dfcfe348a17e6cd46ff5f3863a644fd67bb87",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    },
+    {
+      "spec_id": "SPEC-PHASE-9-GARMIN-COMPATIBILITY",
+      "title": "Phase 9: Garmin Compatibility — Requirements",
+      "content_hash": "c5e3e028547921a0ebf51c96a0f787458c7dad716baf3c0cb23fff8dc9348b29",
+      "last_published": "2026-11-11T22:37:15Z",
+      "last_page": 0
+    }
+  ]
+}

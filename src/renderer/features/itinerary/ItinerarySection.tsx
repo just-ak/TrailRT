@@ -6,7 +6,6 @@ import type { TimedStop } from "@shared/itinerary/timeline";
 import {
   ArrowDown,
   ArrowUp,
-  CalendarDays,
   CalendarPlus,
   ListPlus,
   RefreshCw,
@@ -18,6 +17,7 @@ import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
 import { api, call, describeError } from "../../lib/client";
 import { useGeometryStore } from "../../stores/geometryStore";
+import { saveToCalendar } from "../companion/companionActions";
 import { useItineraryStore } from "../../stores/itineraryStore";
 import { useLibraryStore } from "../../stores/libraryStore";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -47,7 +47,7 @@ const KM_PER_MILE = 1.609344;
 const SMALL_INPUT = inputAt('w-auto');
 
 /** Runs a change, then reloads what it touched; failures become a toast. */
-async function run(work: () => Promise<unknown>, done?: string): Promise<boolean> {
+export async function run(work: () => Promise<unknown>, done?: string): Promise<boolean> {
   try {
     await work();
     await Promise.all([
@@ -64,9 +64,9 @@ async function run(work: () => Promise<unknown>, done?: string): Promise<boolean
   }
 }
 
-type StopUpdate = Parameters<Window["trailrt"]["itinerary"]["updateStop"]>[0];
+export type StopUpdate = Parameters<Window["trailrt"]["itinerary"]["updateStop"]>[0];
 
-function update(patch: StopUpdate): void {
+export function update(patch: StopUpdate): void {
   void run(() => call(api().itinerary.updateStop(patch)));
 }
 
@@ -110,7 +110,6 @@ function Plan({ view }: { view: ItineraryView }): ReactNode {
   const { itinerary, stops, timeline } = view;
   const units = useSettingsStore((s) => s.settings.units);
   const geometry = useGeometryStore((s) => (s.tripId === itinerary.tripId ? s.geometry : null));
-  const openCalendar = useUiStore((s) => s.openCalendar);
   const openPoiPanel = useUiStore((s) => s.openPoiPanel);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [adding, setAdding] = useState("");
@@ -224,9 +223,6 @@ function Plan({ view }: { view: ItineraryView }): ReactNode {
       <PlanSettings view={view} units={units} />
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5" data-testid="itinerary-actions">
-        <IconButton hint="Calendar" onClick={() => openCalendar(tripId)}>
-          <CalendarDays size={16} aria-hidden="true" />
-        </IconButton>
         <IconButton hint="Find places along the way" onClick={() => openPoiPanel({ kind: "itinerary", tripId })}>
           <Search size={16} aria-hidden="true" />
         </IconButton>
@@ -236,18 +232,7 @@ function Plan({ view }: { view: ItineraryView }): ReactNode {
         >
           <RefreshCw size={16} aria-hidden="true" />
         </IconButton>
-        <IconButton
-          hint="Export to a calendar file"
-          onClick={() =>
-            void call(api().itinerary.exportIcs({ tripId, includeLegs: true }))
-              .then((result) => {
-                if (result.cancelled) return;
-                const left = result.omitted.length === 0 ? "" : ` ${result.omitted.length} left out because their times are unknown.`;
-                useUiStore.getState().showToast(`Saved ${result.fileName}: ${result.eventCount} events.${left}`);
-              })
-              .catch((cause: unknown) => useUiStore.getState().showToast(describeError(cause), "error"))
-          }
-        >
+        <IconButton hint="Export to a calendar file" onClick={() => saveToCalendar(tripId)}>
           <CalendarPlus size={16} aria-hidden="true" />
         </IconButton>
         {confirmRemove ? (
@@ -280,7 +265,7 @@ const TRANSPORT_LABELS: Record<OtherTransport, string> = {
   other: "Other",
 };
 
-function LegRow({
+export function LegRow({
   stop,
   timed,
   routes,
@@ -501,54 +486,23 @@ function StopRow({
 
       {!isFirst && !isLast && <DurationEditor stop={stop} onChange={update} />}
 
-      {!isFirst && (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <label className="flex items-center gap-1 whitespace-nowrap text-[var(--color-text-secondary)]">
-            Arrive by
-            <input
-              type="time"
-              aria-label="Arrive by"
-              value={stop.arriveBy ?? ""}
-              onChange={(e) => update({ id: stop.id, arriveBy: e.target.value === "" ? null : e.target.value })}
-              className={SMALL_INPUT}
-            />
-          </label>
-          {!isLast && stop.durationKind === "hours" && (
-            <label className="flex items-center gap-1 whitespace-nowrap text-[var(--color-text-secondary)]">
-              Leave at
-              <input
-                type="time"
-                aria-label="Leave at"
-                value={stop.departAt ?? ""}
-                onChange={(e) => update({ id: stop.id, departAt: e.target.value === "" ? null : e.target.value })}
-                className={SMALL_INPUT}
-              />
-            </label>
-          )}
-        </div>
-      )}
-
+      <StopTimes stop={stop} isFirst={isFirst} isLast={isLast} />
       <NotesField stop={stop} onCommit={(notes) => update({ id: stop.id, notes })} />
 
-      {(timed?.flags ?? []).map((flag) => (
-        <p
-          key={flag}
-          className={isWarning(flag) ? "mt-1 text-[var(--color-danger)]" : "mt-1 text-[var(--color-text-muted)]"}
-          data-testid="stop-flag"
-        >
-          {flagMessage(flag, zone)}
-        </p>
-      ))}
+      <StopFlags timed={timed} zone={zone} />
     </div>
   );
 }
 
-function DurationEditor({
+export function DurationEditor({
   stop,
   onChange,
+  onDraft,
 }: {
   stop: StopView;
   onChange: (patch: StopUpdate) => void;
+  /** Phase 14: the stay as it is being typed, before it is saved, for the consequence line. */
+  onDraft?: (draft: { minutes?: number; days?: number } | null) => void;
 }): ReactNode {
   const split = splitMinutes(stop.durationMinutes);
   const [hours, setHours] = useState(String(split.hours));
@@ -584,8 +538,15 @@ function DurationEditor({
             aria-label="Hours"
             inputMode="numeric"
             value={hours}
-            onChange={(e) => setHours(e.target.value)}
-            onBlur={commitHours}
+            onChange={(e) => {
+              setHours(e.target.value);
+              const total = joinMinutes(e.target.value, minutes);
+              onDraft?.(total === null ? null : { minutes: total });
+            }}
+            onBlur={() => {
+              onDraft?.(null);
+              commitHours();
+            }}
             className={inputAt('w-12')}
           />
           h
@@ -593,8 +554,15 @@ function DurationEditor({
             aria-label="Minutes"
             inputMode="numeric"
             value={minutes}
-            onChange={(e) => setMinutes(e.target.value)}
-            onBlur={commitHours}
+            onChange={(e) => {
+              setMinutes(e.target.value);
+              const total = joinMinutes(hours, e.target.value);
+              onDraft?.(total === null ? null : { minutes: total });
+            }}
+            onBlur={() => {
+              onDraft?.(null);
+              commitHours();
+            }}
             className={inputAt('w-12')}
           />
           min
@@ -605,8 +573,13 @@ function DurationEditor({
             aria-label="Days"
             inputMode="numeric"
             value={days}
-            onChange={(e) => setDays(e.target.value)}
+            onChange={(e) => {
+              setDays(e.target.value);
+              const value = Number(e.target.value);
+              onDraft?.(Number.isInteger(value) && value >= 1 ? { days: value } : null);
+            }}
             onBlur={() => {
+              onDraft?.(null);
               const value = Number(days);
               if (!Number.isInteger(value) || value < 1) {
                 useUiStore.getState().showToast("A stay is a whole number of days, at least one.", "error");
@@ -631,7 +604,7 @@ function DurationEditor({
   );
 }
 
-function NotesField({ stop, onCommit }: { stop: StopView; onCommit: (notes: string | null) => void }): ReactNode {
+export function NotesField({ stop, onCommit }: { stop: StopView; onCommit: (notes: string | null) => void }): ReactNode {
   const [notes, setNotes] = useState(stop.notes ?? "");
   return (
     <input
@@ -648,7 +621,7 @@ function NotesField({ stop, onCommit }: { stop: StopView; onCommit: (notes: stri
   );
 }
 
-function PlanSettings({ view, units }: { view: ItineraryView; units: UnitSystem }): ReactNode {
+export function PlanSettings({ view, units, open = false }: { view: ItineraryView; units: UnitSystem; open?: boolean }): ReactNode {
   const { itinerary } = view;
   const tripId = itinerary.tripId;
   const toShown = (km: number | null): string =>
@@ -657,9 +630,9 @@ function PlanSettings({ view, units }: { view: ItineraryView; units: UnitSystem 
   const [cap, setCap] = useState(itinerary.maxDriveMinutes === null ? "" : String(itinerary.maxDriveMinutes / 60));
 
   return (
-    <details className="mt-2 text-[12px] text-[var(--color-text-secondary)]">
+    <details className="mt-2 text-[12px] text-[var(--color-text-secondary)]" open={open}>
       <summary className="cursor-pointer text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
-        Trip settings
+        {open ? "Driving rules" : "Trip settings"}
       </summary>
       <div className="mt-2 flex flex-col gap-2">
         <label className="flex items-center justify-between gap-2">
@@ -748,5 +721,60 @@ function PlanSettings({ view, units }: { view: ItineraryView; units: UnitSystem 
         </p>
       </div>
     </details>
+  );
+}
+
+/** The same change-then-reload, for the companion's undated prompt. */
+export { run as runPlanChange };
+
+/** Arrive by and a fixed leaving time: checks on a stop's timing (Phase 10). */
+export function StopTimes({ stop, isFirst, isLast }: { stop: StopView; isFirst: boolean; isLast: boolean }): ReactNode {
+  return (
+    <>
+      {!isFirst && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <label className="flex items-center gap-1 whitespace-nowrap text-[var(--color-text-secondary)]">
+            Arrive by
+            <input
+              type="time"
+              aria-label="Arrive by"
+              value={stop.arriveBy ?? ""}
+              onChange={(e) => update({ id: stop.id, arriveBy: e.target.value === "" ? null : e.target.value })}
+              className={SMALL_INPUT}
+            />
+          </label>
+          {!isLast && stop.durationKind === "hours" && (
+            <label className="flex items-center gap-1 whitespace-nowrap text-[var(--color-text-secondary)]">
+              Leave at
+              <input
+                type="time"
+                aria-label="Leave at"
+                value={stop.departAt ?? ""}
+                onChange={(e) => update({ id: stop.id, departAt: e.target.value === "" ? null : e.target.value })}
+                className={SMALL_INPUT}
+              />
+            </label>
+          )}
+        </div>
+      )}
+
+    </>
+  );
+}
+
+/** What the timeline says about a stop: a missed arrive-by, an unknown time. */
+export function StopFlags({ timed, zone }: { timed: TimedStop | undefined; zone: string }): ReactNode {
+  return (
+    <>
+      {(timed?.flags ?? []).map((flag) => (
+        <p
+          key={flag}
+          className={isWarning(flag) ? "mt-1 text-[var(--color-danger)]" : "mt-1 text-[var(--color-text-muted)]"}
+          data-testid="stop-flag"
+        >
+          {flagMessage(flag, zone)}
+        </p>
+      ))}
+    </>
   );
 }

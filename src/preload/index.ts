@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { CHANNELS, EVENTS, type MenuAction } from '@shared/ipc/channels';
 import type { PostcodeProgress, TrailRtApi } from '@shared/ipc/api';
 import type { UndoState } from '@shared/domain/types';
+import type { ScanProgress } from '@shared/domain/linkedFolders';
 import type { ImportProgress } from '@shared/io/types';
 import type {
   RegionJobProgress,
@@ -54,6 +55,8 @@ const api: TrailRtApi = {
     setStatus: (req) => call(CHANNELS.trips.setStatus, req),
     delete: (req) => call(CHANNELS.trips.delete, req),
     search: (req) => call(CHANNELS.trips.search, req),
+    overview: (req) => call(CHANNELS.trips.overview, req),
+    loose: () => call(CHANNELS.trips.loose),
   },
   folders: {
     list: () => call(CHANNELS.folders.list),
@@ -76,6 +79,7 @@ const api: TrailRtApi = {
   routes: {
     listForTrip: (req) => call(CHANNELS.routes.listForTrip, req),
     listAll: () => call(CHANNELS.routes.listAll),
+    join: (req) => call(CHANNELS.routes.join, req),
     get: (req) => call(CHANNELS.routes.get, req),
     create: (req) => call(CHANNELS.routes.create, req),
     update: (req) => call(CHANNELS.routes.update, req),
@@ -103,6 +107,27 @@ const api: TrailRtApi = {
     update: () => call(CHANNELS.postcodes.update),
     cancel: () => call(CHANNELS.postcodes.cancel),
   },
+  linkedFolders: {
+    chooseFolder: (req) => call(CHANNELS.linkedFolders.chooseFolder, req),
+    link: (req) => call(CHANNELS.linkedFolders.link, req),
+    unlink: (req) => call(CHANNELS.linkedFolders.unlink, req),
+    relink: (req) => call(CHANNELS.linkedFolders.relink, req),
+    setIncludeSubfolders: (req) => call(CHANNELS.linkedFolders.setIncludeSubfolders, req),
+    rescan: (req) => call(CHANNELS.linkedFolders.rescan, req),
+    cancelScan: (req) => call(CHANNELS.linkedFolders.cancelScan, req),
+    list: (req) => call(CHANNELS.linkedFolders.list, req),
+    get: (req) => call(CHANNELS.linkedFolders.get, req),
+  },
+  photos: {
+    list: (req) => call(CHANNELS.photos.list, req),
+    mapPoints: (req) => call(CHANNELS.photos.mapPoints, req),
+    years: (req) => call(CHANNELS.photos.years, req),
+    get: (req) => call(CHANNELS.photos.get, req),
+    thumbnail: (req) => call(CHANNELS.photos.thumbnail, req),
+    open: (req) => call(CHANNELS.photos.open, req),
+    reveal: (req) => call(CHANNELS.photos.reveal, req),
+    forTrip: (req) => call(CHANNELS.photos.forTrip, req),
+  },
   itinerary: {
     get: (req) => call(CHANNELS.itinerary.get, req),
     create: (req) => call(CHANNELS.itinerary.create, req),
@@ -116,6 +141,13 @@ const api: TrailRtApi = {
     setLegMode: (req) => call(CHANNELS.itinerary.setLegMode, req),
     planAll: (req) => call(CHANNELS.itinerary.planAll, req),
     addPoiStop: (req) => call(CHANNELS.itinerary.addPoiStop, req),
+    addPlaceStop: (req) => call(CHANNELS.itinerary.addPlaceStop, req),
+    addWaypointStop: (req) => call(CHANNELS.itinerary.addWaypointStop, req),
+    addPhotoStop: (req) => call(CHANNELS.itinerary.addPhotoStop, req),
+    addRouteLeg: (req) => call(CHANNELS.itinerary.addRouteLeg, req),
+    addDay: (req) => call(CHANNELS.itinerary.addDay, req),
+    deleteItem: (req) => call(CHANNELS.itinerary.deleteItem, req),
+    removeDay: (req) => call(CHANNELS.itinerary.removeDay, req),
     planLeg: (req) => call(CHANNELS.itinerary.planLeg, req),
     planAround: (req) => call(CHANNELS.itinerary.planAround, req),
     exportIcs: (req) => call(CHANNELS.itinerary.exportIcs, req),
@@ -133,6 +165,7 @@ const api: TrailRtApi = {
     search: (req) => call(CHANNELS.waypoints.search, req),
     groups: (req) => call(CHANNELS.waypoints.groups, req),
     createGroup: (req) => call(CHANNELS.waypoints.createGroup, req),
+    fromPhoto: (req) => call(CHANNELS.waypoints.fromPhoto, req),
   },
   tracks: {
     listForTrip: (req) => call(CHANNELS.tracks.listForTrip, req),
@@ -251,6 +284,10 @@ const api: TrailRtApi = {
       subscribe<[RegionJobProgress]>(EVENTS.regionJobProgress, listener),
     onPostcodeProgress: (listener) =>
       subscribe<[PostcodeProgress]>(EVENTS.postcodeProgress, listener),
+    onLinkedFolderScanProgress: (listener) =>
+      subscribe<[ScanProgress]>(EVENTS.linkedFolderScanProgress, listener),
+    onLinkedFoldersChanged: (listener) =>
+      subscribe<[{ folderId: string }]>(EVENTS.linkedFoldersChanged, listener),
   },
 };
 

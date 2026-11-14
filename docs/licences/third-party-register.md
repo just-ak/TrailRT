@@ -5,19 +5,19 @@ licensed GPL-3.0-or-later; every entry here must be inbound-compatible with that
 
 **GENERATED FILE** — regenerate with `npm run licences`.
 
-Generated 2026-11-11 from the installed dependency tree
-on Node v26.13.0. Packages examined: **373**. Incompatibilities: **0**.
+Generated 2026-11-12 from the installed dependency tree
+on Node v26.13.0. Packages examined: **419**. Incompatibilities: **0**.
 
 ## Licence distribution
 
 | Licence | Packages |
 | --- | --- |
-| MIT | 296 |
-| ISC | 27 |
-| Apache-2.0 | 16 |
+| MIT | 339 |
+| ISC | 29 |
+| Apache-2.0 | 17 |
 | BSD-3-Clause | 11 |
+| BSD-2-Clause | 7 |
 | BlueOak-1.0.0 | 6 |
-| BSD-2-Clause | 6 |
 | MPL-2.0 | 2 |
 | (MIT AND Zlib) | 1 |
 | (MIT OR CC0-1.0) | 1 |
@@ -25,7 +25,6 @@ on Node v26.13.0. Packages examined: **373**. Incompatibilities: **0**.
 | (WTFPL OR MIT) | 1 |
 | 0BSD | 1 |
 | CC-BY-4.0 | 1 |
-| Python-2.0 | 1 |
 | WTFPL | 1 |
 | WTFPL OR ISC | 1 |
 
@@ -60,7 +59,7 @@ Distributed to users, so these licences bind the combined work.
 ## Full dependency list
 
 <details>
-<summary>All 373 packages</summary>
+<summary>All 419 packages</summary>
 
 | Package | Version | Licence |
 | --- | --- | --- |
@@ -105,13 +104,19 @@ Distributed to users, so these licences bind the combined work.
 | `@jridgewell/resolve-uri` | 3.1.2 | MIT |
 | `@jridgewell/sourcemap-codec` | 1.6.0 | MIT |
 | `@jridgewell/trace-mapping` | 0.3.31 | MIT |
+| `@just-ak/kiro-spec-handbook` | 0.5.0 | MIT |
 | `@malept/cross-spawn-promise` | 2.0.0 | Apache-2.0 |
 | `@malept/flatpak-bundler` | 0.4.0 | MIT |
 | `@napi-rs/wasm-runtime` | 1.2.2 | MIT |
 | `@noble/hashes` | 1.8.0 | MIT |
 | `@nodable/entities` | 3.1.0 | MIT |
+| `@nodelib/fs.scandir` | 2.1.5 | MIT |
+| `@nodelib/fs.stat` | 2.0.5 | MIT |
+| `@nodelib/fs.walk` | 1.2.8 | MIT |
 | `@oxc-project/types` | 0.156.0 | MIT |
 | `@oxlint/binding-darwin-arm64` | 1.91.0 | MIT |
+| `@pdf-lib/standard-fonts` | 1.0.0 | MIT |
+| `@pdf-lib/upng` | 1.0.1 | MIT |
 | `@peculiar/asn1-schema` | 2.11.1 | MIT |
 | `@peculiar/json-schema` | 1.1.12 | MIT |
 | `@peculiar/utils` | 2.0.3 | MIT |
@@ -119,7 +124,9 @@ Distributed to users, so these licences bind the combined work.
 | `@playwright/test` | 1.65.0 | Apache-2.0 |
 | `@rolldown/binding-darwin-arm64` | 1.2.16 | MIT |
 | `@rolldown/pluginutils` | 1.0.1 | MIT |
+| `@sec-ant/readable-stream` | 0.4.1 | MIT |
 | `@sindresorhus/is` | 4.6.0 | MIT |
+| `@sindresorhus/merge-streams` | 2.3.0 | MIT |
 | `@szmarczak/http-timer` | 4.0.6 | MIT |
 | `@tailwindcss/node` | 4.3.4 | MIT |
 | `@tailwindcss/oxide` | 4.3.4 | MIT |
@@ -158,7 +165,7 @@ Distributed to users, so these licences bind the combined work.
 | `ansi-styles` | 4.3.0 | MIT |
 | `anynum` | 1.0.1 | MIT |
 | `app-builder-lib` | 26.18.0 | MIT |
-| `argparse` | 2.0.1 | Python-2.0 |
+| `argparse` | 1.0.10 | MIT |
 | `asn1js` | 3.1.0 | BSD-3-Clause |
 | `assertion-error` | 2.0.1 | MIT |
 | `ast-v8-to-istanbul` | 1.0.7 | MIT |
@@ -174,6 +181,7 @@ Distributed to users, so these licences bind the combined work.
 | `bluebird` | 3.7.2 | MIT |
 | `boolean` | 3.2.0 | MIT |
 | `brace-expansion` | 1.1.21 | MIT |
+| `braces` | 3.0.3 | MIT |
 | `browserslist` | 4.29.5 | MIT |
 | `buffer` | 6.0.3 | MIT |
 | `buffer-from` | 1.1.2 | MIT |
@@ -241,15 +249,22 @@ Distributed to users, so these licences bind the combined work.
 | `esbuild` | 0.28.2 | MIT |
 | `escalade` | 3.2.0 | MIT |
 | `escape-string-regexp` | 4.0.0 | MIT |
+| `esprima` | 4.0.1 | BSD-2-Clause |
 | `estree-walker` | 3.0.3 | MIT |
+| `execa` | 9.6.1 | MIT |
 | `expect-type` | 1.4.0 | Apache-2.0 |
 | `exponential-backoff` | 3.1.3 | Apache-2.0 |
+| `extend-shallow` | 2.0.1 | MIT |
 | `fast-deep-equal` | 3.1.3 | MIT |
+| `fast-glob` | 3.3.3 | MIT |
 | `fast-uri` | 3.1.9 | BSD-3-Clause |
 | `fast-xml-builder` | 1.3.1 | MIT |
 | `fast-xml-parser` | 5.12.0 | MIT |
+| `fastq` | 1.20.3 | ISC |
 | `fdir` | 6.5.0 | MIT |
+| `figures` | 6.1.0 | MIT |
 | `filelist` | 1.0.6 | Apache-2.0 |
+| `fill-range` | 7.1.1 | MIT |
 | `fit-file-parser` | 6.2.7 | MIT |
 | `form-data` | 4.0.6 | MIT |
 | `fs-extra` | 11.3.1 | MIT |
@@ -263,11 +278,14 @@ Distributed to users, so these licences bind the combined work.
 | `get-stream` | 5.2.0 | MIT |
 | `get-tsconfig` | 4.14.3 | MIT |
 | `glob` | 7.2.3 | ISC |
+| `glob-parent` | 5.1.2 | ISC |
 | `global-agent` | 3.0.0 | BSD-3-Clause |
 | `globalthis` | 1.0.4 | MIT |
+| `globby` | 14.1.0 | MIT |
 | `gopd` | 1.2.0 | MIT |
 | `got` | 11.8.6 | MIT |
 | `graceful-fs` | 4.2.11 | ISC |
+| `gray-matter` | 4.0.3 | MIT |
 | `has-flag` | 4.0.0 | MIT |
 | `has-property-descriptors` | 1.0.2 | MIT |
 | `has-symbols` | 1.1.0 | MIT |
@@ -278,11 +296,20 @@ Distributed to users, so these licences bind the combined work.
 | `http-proxy-agent` | 7.0.2 | MIT |
 | `http2-wrapper` | 1.0.3 | MIT |
 | `https-proxy-agent` | 7.0.6 | MIT |
+| `human-signals` | 8.0.1 | Apache-2.0 |
 | `ieee754` | 1.2.1 | BSD-3-Clause |
+| `ignore` | 7.0.14 | MIT |
 | `immediate` | 3.0.6 | MIT |
 | `inflight` | 1.0.6 | ISC |
 | `inherits` | 2.0.4 | ISC |
+| `is-extendable` | 0.1.1 | MIT |
+| `is-extglob` | 2.1.1 | MIT |
 | `is-fullwidth-code-point` | 3.0.0 | MIT |
+| `is-glob` | 4.0.3 | MIT |
+| `is-number` | 7.0.0 | MIT |
+| `is-plain-obj` | 4.1.0 | MIT |
+| `is-stream` | 4.0.1 | MIT |
+| `is-unicode-supported` | 2.1.0 | MIT |
 | `is-unsafe` | 2.0.3 | MIT |
 | `isarray` | 1.0.0 | MIT |
 | `isbinaryfile` | 5.0.7 | MIT |
@@ -299,6 +326,7 @@ Distributed to users, so these licences bind the combined work.
 | `jsonfile` | 6.2.1 | MIT |
 | `jszip` | 3.10.2 | (MIT OR GPL-3.0-or-later) |
 | `keyv` | 4.5.4 | MIT |
+| `kind-of` | 6.0.3 | MIT |
 | `lazy-val` | 1.0.5 | MIT |
 | `leaflet` | 1.9.4 | BSD-2-Clause |
 | `lie` | 3.3.0 | MIT |
@@ -312,6 +340,8 @@ Distributed to users, so these licences bind the combined work.
 | `magicast` | 0.5.5 | MIT |
 | `matcher` | 3.0.0 | MIT |
 | `math-intrinsics` | 1.1.0 | MIT |
+| `merge2` | 1.4.1 | MIT |
+| `micromatch` | 4.0.8 | MIT |
 | `mime` | 2.6.0 | MIT |
 | `mime-db` | 1.52.0 | MIT |
 | `mime-types` | 2.1.35 | MIT |
@@ -331,6 +361,7 @@ Distributed to users, so these licences bind the combined work.
 | `node-releases` | 2.0.63 | MIT |
 | `nopt` | 9.0.0 | ISC |
 | `normalize-url` | 6.1.0 | MIT |
+| `npm-run-path` | 6.0.0 | MIT |
 | `object-keys` | 1.1.1 | MIT |
 | `obug` | 3.0.0 | MIT |
 | `once` | 1.4.0 | ISC |
@@ -338,9 +369,12 @@ Distributed to users, so these licences bind the combined work.
 | `p-cancelable` | 2.1.1 | MIT |
 | `p-limit` | 3.1.0 | MIT |
 | `pako` | 1.0.11 | (MIT AND Zlib) |
+| `parse-ms` | 4.0.0 | MIT |
 | `path-expression-matcher` | 1.6.2 | MIT |
 | `path-is-absolute` | 1.0.1 | MIT |
 | `path-key` | 3.1.1 | MIT |
+| `path-type` | 6.0.0 | MIT |
+| `pdf-lib` | 1.17.1 | MIT |
 | `pe-library` | 0.4.1 | MIT |
 | `picocolors` | 1.1.1 | ISC |
 | `picomatch` | 4.0.7 | MIT |
@@ -350,6 +384,7 @@ Distributed to users, so these licences bind the combined work.
 | `plist` | 3.1.0 | MIT |
 | `postcss` | 8.5.32 | MIT |
 | `postject` | 1.0.0-alpha.6 | MIT |
+| `pretty-ms` | 9.3.1 | MIT |
 | `proc-log` | 6.1.0 | ISC |
 | `process-nextick-args` | 2.0.1 | MIT |
 | `progress` | 2.0.3 | MIT |
@@ -358,6 +393,7 @@ Distributed to users, so these licences bind the combined work.
 | `pump` | 3.0.4 | MIT |
 | `pvtsutils` | 1.3.6 | MIT |
 | `pvutils` | 1.2.0 | MIT |
+| `queue-microtask` | 1.2.3 | MIT |
 | `quick-lru` | 5.1.1 | MIT |
 | `react` | 19.3.1 | MIT |
 | `react-dom` | 19.3.1 | MIT |
@@ -370,13 +406,16 @@ Distributed to users, so these licences bind the combined work.
 | `resolve-pkg-maps` | 1.0.0 | MIT |
 | `responselike` | 2.0.1 | MIT |
 | `retry` | 0.12.0 | MIT |
+| `reusify` | 1.1.0 | MIT |
 | `rimraf` | 2.6.3 | ISC |
 | `roarr` | 2.15.4 | BSD-3-Clause |
 | `rolldown` | 1.2.16 | MIT |
+| `run-parallel` | 1.2.0 | MIT |
 | `safe-buffer` | 5.1.2 | MIT |
 | `sanitize-filename` | 1.6.4 | WTFPL OR ISC |
 | `sax` | 1.6.1 | BlueOak-1.0.0 |
 | `scheduler` | 0.28.0 | MIT |
+| `section-matter` | 1.0.0 | MIT |
 | `semver` | 5.7.3 | ISC |
 | `semver-compare` | 1.0.0 | MIT |
 | `serialize-error` | 7.0.1 | MIT |
@@ -385,6 +424,7 @@ Distributed to users, so these licences bind the combined work.
 | `shebang-regex` | 3.0.0 | MIT |
 | `signal-exit` | 3.0.7 | ISC |
 | `simple-update-notifier` | 2.0.0 | MIT |
+| `slash` | 5.1.0 | MIT |
 | `source-map` | 0.6.1 | BSD-3-Clause |
 | `source-map-js` | 1.2.2 | BSD-3-Clause |
 | `source-map-support` | 0.5.21 | MIT |
@@ -394,6 +434,8 @@ Distributed to users, so these licences bind the combined work.
 | `string-width` | 4.2.3 | MIT |
 | `string_decoder` | 1.1.1 | MIT |
 | `strip-ansi` | 6.0.1 | MIT |
+| `strip-bom-string` | 1.0.0 | MIT |
+| `strip-final-newline` | 4.0.0 | MIT |
 | `strnum` | 2.5.1 | MIT |
 | `sumchecker` | 3.0.1 | Apache-2.0 |
 | `supports-color` | 7.2.0 | MIT |
@@ -409,6 +451,7 @@ Distributed to users, so these licences bind the combined work.
 | `tinyrainbow` | 3.2.0 | MIT |
 | `tmp` | 0.2.7 | MIT |
 | `tmp-promise` | 3.0.3 | MIT |
+| `to-regex-range` | 5.0.1 | MIT |
 | `truncate-utf8-bytes` | 1.0.2 | WTFPL |
 | `tslib` | 2.9.1 | 0BSD |
 | `tsx` | 4.23.15 | MIT |
@@ -416,6 +459,7 @@ Distributed to users, so these licences bind the combined work.
 | `typescript` | 7.0.2 | Apache-2.0 |
 | `undici` | 7.30.2 | MIT |
 | `undici-types` | 8.9.0 | MIT |
+| `unicorn-magic` | 0.3.0 | MIT |
 | `universalify` | 2.0.1 | MIT |
 | `unzipper` | 0.12.5 | MIT |
 | `update-browserslist-db` | 1.3.4 | MIT |
@@ -435,6 +479,7 @@ Distributed to users, so these licences bind the combined work.
 | `yargs` | 17.7.3 | MIT |
 | `yargs-parser` | 21.1.1 | ISC |
 | `yocto-queue` | 0.1.0 | MIT |
+| `yoctocolors` | 2.2.0 | MIT |
 | `zod` | 4.6.7 | MIT |
 | `zustand` | 5.0.16 | MIT |
 

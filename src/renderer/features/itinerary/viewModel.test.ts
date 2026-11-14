@@ -7,6 +7,8 @@ const timed = (overrides: Partial<TimedStop>): TimedStop => ({
   index: 1,
   zone: 'Europe/London',
   zoneKnown: true,
+  driveSeconds: null,
+  driveDistanceM: null,
   arrival: null,
   departure: null,
   arrivalLocal: null,

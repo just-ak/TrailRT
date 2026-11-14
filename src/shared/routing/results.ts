@@ -420,6 +420,8 @@ export interface RegionJobProgress {
   regionIndex?: number | null;
   regionCount?: number | null;
   regionName?: string | null;
+  /** Download stage: the file was downloaded before and is reused (Phase 14 Requirement 17.1). */
+  cached?: boolean;
   /** Terrain stage only. */
   tilesDone?: number | null;
   tileCount?: number | null;

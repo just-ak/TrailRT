@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import {
+  appendFileSync,
   mkdirSync,
   readdirSync,
   renameSync,
@@ -7,6 +8,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
+import { cpus, freemem, totalmem } from 'node:os';
 import { basename, join } from 'node:path';
 import { ServiceError } from '../services/errors';
 import {
@@ -129,7 +131,7 @@ export async function importRegion(
   mkdirSync(join(paths.configFile, '..'), { recursive: true });
   writeFileSync(configPath, buildConfig(stagingPaths), 'utf8');
 
-  await runTool(tool, ['-c', configPath, extractPath], options);
+  await runTool(tool, ['-c', configPath, extractPath], options, buildLogPath(paths));
 
   const tileCount = countTiles(staging);
   if (tileCount === 0) {
@@ -160,11 +162,39 @@ export async function importRegion(
   };
 }
 
+/**
+ * The last build's whole log, kept beside the graph (Phase 14 Requirement
+ * 17.2). A build stopped from outside, such as by a SIGTERM, otherwise leaves
+ * nothing to say what it was doing or what the machine had left.
+ */
+export function buildLogPath(paths: EmbeddedPaths): string {
+  return join(paths.tileDir, '..', 'build.log');
+}
+
+const MB = 1024 * 1024;
+
+function machine(): string {
+  return `memory ${Math.round(freemem() / MB)} MB free of ${Math.round(totalmem() / MB)} MB, ${cpus().length} cores`;
+}
+
 function runTool(
   tool: string,
   args: readonly string[],
   options: ImportRegionOptions,
+  logFile: string,
 ): Promise<void> {
+  const log = (text: string): void => {
+    try {
+      appendFileSync(logFile, text);
+    } catch {
+      // A log that cannot be written must not stop the build.
+    }
+  };
+  try {
+    writeFileSync(logFile, `${new Date().toISOString()} ${basename(tool)} ${args.map((a) => basename(a)).join(' ')}\nAt start: ${machine()}\n\n`);
+  } catch {
+    // As above.
+  }
   return new Promise((resolve, reject) => {
     const child = spawn(tool, [...args], {
       // The tools find their libraries through @loader_path, so no
@@ -177,6 +207,7 @@ function runTool(
     let tail = '';
 
     const onLine = (line: string): void => {
+      log(`${line}\n`);
       tail = `${tail}${line}\n`.slice(-4000);
       for (const { match, stage } of STAGES) {
         if (match.test(line) && stage !== lastStage) {
@@ -217,16 +248,18 @@ function runTool(
 
     child.on('close', (code, signal) => {
       options.signal?.removeEventListener('abort', onAbort);
+      log(`\n${new Date().toISOString()} ended: code ${code ?? 'none'}, signal ${signal ?? 'none'}, stage ${lastStage || 'not reached'}\nAt end: ${machine()}\n`);
       const failure = toolExitError(
         { code, signal, aborted: options.signal?.aborted === true },
         {
           cancelled: 'The region import was cancelled.',
           failed: 'Building the routing graph failed.',
           name: 'The tile builder',
+          after: `Its log is in ${logFile}.`,
         },
         // The tail, not the whole log: it is megabytes, and the useful part of
-        // a failure is always at the end.
-        tail.slice(-1500),
+        // a failure is always at the end. The whole log is in the file.
+        `${tail.slice(-1500)}\nStage: ${lastStage || 'not reached'}. The whole log is in ${logFile}.`,
       );
       if (failure !== null) reject(failure);
       else resolve();

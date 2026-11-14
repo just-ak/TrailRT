@@ -16,19 +16,25 @@ import {
   type ItineraryView,
   type StopLeg,
   type StopPatch,
+  type StopDrive,
+  type StopPlace,
+  type StopPoint,
   type StopView,
   type VehicleEnergy,
 } from '@shared/domain/itinerary';
+import { isNear, routeFit } from '@shared/itinerary/routeFit';
+import { dayEntries, photoStopIndex } from '@shared/itinerary/planEdit';
 import { haversineDistance } from '@shared/geo/distance';
 import { computeTimeline } from '@shared/itinerary/timeline';
 import { isTransportMode, type TransportMode } from '@shared/routing/RoutingProvider';
 import { resolveTimeZone } from '@shared/time/timeZones';
-import { isValidDate, isValidTime, systemZone } from '@shared/time/zoned';
+import { addDays, isValidDate, isValidTime, systemZone, utcToWallClock } from '@shared/time/zoned';
 import type { Db } from '../db/client';
 import * as repo from '../db/repositories/itineraries';
 import * as routeRepo from '../db/repositories/routes';
 import * as tripRepo from '../db/repositories/trips';
 import * as waypointRepo from '../db/repositories/waypoints';
+import { batch } from './compose';
 import { notFound, ServiceError } from './errors';
 import type { Mutation } from './folderService';
 
@@ -49,7 +55,6 @@ import type { Mutation } from './folderService';
  */
 
 /** A route end within this of its stop counts as joining it. */
-const LEG_FIT_M = 1000;
 
 export interface PlanningSettings {
   walkingSpeedKmh: number;
@@ -85,6 +90,35 @@ function assertDate(value: string, what: string): void {
 function assertTime(value: string | null | undefined, what: string): void {
   if (value === null || value === undefined) return;
   if (!isValidTime(value)) throw invalid(`${what} must be a time between 00:00 and 23:59.`);
+}
+
+/**
+ * Where a stop is: its waypoint, while it is in the trip, or its point
+ * (Phase 14 Requirement 13.3). Null when its waypoint has gone.
+ */
+export function stopPlace(db: Db, stop: ItineraryStop, tripId: string): StopPlace | null {
+  if (stop.kind === 'route') return routeEnd(db, stop, tripId, 'first');
+  if (stop.point !== null) return { id: `point:${stop.id}`, name: stop.point.name, lat: stop.point.lat, lon: stop.point.lon, symbol: null };
+  if (stop.waypointId === null) return null;
+  const waypoint = waypointRepo.findWaypoint(db, stop.waypointId);
+  return waypoint === null || waypoint.tripId !== tripId
+    ? null
+    : { id: waypoint.id, name: waypoint.name, lat: waypoint.lat, lon: waypoint.lon, symbol: waypoint.symbol };
+}
+
+/** One end of a route entry's route, as a place: where it is reached or left. */
+function routeEnd(db: Db, stop: ItineraryStop, tripId: string, which: 'first' | 'last'): StopPlace | null {
+  if (stop.entryRouteId === null) return null;
+  const route = routeRepo.findRoute(db, stop.entryRouteId);
+  const ends = route === null || route.tripId !== tripId ? null : routeRepo.routeEndpoints(db, route.id);
+  if (route === null || ends === null) return null;
+  const at = ends[which];
+  return { id: `route:${route.id}:${which}`, name: route.name, lat: at.lat, lon: at.lon, symbol: null };
+}
+
+/** Where an entry is left from: its place for a stop, its route's end for a route entry. */
+export function stopPlaceOut(db: Db, stop: ItineraryStop, tripId: string): StopPlace | null {
+  return stop.kind === 'route' ? routeEnd(db, stop, tripId, 'last') : stopPlace(db, stop, tripId);
 }
 
 function assertWaypointInTrip(db: Db, waypointId: string, tripId: string): void {
@@ -165,7 +199,7 @@ function normaliseDuration(
 function legFor(
   db: Db,
   stop: ItineraryStop,
-  previous: StopView | undefined,
+  previous: Pick<StopView, 'placeOut'> | undefined,
   place: StopView['place'],
   settings: PlanningSettings,
 ): StopLeg | null {
@@ -179,15 +213,22 @@ function legFor(
 
   let fits: boolean | null = null;
   const ends = routeRepo.routeEndpoints(db, route.id);
-  if (ends !== null && previous.place !== null && place !== null) {
-    fits =
-      haversineDistance(ends.first, previous.place) <= LEG_FIT_M &&
-      haversineDistance(ends.last, place) <= LEG_FIT_M;
+  if (ends !== null && previous.placeOut !== null && place !== null) {
+    fits = routeFit({ start: ends.first, end: ends.last }, previous.placeOut, place).fits;
   }
   return { routeId: route.id, name: route.name, distanceM: route.distanceM, mode, fits };
 }
 
-/** The itinerary with its places, legs and timeline, or null when the trip has none. */
+/** A route entry's route, as the timeline drives it. Null when the route has gone. */
+function driveFor(db: Db, stop: ItineraryStop, settings: PlanningSettings): StopDrive | null {
+  if (stop.entryRouteId === null) return null;
+  const route = routeRepo.findRoute(db, stop.entryRouteId);
+  if (route === null || route.tripId !== stop.tripId) return null;
+  const recorded = routeRepo.readRoutingProvenance(db, route.id)?.transportMode ?? null;
+  const mode = recorded !== null && isTransportMode(recorded) ? recorded : settings.transportMode;
+  return { routeId: route.id, name: route.name, distanceM: route.distanceM, mode };
+}
+
 /**
  * The itinerary with its places, legs and timeline, or null when the trip has
  * none. `planIssue` says why a by-road leg has no route; the caller supplies
@@ -205,15 +246,23 @@ export function get(
 
   const views: StopView[] = [];
   for (const stop of repo.listStops(db, tripId)) {
-    const waypoint = waypointRepo.findWaypoint(db, stop.waypointId);
-    const place =
-      waypoint === null || waypoint.tripId !== tripId
-        ? null
-        : { id: waypoint.id, name: waypoint.name, lat: waypoint.lat, lon: waypoint.lon, symbol: waypoint.symbol };
-    const previous = views.at(-1);
-    const leg = stop.legMode === 'other' ? null : legFor(db, stop, previous, place, settings);
-    const unplanned = previous !== undefined && stop.legMode === 'road' && (leg === null || leg.name === null || leg.fits === false);
-    views.push({ ...stop, place, leg, planIssue: unplanned ? planIssue(stop) : null });
+    if (stop.kind === 'day') {
+      // A day break has no place; the entry after it is joined to the one before it.
+      views.push({ ...stop, place: null, placeOut: null, drive: null, joined: false, leg: null, planIssue: null });
+      continue;
+    }
+    const place = stopPlace(db, stop, tripId);
+    const placeOut = stopPlaceOut(db, stop, tripId);
+    const previous = views.findLast((v) => v.kind !== 'day');
+    const drive = stop.kind === 'route' ? driveFor(db, stop, settings) : null;
+    // A route entry that begins where the entry before it ends needs nothing
+    // to join them (Requirement 14.3).
+    const joined =
+      previous !== undefined && previous.placeOut !== null && place !== null && isNear(haversineDistance(previous.placeOut, place));
+    const leg = stop.legMode === 'other' || joined ? null : legFor(db, stop, previous, place, settings);
+    const unplanned =
+      previous !== undefined && !joined && stop.legMode === 'road' && (leg === null || leg.name === null || leg.fits === false);
+    views.push({ ...stop, place, placeOut, drive, joined, leg, planIssue: unplanned ? planIssue(stop) : null });
   }
 
   const timeline = computeTimeline(
@@ -224,8 +273,11 @@ export function get(
         position: view.place,
         // Other transport is timed by what the user gave; a route that is
         // gone, or does not join its stops, is not a plan.
-        leg:
-          view.legMode === 'other'
+        drive: view.drive === null ? null : { routeId: view.drive.routeId, distanceM: view.drive.distanceM, mode: view.drive.mode },
+        dayBreak: view.kind === 'day' ? { departTime: view.departTime } : null,
+        leg: view.joined
+          ? { routeId: null, distanceM: 0, mode: settings.transportMode, joined: true }
+          : view.legMode === 'other'
             ? { routeId: null, distanceM: null, mode: settings.transportMode, kind: 'other' as const, minutes: view.legMinutes }
             : view.leg === null || view.leg.name === null || view.leg.fits === false
               ? null
@@ -252,6 +304,7 @@ export function create(
   input: { tripId: string; startDate: string; startTime: string },
 ): Mutation<Itinerary> {
   assertTrip(db, input.tripId);
+  if (tripRepo.findLooseTripId(db) === input.tripId) throw invalid('Items outside a trip cannot have a plan.');
   assertDate(input.startDate, 'The start date');
   assertTime(input.startTime, 'The start time');
   if (repo.findItinerary(db, input.tripId) !== null) {
@@ -310,6 +363,67 @@ export function update(db: Db, tripId: string, patch: ItineraryPatch): Mutation<
   const previous: Record<string, unknown> = { tripId };
   for (const key of Object.keys(patch) as (keyof ItineraryPatch)[]) previous[key] = before[key];
   return { result: requireItinerary(db, tripId), inverse: { kind: 'itinerary:update', payload: previous } };
+}
+
+// --------------------------------------------------------------- the days
+
+const dateOf = (instant: number, zone: string): string => utcToWallClock(instant, zone).date;
+const nextDate = (date: string): string => addDays(date, 1);
+
+/**
+ * Add a Day (Phase 14 Requirement 15.1): a day break after the given day's
+ * last entry, or at the end of the plan. The new day starts empty, at the
+ * plan's usual leaving time; what followed moves on a day.
+ */
+export function addDay(db: Db, input: { tripId: string; afterDate?: string | undefined }, settings: PlanningSettings): Mutation<ItineraryStop> {
+  const view = get(db, input.tripId, settings);
+  if (view === null) throw invalid('This trip has no plan to add a day to.');
+  let index = view.stops.length;
+  if (input.afterDate !== undefined) {
+    const { last } = dayEntries(view, input.afterDate, dateOf, nextDate);
+    if (last !== null) index = last + 1;
+    else if (input.afterDate === view.itinerary.startDate) index = 0;
+  }
+  return addStop(db, { tripId: input.tripId, waypointId: null, dayBreak: true, index });
+}
+
+/**
+ * Where a photo taken on `day` goes in the plan (Phase 14 Requirement 18.4):
+ * after that day's last entry, or at the end.
+ */
+export function dayIndex(db: Db, tripId: string, day: string | null, settings: PlanningSettings): number {
+  const view = get(db, tripId, settings);
+  if (view === null) throw invalid('This trip has no plan to add to.');
+  return photoStopIndex(view, day, dateOf, nextDate);
+}
+
+/**
+ * Remove a Day (Phase 14 Requirement 15.2): its entries come out of the plan
+ * and stay in the trip, under Not in the plan; its day break goes with them.
+ * Removing the first day moves the plan's start to the next day's, so the
+ * days after keep their dates. One undo step.
+ */
+export function removeDay(db: Db, input: { tripId: string; date: string }, settings: PlanningSettings): Mutation<{ removed: number }> {
+  const view = get(db, input.tripId, settings);
+  if (view === null) throw invalid('This trip has no plan.');
+  const { entries } = dayEntries(view, input.date, dateOf, nextDate);
+  const steps: Mutation<unknown>[] = [];
+  const firstDate = view.itinerary.startDate;
+  if (input.date === firstDate) {
+    // The next day break becomes the start: its date and leaving time.
+    const index = view.stops.findIndex((s) => s.kind === 'day' && !entries.includes(s.id));
+    const next = index < 0 ? undefined : view.stops[index];
+    const starts = index < 0 ? null : (view.timeline.stops[index]?.arrival ?? null);
+    if (next !== undefined && starts !== null) {
+      const local = utcToWallClock(starts, view.timeline.calendarZone);
+      steps.push(update(db, input.tripId, { startDate: local.date, startTime: local.time }));
+      entries.push(next.id);
+    }
+  }
+  if (entries.length === 0 && steps.length === 0) throw invalid('There is nothing on that day to remove.');
+  for (const id of entries) steps.push(removeStop(db, { id }));
+  const removed = entries.filter((id) => view.stops.find((s) => s.id === id)?.kind !== 'day').length;
+  return batch({ removed }, ...steps);
 }
 
 // ------------------------------------------------------------- the stops
@@ -387,7 +501,13 @@ function settleLinks(db: Db, tripId: string, affected: readonly (string | undefi
 
 export interface AddStopInput {
   tripId: string;
-  waypointId: string;
+  /** The stop's waypoint, or, for a stop that is only a point, null with `point` (Phase 14). */
+  waypointId: string | null;
+  point?: StopPoint | null | undefined;
+  /** Phase 14 Requirement 14: a route placed in the plan as a drive of its own. */
+  entryRouteId?: string | null | undefined;
+  /** Phase 14 Requirement 15: a day break, with no place. */
+  dayBreak?: boolean | undefined;
   /** Position to insert at; the end when absent. */
   index?: number | undefined;
   durationKind?: DurationKind | undefined;
@@ -401,7 +521,13 @@ export interface AddStopInput {
 
 export function addStop(db: Db, input: AddStopInput): Mutation<ItineraryStop> {
   requireItinerary(db, input.tripId);
-  assertWaypointInTrip(db, input.waypointId, input.tripId);
+  const isRoute = input.entryRouteId != null;
+  const isDay = input.dayBreak === true;
+  if (isDay) {
+    // Nothing to check: a day break has no place.
+  } else if (isRoute) assertRouteInTrip(db, input.entryRouteId as string, input.tripId);
+  else if (input.waypointId !== null) assertWaypointInTrip(db, input.waypointId, input.tripId);
+  else if (input.point == null) throw invalid('A stop needs a waypoint or a point.');
 
   const stops = repo.listStops(db, input.tripId);
   if (stops.length >= MAX_ITINERARY_STOPS) {
@@ -427,7 +553,10 @@ export function addStop(db: Db, input: AddStopInput): Mutation<ItineraryStop> {
       tripId: input.tripId,
       // Placed just before `index`, then everything is renumbered.
       seq: index - 0.5,
-      waypointId: input.waypointId,
+      waypointId: isRoute || isDay ? null : input.waypointId,
+      point: isRoute || isDay || input.waypointId !== null ? null : (input.point ?? null),
+      ...(isRoute ? { kind: 'route' as const, entryRouteId: input.entryRouteId as string } : {}),
+      ...(isDay ? { kind: 'day' as const } : {}),
       legRouteId: null,
       ...duration,
       arriveBy: null,
@@ -687,15 +816,35 @@ const STOP_KEYS: (keyof ItineraryStop)[] = [
   'updatedAt',
 ];
 
+function isPoint(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false;
+  const p = value as Record<string, unknown>;
+  return typeof p.lat === 'number' && typeof p.lon === 'number' && typeof p.name === 'string';
+}
+
 export function readStop(value: unknown): ItineraryStop {
   if (typeof value !== 'object' || value === null) throw malformed('stop');
   const record = value as Record<string, unknown>;
   for (const key of STOP_KEYS) if (!(key in record)) throw malformed(`stop.${key}`);
-  if (typeof record.id !== 'string' || typeof record.tripId !== 'string' || typeof record.waypointId !== 'string') {
-    throw malformed('stop ids');
-  }
+  if (typeof record.id !== 'string' || typeof record.tripId !== 'string') throw malformed('stop ids');
   if (record.durationKind !== 'hours' && record.durationKind !== 'days') throw malformed('stop.durationKind');
-  return record as unknown as ItineraryStop;
+  // Phase 14: a route entry, a waypoint, or a point. A stop recorded before
+  // these existed has no such keys, and is read as a waypoint stop.
+  const point = record.point ?? null;
+  const kind = record.kind ?? 'stop';
+  if (kind === 'route') {
+    if (typeof record.entryRouteId !== 'string' || record.waypointId !== null || point !== null) throw malformed('route entry');
+  } else if (kind === 'day') {
+    if (record.waypointId !== null || point !== null) throw malformed('day break');
+  } else if (typeof record.waypointId === 'string' ? point !== null : !isPoint(point)) {
+    throw malformed('stop place');
+  }
+  return {
+    ...(record as unknown as ItineraryStop),
+    point: point as StopPoint | null,
+    kind: kind === 'route' ? 'route' : kind === 'day' ? 'day' : 'stop',
+    entryRouteId: (record.entryRouteId as string | null | undefined) ?? null,
+  };
 }
 
 export function readSnapshot(value: Record<string, unknown>): ItinerarySnapshot {

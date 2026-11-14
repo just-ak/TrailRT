@@ -6,11 +6,17 @@ import type {
   ViewId,
   Waypoint,
 } from '@shared/domain/types';
+import type { FolderState, LinkedFolder, PhotoState } from '@shared/domain/linkedFolders';
+import type { TripOverview } from '@shared/domain/library';
+import { folderDetail, LINKED_FOLDERS_GROUP } from '@shared/photos/library';
 import type { Db } from '../db/client';
+import * as linkedFolderRepo from '../db/repositories/linkedFolders';
+import * as photoRepo from '../db/repositories/photoMetadata';
 import * as routeRepo from '../db/repositories/routes';
+import * as tripRepo from '../db/repositories/trips';
 import * as trackRepo from '../db/repositories/tracks';
 import * as waypointRepo from '../db/repositories/waypoints';
-import { itineraryTreeChildren, tripSummary } from '@shared/itinerary/treeSummary';
+import { itineraryTreeChildren, tripSummary, type PhotoDays } from '@shared/itinerary/treeSummary';
 import type { ItineraryView } from '@shared/domain/itinerary';
 import * as folderService from './folderService';
 import * as itineraryService from './itineraryService';
@@ -41,6 +47,8 @@ const VIEWS: readonly ViewSpec[] = [
   { id: 'routes', name: 'Routes', available: true },
   { id: 'tracks', name: 'Tracks', available: true },
   { id: 'waypoints', name: 'Waypoints', available: true },
+  // Phase 11: every linked folder across the visible trips (design §8.2).
+  { id: 'photos', name: 'Photos', available: true },
   { id: 'imported', name: 'Imported Data', available: true },
   { id: 'recent', name: 'Recently Used', available: false }, // later
 ];
@@ -119,12 +127,52 @@ function waypointNode(waypoint: Waypoint, path: string): TreeNode {
   };
 }
 
+/** Phase 11: what a linked folder row needs, gathered once per tree. */
+interface FolderRows {
+  byTrip: Map<string, LinkedFolder[]>;
+  counts: Map<string, Record<PhotoState, number>>;
+  stateOf: (folderId: string) => FolderState | null;
+}
+
+const NO_PHOTOS: Record<PhotoState, number> = { located: 0, unlocated: 0, unreadable: 0, 'not-downloaded': 0 };
+
+function linkedFolderNode(folder: LinkedFolder, path: string, rows: FolderRows): TreeNode {
+  return {
+    id: `${path}/linkedFolder:${folder.id}`,
+    ref: { kind: 'linkedFolder', id: folder.id },
+    kind: 'linkedFolder',
+    name: folder.name,
+    detail: folderDetail(rows.counts.get(folder.id) ?? NO_PHOTOS, rows.stateOf(folder.id)),
+    hint: folder.realPath,
+    children: [],
+  };
+}
+
+/** A trip's "Linked folders" row, after everything else in it (design §8.1). */
+function linkedFoldersGroup(tripId: string, path: string, rows: FolderRows): TreeNode[] {
+  const folders = rows.byTrip.get(tripId) ?? [];
+  if (folders.length === 0) return [];
+  const groupPath = `${path}/linked-folders`;
+  return [
+    {
+      id: groupPath,
+      kind: 'group',
+      glyph: '🖼️',
+      name: LINKED_FOLDERS_GROUP,
+      detail: String(folders.length),
+      children: folders.map((folder) => linkedFolderNode(folder, groupPath, rows)),
+    },
+  ];
+}
+
 function tripNode(
   trip: TripWithCounts,
   routes: readonly Route[],
   tracks: readonly { id: string; name: string; distanceM: number | null }[],
   waypoints: readonly Waypoint[],
   plan: ItineraryView | null,
+  folders: FolderRows,
+  photoDays: PhotoDays,
 ): TreeNode {
   const path = `trip:${trip.id}`;
   // Phase 10: a dated trip is shown as a summary of its plan (Requirement
@@ -137,11 +185,20 @@ function tripNode(
       name: trip.name,
       status: trip.status,
       detail: tripSummary(plan),
-      children: itineraryTreeChildren(plan, { routes, tracks, waypoints }, path, {
-        route: (route, at) => routeNode(route as Route, at),
-        track: (track, at) => trackNode(track, at),
-        waypoint: (waypoint, at) => waypointNode(waypoint as Waypoint, at),
-      }),
+      children: [
+        ...itineraryTreeChildren(
+          plan,
+          { routes, tracks, waypoints },
+          path,
+          {
+            route: (route, at) => routeNode(route as Route, at),
+            track: (track, at) => trackNode(track, at),
+            waypoint: (waypoint, at) => waypointNode(waypoint as Waypoint, at),
+          },
+          photoDays,
+        ),
+        ...linkedFoldersGroup(trip.id, path, folders),
+      ],
     };
   }
   return {
@@ -154,13 +211,99 @@ function tripNode(
       ...routes.map((r) => routeNode(r, path)),
       ...tracks.map((t) => trackNode(t, path)),
       ...waypoints.map((w) => waypointNode(w, path)),
+      ...linkedFoldersGroup(trip.id, path, folders),
     ],
   };
 }
 
+/** Phase 11: the Photos view's filters (design §8.2). */
+export interface PhotoViewFilter {
+  year?: number | 'none';
+  tripId?: string;
+}
+
+/**
+ * Every dated trip's itinerary, timed. Settings are read only when some trip
+ * is scheduled; the end date needs the timeline, which needs the planning
+ * speeds.
+ */
+function allPlans(db: Db): Map<string, ItineraryView> {
+  const itineraries = itineraryService.listAll(db);
+  const plans = new Map<string, ItineraryView>();
+  if (itineraries.size === 0) return plans;
+  const settings = settingsService.all(db);
+  const planning = { walkingSpeedKmh: settings.planningSpeedKmh, transportMode: settings.transportMode };
+  for (const tripId of itineraries.keys()) {
+    const view = itineraryService.get(db, tripId, planning);
+    if (view !== null) plans.set(tripId, view);
+  }
+  return plans;
+}
+
+/** The planned length of a trip by road and other transport: the sum of its timed legs. */
+function plannedDistance(view: ItineraryView): number | null {
+  let metres = 0;
+  let any = false;
+  for (const stop of view.timeline.stops) {
+    if (stop.index === 0 || stop.legDistanceM === null) continue;
+    metres += stop.legDistanceM;
+    any = true;
+  }
+  return any ? metres : null;
+}
+
+/**
+ * Every visible trip as the library lists it (Phase 14 design §3.2): its
+ * dates, length and counts, in one call. Missing values stay missing: an
+ * undated trip has no dates and no length, and a trip whose drives are not
+ * all timed has no end date.
+ */
+export function overview(db: Db, options: { includeArchived: boolean }): TripOverview[] {
+  const trips = tripService.list(db, { includeArchived: options.includeArchived, sortKey: 'name', sortDirection: 'asc' });
+  const plans = allPlans(db);
+  const photos = photoRepo.photoCountsByTrip(db);
+  const folders = new Map<string, number>();
+  for (const folder of linkedFolderRepo.listLinkedFolders(db)) {
+    folders.set(folder.tripId, (folders.get(folder.tripId) ?? 0) + 1);
+  }
+  return trips.map((trip) => {
+    const plan = plans.get(trip.id) ?? null;
+    const endDate = plan?.timeline.endDate ?? null;
+    return {
+      id: trip.id,
+      name: trip.name,
+      folderId: trip.folderId,
+      status: trip.status,
+      startDate: plan?.itinerary.startDate ?? null,
+      endDate,
+      days: plan !== null && endDate !== null ? plan.timeline.days.length : null,
+      distanceM: plan === null ? null : plannedDistance(plan),
+      driveSeconds: plan === null || !plan.timeline.complete ? null : plan.timeline.days.reduce((sum, d) => sum + d.driveSeconds, 0),
+      startPlace: plan?.stops[0]?.place?.name ?? null,
+      startTime: plan?.itinerary.startTime ?? null,
+      counts: {
+        routes: trip.routeCount,
+        tracks: trip.trackCount,
+        waypoints: trip.waypointCount,
+        photos: photos.get(trip.id) ?? 0,
+        linkedFolders: folders.get(trip.id) ?? 0,
+      },
+      createdAt: trip.createdAt,
+      updatedAt: trip.updatedAt,
+    };
+  });
+}
+
 export function tree(
   db: Db,
-  options: { includeArchived: boolean; sortKey?: ObjectSortKey },
+  options: {
+    includeArchived: boolean;
+    sortKey?: ObjectSortKey;
+    /** Phase 11: narrows the Photos view. */
+    photos?: PhotoViewFilter;
+    /** Phase 11: a linked folder's runtime state, from the scanner. */
+    folderState?: (folderId: string) => FolderState | null;
+  },
 ): TreeNode {
   const sortKey = options.sortKey ?? 'name';
   const folders = folderService.list(db);
@@ -201,16 +344,23 @@ export function tree(
 
   // Settings are read only when some trip is scheduled; the end date needs the
   // timeline, which needs the planning speeds.
-  const itineraries = itineraryService.listAll(db);
-  const plans = new Map<string, ItineraryView>();
-  if (itineraries.size > 0) {
-    const settings = settingsService.all(db);
-    const planning = { walkingSpeedKmh: settings.planningSpeedKmh, transportMode: settings.transportMode };
-    for (const tripId of itineraries.keys()) {
-      const view = itineraryService.get(db, tripId, planning);
-      if (view !== null) plans.set(tripId, view);
-    }
+  const plans = allPlans(db);
+
+  // Phase 11: linked folders, their photo counts in one query, and photos per
+  // day for the dated trips only.
+  const linkedFolders = linkedFolderRepo.listLinkedFolders(db);
+  const folderRows: FolderRows = {
+    byTrip: new Map(),
+    counts: linkedFolders.length === 0 ? new Map() : photoRepo.countsByFolder(db),
+    stateOf: options.folderState ?? (() => null),
+  };
+  for (const folder of linkedFolders) {
+    const bucket = folderRows.byTrip.get(folder.tripId);
+    if (bucket === undefined) folderRows.byTrip.set(folder.tripId, [folder]);
+    else bucket.push(folder);
   }
+  const daysByTrip =
+    linkedFolders.length === 0 ? new Map<string, PhotoDays>() : photoRepo.photoDays(db, [...plans.keys()]);
 
   const buildTrip = (trip: TripWithCounts): TreeNode =>
     tripNode(
@@ -219,6 +369,8 @@ export function tree(
       tracksByTrip.get(trip.id) ?? [],
       waypointsByTrip.get(trip.id) ?? [],
       plans.get(trip.id) ?? null,
+      folderRows,
+      daysByTrip.get(trip.id) ?? new Map(),
     );
 
   const foldersByParent = new Map<string | null, Folder[]>();
@@ -247,6 +399,12 @@ export function tree(
   });
 
   const visibleTripIds = new Set(trips.map((t) => t.id));
+  // ADR 0022: items outside a trip are listed in the sections, first, under
+  // the holder's stored name, "Not in a trip". The holder is never a trip row.
+  const looseId = tripRepo.findLooseTripId(db);
+  if (looseId !== null) visibleTripIds.add(looseId);
+  const looseFirst = (a: { tripId: string }, b: { tripId: string }): number =>
+    (a.tripId === looseId ? 0 : 1) - (b.tripId === looseId ? 0 : 1);
 
   const viewNodes: TreeNode[] = VIEWS.map((view) => {
     const node: TreeNode = {
@@ -268,9 +426,10 @@ export function tree(
       node.children = allRoutes
         .filter((route) => visibleTripIds.has(route.tripId))
         .toSorted((a, b) =>
-          sortKey === 'distance'
+          looseFirst(a, b) ||
+          (sortKey === 'distance'
             ? byDistance(a.distanceM, b.distanceM, 1)
-            : a.name.localeCompare(b.name),
+            : a.name.localeCompare(b.name)),
         )
         .map((route) => ({
           ...routeNode(route, 'view:routes'),
@@ -280,9 +439,10 @@ export function tree(
       node.children = allTracks
         .filter((track) => visibleTripIds.has(track.tripId))
         .toSorted((a, b) =>
-          sortKey === 'distance'
+          looseFirst(a, b) ||
+          (sortKey === 'distance'
             ? byDistance(a.distanceM, b.distanceM, 1)
-            : a.name.localeCompare(b.name),
+            : a.name.localeCompare(b.name)),
         )
         .map((track) => ({
           ...trackNode(track, 'view:tracks'),
@@ -291,10 +451,39 @@ export function tree(
     } else if (view.id === 'waypoints') {
       node.children = allWaypoints
         .filter((waypoint) => visibleTripIds.has(waypoint.tripId))
+        .toSorted(looseFirst)
         .map((waypoint) => ({
           ...waypointNode(waypoint, 'view:waypoints'),
           detail: waypoint.tripName,
         }));
+    } else if (view.id === 'photos') {
+      // Every linked folder of a visible trip, annotated with the trip as the
+      // Routes view is, and narrowed by the view's Year and Trip filters.
+      const filter = options.photos ?? {};
+      const inYear = filter.year === undefined ? null : photoRepo.foldersWithYear(db, filter.year);
+      const tripNames = new Map(trips.map((t) => [t.id, t.name]));
+      if (looseId !== null) tripNames.set(looseId, tripService.LOOSE_TRIP_NAME);
+      node.children = linkedFolders
+        .filter(
+          (folder) =>
+            visibleTripIds.has(folder.tripId) &&
+            (filter.tripId === undefined || folder.tripId === filter.tripId) &&
+            (inYear === null || inYear.has(folder.id)),
+        )
+        .toSorted(
+          (a, b) =>
+            looseFirst(a, b) ||
+            (tripNames.get(a.tripId) ?? '').localeCompare(tripNames.get(b.tripId) ?? '') ||
+            a.name.localeCompare(b.name),
+        )
+        .map((folder) => {
+          const row = linkedFolderNode(folder, 'view:photos', folderRows);
+          row.detail = `${tripNames.get(folder.tripId) ?? ''} · ${row.detail ?? ''}`;
+          return row;
+        });
+      if (linkedFolders.length === 0) {
+        node.hint = 'Link a folder on disk to a trip (File › Link Folder to Trip…) and its photos are listed here.';
+      }
     } else if (view.id === 'imported') {
       // Everything whose geometry came from a file rather than being drawn
       // here. A cross-trip view over `source`, which is exactly what the

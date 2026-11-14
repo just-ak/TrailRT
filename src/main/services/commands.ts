@@ -3,6 +3,8 @@ import type { Db } from '../db/client';
 import { ServiceError } from './errors';
 import * as folderService from './folderService';
 import * as itineraryService from './itineraryService';
+import * as linkedFolderService from './linkedFolderService';
+import type { LinkedFolder } from '@shared/domain/linkedFolders';
 import type { Mutation } from './folderService';
 import * as routeService from './routeService';
 import type { ControlInput } from '../db/repositories/routeControlPoints';
@@ -94,7 +96,16 @@ export type CommandKind =
   | 'itinerary:moveStop'
   | 'itinerary:updateStop'
   | 'itinerary:linkLeg'
-  | 'itinerary:setLegMode';
+  | 'itinerary:setLegMode'
+  /*
+   * Phase 11: linked folders (design §4.4). Unlink's inverse restores the
+   * folder row under its old id; the index is not carried, because the
+   * scanner rebuilds it from the folder.
+   */
+  | 'linkedFolder:unlink'
+  | 'linkedFolder:restore'
+  | 'linkedFolder:relink'
+  | 'linkedFolder:setIncludeSubfolders';
 
 export interface Command {
   kind: string;
@@ -149,6 +160,11 @@ const LABELS: Record<CommandKind, string> = {
   'itinerary:updateStop': 'stop edit',
   'itinerary:linkLeg': 'leg route',
   'itinerary:setLegMode': 'leg travel',
+  // Labelled by what the user did: the inverse of linking is an unlink.
+  'linkedFolder:unlink': 'link folder',
+  'linkedFolder:restore': 'unlink folder',
+  'linkedFolder:relink': 'relink folder',
+  'linkedFolder:setIncludeSubfolders': 'include subfolders',
 };
 
 export function labelFor(kind: string): string {
@@ -204,6 +220,29 @@ function numOrNull(
   const value = payload[key];
   if (value === null || value === undefined) return null;
   return num(payload, key);
+}
+
+/** The folder row an unlink carried, checked before it is written back. */
+function readLinkedFolder(value: unknown): LinkedFolder {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new ServiceError('UNKNOWN', 'An undo step was malformed and was not applied.', 'expected a folder object');
+  }
+  const p = value as Record<string, unknown>;
+  if (typeof p.includeSubfolders !== 'boolean') {
+    throw new ServiceError('UNKNOWN', 'An undo step was malformed and was not applied.', 'expected boolean at "includeSubfolders"');
+  }
+  return {
+    id: str(p, 'id'),
+    tripId: str(p, 'tripId'),
+    path: str(p, 'path'),
+    realPath: str(p, 'realPath'),
+    name: str(p, 'name'),
+    includeSubfolders: p.includeSubfolders,
+    lastScanAt: numOrNull(p, 'lastScanAt'),
+    lastSeenAt: numOrNull(p, 'lastSeenAt'),
+    createdAt: num(p, 'createdAt'),
+    updatedAt: num(p, 'updatedAt'),
+  };
 }
 
 function points(payload: Record<string, unknown>): RoutePoint[] {
@@ -342,6 +381,24 @@ const HANDLERS: Record<CommandKind, Handler> = {
   none: () => ({ result: null, inverse: { kind: 'none', payload: {} } }),
 
   'itinerary:remove': (db, p) => itineraryService.remove(db, str(p, 'tripId')),
+
+  'linkedFolder:unlink': (db, p) => linkedFolderService.unlink(db, str(p, 'id')),
+
+  'linkedFolder:restore': (db, p) => linkedFolderService.restore(db, readLinkedFolder(p.folder)),
+
+  'linkedFolder:relink': (db, p) =>
+    linkedFolderService.setLocation(db, str(p, 'id'), {
+      path: str(p, 'path'),
+      realPath: str(p, 'realPath'),
+      name: str(p, 'name'),
+    }),
+
+  'linkedFolder:setIncludeSubfolders': (db, p) => {
+    if (typeof p.include !== 'boolean') {
+      throw new ServiceError('UNKNOWN', 'An undo step was malformed and was not applied.', 'expected boolean at "include"');
+    }
+    return linkedFolderService.setIncludeSubfolders(db, str(p, 'id'), p.include);
+  },
 
   'itinerary:restore': (db, p) => itineraryService.restore(db, itineraryService.readSnapshot(p)),
 

@@ -640,3 +640,18 @@ describe('Phase 10 panel layout', () => {
     expect(S.panelLayoutSchema.safeParse({ ...before, topVisible: true }).success).toBe(false);
   });
 });
+
+describe('Phase 14 navigation settings', () => {
+  it('accepts the rail’s sections, an open trip or none, and the trip tabs', () => {
+    expect(S.settingsSetRequest.safeParse({ key: 'librarySection', value: 'photos' }).success).toBe(true);
+    expect(S.settingsSetRequest.safeParse({ key: 'openTripId', value: null }).success).toBe(true);
+    expect(S.settingsSetRequest.safeParse({ key: 'openTripId', value: VALID_ID }).success).toBe(true);
+    expect(S.settingsSetRequest.safeParse({ key: 'tripTab', value: 'objects' }).success).toBe(true);
+  });
+
+  it('refuses a section that is not stored, a trip that is not an id, and an unknown tab', () => {
+    expect(S.settingsSetRequest.safeParse({ key: 'librarySection', value: 'recent' }).success).toBe(false);
+    expect(S.settingsSetRequest.safeParse({ key: 'openTripId', value: '../trip' }).success).toBe(false);
+    expect(S.settingsSetRequest.safeParse({ key: 'tripTab', value: 'calendar' }).success).toBe(false);
+  });
+});

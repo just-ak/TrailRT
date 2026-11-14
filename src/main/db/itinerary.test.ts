@@ -2,15 +2,24 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { BUXTON, LEEK } from '@fixtures/places';
 import { createDatabase, type Db, type DbHandle } from './client';
 import { MIGRATIONS, splitStatements } from './migrations/index';
-import * as schema from './schema';
 import * as itineraryRepo from './repositories/itineraries';
 import * as tripRepo from './repositories/trips';
 import * as waypointRepo from './repositories/waypoints';
+
+/**
+ * A trip written as a build before migration 0007 would write it: the
+ * repository writes every column the current schema has, `role` included.
+ */
+function legacyTrip(sqlite: Database.Database, id: string, name: string): { id: string } {
+  const now = Date.now();
+  sqlite.prepare('INSERT INTO trips (id, folder_id, name, status, created_at, updated_at) VALUES (?, NULL, ?, ?, ?, ?)').run(id, name, 'active', now, now);
+  return { id };
+}
+
 
 let dir: string;
 let handle: DbHandle;
@@ -94,19 +103,11 @@ describe('migration 0004', () => {
       for (const statement of splitStatements(migration.sql)) sqlite.exec(statement);
       sqlite.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?)').run(migration.version, migration.name, Date.now());
     }
-    const old = drizzle(sqlite, { schema });
-    const existing = tripRepo.insertTrip(old, {
-      id: '0190c3ae-1f2b-7c4d-9e8f-000000000011',
-      folderId: null,
-      name: 'Before Phase 10',
-      description: null,
-      notes: null,
-      now: Date.now(),
-    });
+    const existing = legacyTrip(sqlite, '0190c3ae-1f2b-7c4d-9e8f-000000000011', 'Before Phase 10');
     sqlite.close();
 
     const upgraded = createDatabase({ file });
-    expect(upgraded.migration.applied).toEqual([5, 6]);
+    expect(upgraded.migration.applied).toEqual([5, 6, 7, 8, 9, 10, 11]);
     expect(tripRepo.findTrip(upgraded.db, existing.id)?.name).toBe('Before Phase 10');
     expect(itineraryRepo.findItinerary(upgraded.db, existing.id)).toBeNull();
     upgraded.close();
@@ -195,5 +196,64 @@ describe('itinerary repository', () => {
     expect(stop).toMatchObject({ durationMinutes: null, departTime: null, legRouteId: null });
     const plan = itineraryRepo.findItinerary(db, tripId);
     expect(plan).toMatchObject({ maxDriveMinutes: null, rangeKm: null, reservePct: 20 });
+  });
+});
+
+describe('migration 0008', () => {
+  it('rebuilds the stops table, keeps every stop as it was, and takes a stop that is only a point', () => {
+    const upgradeDir = mkdtempSync(join(tmpdir(), 'trailrt-p14-upgrade-'));
+    const file = join(upgradeDir, 'phase14.db');
+    const sqlite = new Database(file);
+    sqlite.exec('CREATE TABLE schema_migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at INTEGER NOT NULL)');
+    for (const migration of MIGRATIONS.filter((m) => m.version <= 8)) {
+      for (const statement of splitStatements(migration.sql)) sqlite.exec(statement);
+      sqlite.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?)').run(migration.version, migration.name, Date.now());
+    }
+    const trip = legacyTrip(sqlite, '0190c3ae-1f2b-7c4d-9e8f-000000000021', 'Before points');
+    sqlite.prepare("INSERT INTO itineraries (trip_id, start_date, start_time) VALUES (?, '2026-11-20', '09:00')").run(trip.id);
+    sqlite
+      .prepare("INSERT INTO itinerary_stops (id, trip_id, seq, waypoint_id, leg_mode, notes) VALUES ('s1', ?, 0, 'w1', 'road', 'kept')")
+      .run(trip.id);
+    sqlite.close();
+
+    const upgraded = createDatabase({ file });
+    expect(upgraded.migration.applied).toEqual([9, 10, 11]);
+    const [kept] = itineraryRepo.listStops(upgraded.db, trip.id);
+    expect(kept).toMatchObject({ id: 's1', waypointId: 'w1', point: null, kind: 'stop', entryRouteId: null, notes: 'kept', legMode: 'road' });
+    const point = itineraryRepo.insertStop(upgraded.db, {
+      tripId: trip.id,
+      seq: 1,
+      waypointId: null,
+      point: { lat: LEEK.lat, lon: LEEK.lon, name: 'End of the lanes' },
+      legRouteId: null,
+      durationKind: 'hours',
+      durationMinutes: 0,
+      durationDays: null,
+      departTime: null,
+      arriveBy: null,
+      departAt: null,
+      notes: null,
+      now: Date.now(),
+    });
+    expect(point.point).toEqual({ lat: LEEK.lat, lon: LEEK.lon, name: 'End of the lanes' });
+    // A stop with neither a waypoint nor a point is refused by the table.
+    expect(() =>
+      itineraryRepo.insertStop(upgraded.db, {
+        tripId: trip.id,
+        seq: 2,
+        waypointId: null,
+        legRouteId: null,
+        durationKind: 'hours',
+        durationMinutes: 0,
+        durationDays: null,
+        departTime: null,
+        arriveBy: null,
+        departAt: null,
+        notes: null,
+        now: Date.now(),
+      }),
+    ).toThrow();
+    upgraded.close();
+    rmSync(upgradeDir, { recursive: true, force: true });
   });
 });

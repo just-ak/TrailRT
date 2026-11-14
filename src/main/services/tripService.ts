@@ -9,8 +9,9 @@ import type {
 import type { DeleteTripResult } from '@shared/ipc/api';
 import type { Db } from '../db/client';
 import * as folderRepo from '../db/repositories/folders';
+import * as linkedFolderRepo from '../db/repositories/linkedFolders';
 import * as repo from '../db/repositories/trips';
-import { notFound } from './errors';
+import { notFound, ServiceError } from './errors';
 import type { Mutation } from './folderService';
 
 /**
@@ -38,6 +39,40 @@ export function get(db: Db, id: string): TripWithCounts {
 export function search(db: Db, query: string): TripWithCounts[] {
   if (query.length === 0) return [];
   return repo.searchTrips(db, query);
+}
+
+/** ADR 0022: the stored name of the holder, so an older build shows it sensibly. */
+export const LOOSE_TRIP_NAME = 'Not in a trip';
+
+/**
+ * The holder of items outside a trip (ADR 0022), made on first use. It is a
+ * trips row like any other, so geometry, moves, undo and backups work on it
+ * unchanged; it is never listed, renamed, archived, duplicated, deleted or
+ * planned.
+ */
+export function looseTripId(db: Db): string {
+  const existing = repo.findLooseTripId(db);
+  if (existing !== null) return existing;
+  return repo.insertTrip(db, {
+    id: randomUUID(),
+    folderId: null,
+    name: LOOSE_TRIP_NAME,
+    description: null,
+    notes: null,
+    role: 'loose',
+    now: Date.now(),
+  }).id;
+}
+
+export function isLoose(db: Db, tripId: string): boolean {
+  return repo.findLooseTripId(db) === tripId;
+}
+
+/** Refuses an action that only makes sense for a real trip. */
+export function assertNotLoose(db: Db, tripId: string, action: string): void {
+  if (isLoose(db, tripId)) {
+    throw new ServiceError('INVALID_REQUEST', `Items outside a trip cannot be ${action}.`);
+  }
 }
 
 function assertFolderExists(db: Db, folderId: string | null): void {
@@ -81,6 +116,7 @@ export function update(
     notes?: string | null | undefined;
   },
 ): Mutation<Trip> {
+  assertNotLoose(db, input.id, 'renamed or described as a trip');
   const before = get(db, input.id);
 
   const patch: repo.TripPatch = {};
@@ -108,6 +144,7 @@ export function move(
   db: Db,
   input: { id: string; folderId: string | null },
 ): Mutation<Trip> {
+  assertNotLoose(db, input.id, 'put in a folder');
   const before = get(db, input.id);
   assertFolderExists(db, input.folderId);
   repo.updateTrip(db, input.id, { folderId: input.folderId }, Date.now());
@@ -124,6 +161,7 @@ export function setStatus(
   db: Db,
   input: { id: string; status: TripStatus },
 ): Mutation<Trip> {
+  assertNotLoose(db, input.id, 'archived');
   const before = get(db, input.id);
   repo.updateTrip(db, input.id, { status: input.status }, Date.now());
   return {
@@ -143,6 +181,7 @@ export function setStatus(
  * it. The duplicate is named distinctly, as Requirement 5.3 asks.
  */
 export function duplicate(db: Db, id: string): Mutation<Trip> {
+  assertNotLoose(db, id, 'duplicated as a trip');
   const source = get(db, id);
 
   const created = db.transaction((): Trip => {
@@ -157,6 +196,9 @@ export function duplicate(db: Db, id: string): Mutation<Trip> {
     });
     // Phase 2 and 3: copy routes, route points, tracks, track points,
     // waypoints and attachments here, inside this same transaction.
+    // Phase 11: the trip's linked folders come with it, index and all, so the
+    // copy shows the same photos. No file is touched (design §4.4).
+    linkedFolderRepo.copyLinkedFoldersForTrip(db, source.id, copy.id, Date.now());
     return copy;
   });
 
@@ -174,6 +216,7 @@ export function duplicate(db: Db, id: string): Mutation<Trip> {
  * a reliable inverse would mean snapshotting them. ADR 0001.
  */
 export function remove(db: Db, id: string): Mutation<DeleteTripResult> {
+  assertNotLoose(db, id, 'deleted as a trip');
   const counts = repo.tripChildCounts(db, id);
   const existing = repo.findTrip(db, id);
   if (existing === null) throw notFound('That trip');

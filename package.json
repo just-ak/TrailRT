@@ -17,6 +17,11 @@
     "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:e2e",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
+    "handbook": "handbook",
+    "handbook:build": "handbook build",
+    "handbook:validate": "handbook validate",
+    "handbook:index": "handbook index",
+    "handbook:changes": "handbook changes",
     "lint": "oxlint",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -40,6 +45,7 @@
     "verify:search": "vitest run src/main/places/search.live.test.ts"
   },
   "dependencies": {
+    "@just-ak/kiro-spec-handbook": "^0.5.0",
     "better-sqlite3": "13.0.3",
     "drizzle-orm": "0.45.4",
     "fast-xml-parser": "^5.12.0",

@@ -42,6 +42,16 @@ describe('toolExitError', () => {
     expect(error?.detail).toBe('Ended by SIGABRT.');
   });
 
+  it('says a SIGTERM came from outside, and that the downloads are kept for another try', () => {
+    const error = toolExitError({ code: null, signal: 'SIGTERM', aborted: false }, messages, 'Stage: Reading roads.');
+    expect(error?.code).toBe('PROVIDER_ERROR');
+    expect(error?.message).toMatch(/stopped by the system \(SIGTERM\)/);
+    expect(error?.message).toMatch(/TrailRT did not stop it/);
+    expect(error?.detail).toMatch(/TrailRT did not send it/);
+    expect(error?.detail).toMatch(/downloaded regions are kept/);
+    expect(error?.detail).toMatch(/Stage: Reading roads\./);
+  });
+
   it('carries the log tail for a non-zero exit', () => {
     const error = toolExitError({ code: 1, signal: null, aborted: false }, messages, 'boom');
     expect(error?.code).toBe('PROVIDER_ERROR');

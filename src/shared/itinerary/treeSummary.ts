@@ -2,6 +2,7 @@ import type { ItineraryView, OtherTransport } from '../domain/itinerary';
 import type { TreeNode } from '../domain/types';
 import { isoWeekday, utcToWallClock } from '../time/zoned';
 import { formatDateRange } from './format';
+import { CAMERA_TIME_HINT, dayPhotoText } from '../photos/library';
 
 /**
  * A dated trip in the library tree, as a summary of its plan. Phase 10
@@ -74,11 +75,15 @@ interface Event {
   node: TreeNode;
 }
 
+/** Phase 11: a day's photos from the trip's linked folders, by wall-clock date (design §8.4). */
+export type PhotoDays = ReadonlyMap<string, { count: number; cameraTime: number }>;
+
 export function itineraryTreeChildren(
   view: ItineraryView,
   contents: TripContents,
   path: string,
   build: SummaryBuilders,
+  photoDays: PhotoDays = new Map(),
 ): TreeNode[] {
   const { stops, timeline } = view;
   const zone = timeline.calendarZone;
@@ -87,12 +92,15 @@ export function itineraryTreeChildren(
   const waypointsById = new Map(contents.waypoints.map((w) => [w.id, w]));
 
   const events: Event[] = [];
+  const real = stops.filter((s) => s.kind !== 'day');
   for (const [index, stop] of stops.entries()) {
     const timed = timeline.stops[index];
-    const isFirst = index === 0;
-    const isLast = index === stops.length - 1;
+    // A day break starts a day; it is not an entry of its own in the tree.
+    if (stop.kind === 'day') continue;
+    const isFirst = stop === real[0];
+    const isLast = stop === real.at(-1);
 
-    if (!isFirst) {
+    if (!isFirst && !stop.joined) {
       const before = timeline.stops[index - 1];
       const leaves = before?.departure ?? null;
       const id = `${path}/leg:${stop.id}`;
@@ -118,6 +126,21 @@ export function itineraryTreeChildren(
       events.push({ instant: leaves, node });
     }
 
+    // Phase 14 Requirement 14: a route in the plan, shown once, from its start to its end.
+    if (stop.kind === 'route') {
+      const route = stop.entryRouteId === null ? undefined : routesById.get(stop.entryRouteId);
+      const from = local(timed?.arrival ?? null);
+      const to = local(timed?.departure ?? null);
+      const id = `${path}/stop:${stop.id}`;
+      const detail = from === null ? 'time unknown' : to === null ? `${from.time} · not timed` : `${from.time} – ${to.time}`;
+      const node: TreeNode =
+        route === undefined
+          ? { id, kind: 'group', glyph: '⚠️', name: 'Route deleted', detail, children: [] }
+          : { ...build.route(route, id), id, detail };
+      events.push({ instant: timed?.arrival ?? null, node });
+      continue;
+    }
+
     const arrive = local(timed?.arrival ?? null);
     const leave = local(timed?.departure ?? null);
     const detail = isFirst
@@ -131,12 +154,14 @@ export function itineraryTreeChildren(
         : arrive === null || leave === null
           ? 'time unknown'
           : `${arrive.time} – ${leave.date === arrive.date ? '' : `${DAYS[isoWeekday(leave.date)] ?? ''} `}${leave.time}`;
-    const waypoint = waypointsById.get(stop.waypointId);
+    const waypoint = stop.waypointId === null ? undefined : waypointsById.get(stop.waypointId);
     const id = `${path}/stop:${stop.id}`;
     const node: TreeNode =
-      waypoint === undefined
-        ? { id, kind: 'group', glyph: '⚠️', name: 'Place deleted', detail, children: [] }
-        : { ...build.waypoint(waypoint, id), id, detail };
+      stop.point !== null
+        ? { id, kind: 'group', glyph: '📍', name: stop.point.name, detail, children: [] }
+        : waypoint === undefined
+          ? { id, kind: 'group', glyph: '⚠️', name: 'Place deleted', detail, children: [] }
+          : { ...build.waypoint(waypoint, id), id, detail };
     events.push({ instant: isFirst ? (timed?.departure ?? null) : (timed?.arrival ?? null), node });
   }
 
@@ -148,12 +173,15 @@ export function itineraryTreeChildren(
     if (day.driveSeconds > 0) parts.push(`${duration(day.driveSeconds)} driving`);
     if (day.otherSeconds > 0) parts.push(`${duration(day.otherSeconds)} other transport`);
     if (day.driveSeconds === 0 && day.otherSeconds === 0) parts.push('no travel');
+    const photos = photoDays.get(day.date);
+    if (photos !== undefined && photos.count > 0) parts.push(dayPhotoText(photos));
     children.push({
       id: dayPath,
       kind: 'group',
       glyph: '📅',
       name: dayName(day.date),
       detail: parts.join(' · '),
+      ...(photos !== undefined && photos.cameraTime > 0 ? { hint: CAMERA_TIME_HINT } : {}),
       defaultExpanded: true,
       children: inDay.map((e) => ({ ...e.node, id: `${dayPath}/${e.node.id.slice(path.length + 1)}` })),
     });
@@ -173,8 +201,8 @@ export function itineraryTreeChildren(
     });
   }
 
-  const usedRoutes = new Set(stops.map((s) => s.legRouteId).filter((id): id is string => id !== null));
-  const usedWaypoints = new Set(stops.map((s) => s.waypointId));
+  const usedRoutes = new Set(stops.flatMap((s) => [s.legRouteId, s.entryRouteId]).filter((id): id is string => id !== null));
+  const usedWaypoints = new Set(stops.map((s) => s.waypointId).filter((id): id is string => id !== null));
   const outPath = `${path}/not-in-plan`;
   const outside = [
     ...contents.routes.filter((r) => !usedRoutes.has(r.id)).map((r) => build.route(r, outPath)),

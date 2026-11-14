@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 
 export interface MenuItem {
@@ -55,12 +56,14 @@ export function ContextMenu({ x, y, items, onClose }: Props): ReactNode {
     };
   }, [onClose]);
 
-  return (
+  // Rendered into the body above the map: a menu opened near the edge of a
+  // side panel extends over the map, whose panes would otherwise cover it.
+  return createPortal(
     <div
       ref={ref}
       role="menu"
       style={{ left: pos.left, top: pos.top }}
-      className="fixed z-50 min-w-[200px] rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] py-1 shadow-xl"
+      className="fixed z-[2000] min-w-[200px] rounded-lg border border-[var(--color-border-subtle)] bg-[var(--color-surface)] py-1 shadow-xl"
     >
       {items.map((item, index) => (
         <div key={`${item.label}-${index}`}>
@@ -87,6 +90,7 @@ export function ContextMenu({ x, y, items, onClose }: Props): ReactNode {
           </button>
         </div>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 }

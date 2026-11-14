@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import type { TreeNode } from "@shared/domain/types";
 
@@ -20,9 +21,16 @@ interface Props {
   hasChildren: boolean;
   renaming: boolean;
   dropTarget: boolean;
-  /** The single tab stop in the tree. See the roving tabIndex in LibraryPanel. */
+  /** The single tab stop in the tree. See the roving tabIndex in LibraryList. */
   focusable: boolean;
+  /** Phase 14: a trip in the trip list, with its dates and size on a second line. */
+  twoLine?: boolean;
   onToggle: () => void;
+  /**
+   * The trip list flow: opening a trip is its own step. Given, a double-click
+   * opens rather than expands, and the selected row shows an arrow that opens.
+   */
+  onOpen?: () => void;
   onSelect: (modifiers: ClickModifiers) => void;
   onContextMenu: (event: React.MouseEvent) => void;
   onRenameCommit: (name: string) => void;
@@ -75,6 +83,9 @@ function Icon({ node }: { node: TreeNode }): ReactNode {
   if (node.kind === "track") return <span aria-hidden="true">📈</span>;
   if (node.kind === "waypoint") return <span aria-hidden="true">📍</span>;
   if (node.kind === "group") return <span aria-hidden="true">{node.glyph ?? "▫️"}</span>;
+  // A folder on disk, distinct from a library folder (📁), which holds trips.
+  if (node.kind === "linkedFolder") return <span aria-hidden="true">🖼️</span>;
+  if (node.kind === "view" && node.viewId === "photos") return <span aria-hidden="true">🖼️</span>;
   return <span aria-hidden="true">🔖</span>;
 }
 
@@ -88,7 +99,9 @@ export function TreeRow({
   renaming,
   dropTarget,
   focusable,
+  twoLine = false,
   onToggle,
+  onOpen,
   onSelect,
   onContextMenu,
   onRenameCommit,
@@ -101,6 +114,7 @@ export function TreeRow({
 }: Props): ReactNode {
   const unavailable = node.kind === "view" && node.available === false;
   const archived = node.status === "archived";
+  const heading = node.heading === true;
 
   /*
    * Three visual states, not two.
@@ -154,10 +168,12 @@ export function TreeRow({
         onSelect({ metaKey: event.metaKey, shiftKey: event.shiftKey });
       }}
       onDoubleClick={() => {
-        if (hasChildren) onToggle();
+        if (onOpen !== undefined) onOpen();
+        else if (hasChildren) onToggle();
       }}
+      title={node.hint}
       style={{ paddingLeft: depth * INDENT + 6 }}
-      className={`group flex h-[26px] cursor-default items-center gap-1.5 pr-2 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] focus-visible:ring-inset ${background} ${unavailable ? "opacity-55" : ""}`}
+      className={`group flex ${twoLine ? "h-[46px]" : heading ? "mt-2 h-[24px]" : "h-[26px]"} cursor-default items-center gap-1.5 pr-2 text-[13px] outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-accent)] focus-visible:ring-inset ${background} ${unavailable ? "opacity-55" : ""}`}
     >
       <button
         type="button"
@@ -177,9 +193,11 @@ export function TreeRow({
         <Chevron open={expanded} />
       </button>
 
-      <span className="shrink-0 text-[12px]">
-        <Icon node={node} />
-      </span>
+      {!heading && (
+        <span className="shrink-0 text-[12px]">
+          <Icon node={node} />
+        </span>
+      )}
 
       {renaming ? (
         <input
@@ -199,6 +217,19 @@ export function TreeRow({
           onClick={(event) => event.stopPropagation()}
           className="min-w-0 flex-1 rounded border border-[var(--color-accent)] bg-[var(--color-surface)] px-1 py-0 text-[13px] text-[var(--color-text-primary)] outline-none"
         />
+      ) : heading ? (
+        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+          {node.name}
+        </span>
+      ) : twoLine ? (
+        <span className="flex min-w-0 flex-1 flex-col leading-tight">
+          <span className="truncate font-semibold">{node.name}</span>
+          {node.detail !== undefined && (
+            <span className={`truncate text-[11px] ${selected ? "text-white/75" : "text-[var(--color-text-muted)]"}`}>
+              {node.detail}
+            </span>
+          )}
+        </span>
       ) : (
         <span className="min-w-0 flex-1 truncate">
           {node.name}
@@ -224,6 +255,22 @@ export function TreeRow({
             </span>
           )}
         </span>
+      )}
+      {onOpen !== undefined && selected && !renaming && (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={`Open ${node.name}`}
+          title="Open the trip"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+          onDoubleClick={(event) => event.stopPropagation()}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--color-surface)] text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)]"
+        >
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
       )}
     </div>
   );

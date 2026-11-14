@@ -1,0 +1,151 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 644 672" width="644" height="672" role="img" aria-labelledby="option-b-section-rail-t option-b-section-rail-d">
+<title id="option-b-section-rail-t">Option B, Section rail</title>
+<desc id="option-b-section-rail-d">An icon rail switches between Trips, Routes, Tracks, Waypoints, Photos, Imported and Recent; each section has its own list, and Photos is a grid.</desc>
+
+<style>
+  .bg{fill:var(--ui-surface,#ffffff)} .sunk{fill:var(--ui-sunken,#f1f5f9)}
+  .bd{fill:var(--ui-border,#e2e8f0)} .ln{fill:none;stroke:var(--ui-border,#e2e8f0)}
+  .t1{fill:var(--ui-text,#0f172a)} .t2{fill:var(--ui-text2,#475569)} .t3{fill:var(--ui-text3,#94a3b8)}
+  .acc{fill:var(--ui-accent,#2563eb)} .acct{fill:var(--ui-accent,#2563eb)}
+  .accl{fill:var(--ui-accent,#2563eb);fill-opacity:.13} .accr{fill:none;stroke:var(--ui-accent,#2563eb);stroke-width:1.5}
+  .on{fill:#ffffff} .onm{fill:#ffffff;fill-opacity:.75} .ph{fill:var(--ui-photo,#0d9488)}
+  .rail{fill:none;stroke:var(--ui-text3,#94a3b8);stroke-width:2}
+  .i{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i2{stroke:var(--ui-text2,#475569)} .i3{stroke:var(--ui-text3,#94a3b8)} .ia{stroke:var(--ui-accent,#2563eb)}
+  .iw{stroke:#ffffff} .ip{stroke:var(--ui-photo,#0d9488)} .ir{stroke:#7c3aed} .it{stroke:#ea580c} .iy{stroke:#dc2626}
+  .lab{fill:var(--ui-text2,#475569);font-size:13px;font-weight:600}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<style>
+  @media (prefers-color-scheme: dark){
+    svg{--ui-surface:#0f172a;--ui-sunken:#080d17;--ui-border:#2a3550;--ui-text:#f1f5f9;--ui-text2:#94a3b8;--ui-text3:#64748b;--ui-accent:#60a5fa;--ui-photo:#2dd4bf}
+  }
+</style>
+<text x="0" y="18" class="lab" font-size="12.5" font-weight="400" text-anchor="start" >Trips section: folders and trips, nothing else</text>
+<g transform="translate(0 30)">
+<rect x="0" y="0" width="300" height="640" rx="10" class="bg" />
+<rect x="0.5" y="0.5" width="299" height="639" rx="10" class="ln"/>
+<rect x="0" y="0" width="46" height="640" rx="10" class="sunk" />
+<rect x="36" y="0" width="10" height="640" rx="0" class="sunk" />
+<line x1="46" y1="0" x2="46" y2="640" class="ln" />
+<rect x="7" y="12" width="32" height="32" rx="8" class="accl" />
+<g transform="translate(15 20) scale(0.6666666666666666)" class="i ia"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<g transform="translate(15 62) scale(0.6666666666666666)" class="i i2"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<g transform="translate(15 104) scale(0.6666666666666666)" class="i i2"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<g transform="translate(15 146) scale(0.6666666666666666)" class="i i2"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<g transform="translate(15 188) scale(0.6666666666666666)" class="i i2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<g transform="translate(15 230) scale(0.6666666666666666)" class="i i2"><path d="M4 13l2.5-7h11L20 13v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/></g>
+<g transform="translate(15 272) scale(0.6666666666666666)" class="i i3"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g>
+<g transform="translate(15 600) scale(0.6666666666666666)" class="i i2"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/></g>
+<text x="58" y="32" class="t1" font-size="16" font-weight="700" text-anchor="start" >Trips</text>
+<text x="106" y="32" class="t3" font-size="13" font-weight="400" text-anchor="start" >6</text>
+<g transform="translate(237.0 19.0) scale(0.6666666666666666)" class="i i2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></g>
+<rect x="260" y="12" width="30" height="30" rx="7" class="acc" />
+<g transform="translate(267.0 19.0) scale(0.6666666666666666)" class="i iw"><path d="M12 5v14M5 12h14"/></g>
+<rect x="56" y="50" width="232" height="30" rx="7" class="sunk" />
+<g transform="translate(65 57) scale(0.6666666666666666)" class="i i3"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<text x="88" y="69.5" class="t3" font-size="12.5" font-weight="400" text-anchor="start" >Search trips</text>
+<line x1="0" y1="92" x2="300" y2="92" class="ln" />
+<g transform="translate(56 108) scale(0.5)" class="i i3"><path d="M6 9l6 6 6-6"/></g>
+<g transform="translate(72 106.5) scale(0.625)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="93" y="118.5" class="t1" font-size="13" font-weight="600" text-anchor="start" >Idea1</text>
+<text x="136.0" y="118.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >12 Nov · 33 km</text>
+<g transform="translate(72 136) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(88 134.5) scale(0.625)" class="i i3"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g>
+<text x="109" y="146.5" class="t1" font-size="13" font-weight="400" text-anchor="start" >Thu 12 Nov</text>
+<text x="185.0" y="146.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >3 stops</text>
+<g transform="translate(72 164) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(88 162.5) scale(0.625)" class="i i3"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g>
+<text x="109" y="174.5" class="t1" font-size="13" font-weight="400" text-anchor="start" >Not in the plan</text>
+<text x="219.5" y="174.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >2</text>
+<rect x="50" y="184" width="246" height="28" rx="6" class="acc" />
+<g transform="translate(88 190.5) scale(0.625)" class="i iw"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<text x="109" y="202.5" class="on" font-size="13" font-weight="400" text-anchor="start" >Idea1</text>
+<text x="150.5" y="202.5" class="onm" font-size="11.5" font-weight="400" text-anchor="start" >1 photo</text>
+<g transform="translate(56 220) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(72 218.5) scale(0.625)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="93" y="230.5" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="157.6" y="230.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >from 18 Nov</text>
+<g transform="translate(72 246.5) scale(0.625)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="93" y="258.5" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="157.6" y="258.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >empty</text>
+<g transform="translate(72 274.5) scale(0.625)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="93" y="286.5" class="t1" font-size="13" font-weight="600" text-anchor="start" >Something</text>
+<text x="164.8" y="286.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >empty</text>
+<g transform="translate(56 304) scale(0.5)" class="i i3"><path d="M6 9l6 6 6-6"/></g>
+<g transform="translate(72 302.5) scale(0.625)" class="i i2"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/></g>
+<text x="93" y="314.5" class="t1" font-size="13" font-weight="600" text-anchor="start" >Peak District</text>
+<text x="193.60000000000002" y="314.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >3 trips</text>
+<g transform="translate(72 332) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(88 330.5) scale(0.625)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="109" y="342.5" class="t1" font-size="13" font-weight="400" text-anchor="start" >Active Log: 08 Jun…</text>
+<text x="247.1" y="342.5" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >24.2 km</text>
+<line x1="0" y1="600" x2="300" y2="600" class="ln" />
+<text x="58" y="624" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >Archived trips hidden</text>
+</g>
+<text x="344" y="18" class="lab" font-size="12.5" font-weight="400" text-anchor="start" >Photos section: a grid, by year and trip</text>
+<g transform="translate(344 30)">
+<rect x="0" y="0" width="300" height="640" rx="10" class="bg" />
+<rect x="0.5" y="0.5" width="299" height="639" rx="10" class="ln"/>
+<rect x="0" y="0" width="46" height="640" rx="10" class="sunk" />
+<rect x="36" y="0" width="10" height="640" rx="0" class="sunk" />
+<line x1="46" y1="0" x2="46" y2="640" class="ln" />
+<g transform="translate(15 20) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<g transform="translate(15 62) scale(0.6666666666666666)" class="i i2"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<g transform="translate(15 104) scale(0.6666666666666666)" class="i i2"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<g transform="translate(15 146) scale(0.6666666666666666)" class="i i2"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<rect x="7" y="180" width="32" height="32" rx="8" class="accl" />
+<g transform="translate(15 188) scale(0.6666666666666666)" class="i ia"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<g transform="translate(15 230) scale(0.6666666666666666)" class="i i2"><path d="M4 13l2.5-7h11L20 13v6H4z"/><path d="M4 13h5l1 2h4l1-2h5"/></g>
+<g transform="translate(15 272) scale(0.6666666666666666)" class="i i3"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g>
+<g transform="translate(15 600) scale(0.6666666666666666)" class="i i2"><rect x="3" y="4" width="18" height="5" rx="1"/><path d="M5 9v10h14V9M10 13h4"/></g>
+<text x="58" y="32" class="t1" font-size="16" font-weight="700" text-anchor="start" >Photos</text>
+<text x="118" y="32" class="t3" font-size="13" font-weight="400" text-anchor="start" >1,240</text>
+<g transform="translate(267.0 19.0) scale(0.6666666666666666)" class="i i2"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 11v5M9.5 13.5h5"/></g>
+<rect x="56" y="50" width="112" height="26" rx="7" class="sunk" />
+<text x="66" y="67" class="t1" font-size="12" font-weight="400" text-anchor="start" >All trips</text>
+<g transform="translate(150 57) scale(0.4583333333333333)" class="i i3"><path d="M6 9l6 6 6-6"/></g>
+<rect x="174" y="50" width="114" height="26" rx="7" class="sunk" />
+<text x="184" y="67" class="t1" font-size="12" font-weight="400" text-anchor="start" >2026</text>
+<g transform="translate(270 57) scale(0.4583333333333333)" class="i i3"><path d="M6 9l6 6 6-6"/></g>
+<line x1="0" y1="88" x2="300" y2="88" class="ln" />
+<text x="58" y="110" class="t1" font-size="13" font-weight="600" text-anchor="start" >Idea1</text>
+<text x="286" y="110" class="t3" font-size="11.5" font-weight="400" text-anchor="end" >Nov · 1 photo</text>
+<clipPath id="bc90"><rect x="58" y="120" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc90)"><rect x="58" y="120" width="54" height="54" fill="#9cc9e8"/><path d="M58 153.48 Q74.2 138.9 87.7 149.7 T112 144.3 V174 H58z" fill="#5f8f4e"/><path d="M58 165.9 Q85.0 157.8 112 164.28 V174 H58z" fill="#3f6b35"/></g>
+<rect x="56" y="118" width="58" height="58" rx="5" class="accr"/>
+<text x="58" y="202" class="t1" font-size="13" font-weight="600" text-anchor="start" >Peak 2026</text>
+<text x="286" y="202" class="t3" font-size="11.5" font-weight="400" text-anchor="end" >Jun · 29 photos</text>
+<clipPath id="bc95"><rect x="58" y="212" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc95)"><rect x="58" y="212" width="54" height="54" fill="#f4c38a"/><path d="M58 245.48 Q74.2 230.9 87.7 241.7 T112 236.3 V266 H58z" fill="#7a8f5a"/><path d="M58 257.9 Q85.0 249.8 112 256.28 V266 H58z" fill="#4d6a3a"/></g>
+<clipPath id="bc97"><rect x="116" y="212" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc97)"><rect x="116" y="212" width="54" height="54" fill="#b9d6ee"/><path d="M116 245.48 Q132.2 230.9 145.7 241.7 T170 236.3 V266 H116z" fill="#6c9a7b"/><path d="M116 257.9 Q143.0 249.8 170 256.28 V266 H116z" fill="#2f5d4a"/></g>
+<clipPath id="bc99"><rect x="174" y="212" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc99)"><rect x="174" y="212" width="54" height="54" fill="#cfd8e3"/><path d="M174 245.48 Q190.2 230.9 203.7 241.7 T228 236.3 V266 H174z" fill="#8a9a6a"/><path d="M174 257.9 Q201.0 249.8 228 256.28 V266 H174z" fill="#5b6b40"/></g>
+<clipPath id="bc101"><rect x="232" y="212" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc101)"><rect x="232" y="212" width="54" height="54" fill="#ffd6a5"/><path d="M232 245.48 Q248.2 230.9 261.7 241.7 T286 236.3 V266 H232z" fill="#b07d4f"/><path d="M232 257.9 Q259.0 249.8 286 256.28 V266 H232z" fill="#6b4b2e"/></g>
+<clipPath id="bc103"><rect x="58" y="270" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc103)"><rect x="58" y="270" width="54" height="54" fill="#9cc9e8"/><path d="M58 303.48 Q74.2 288.9 87.7 299.7 T112 294.3 V324 H58z" fill="#5f8f4e"/><path d="M58 315.9 Q85.0 307.8 112 314.28 V324 H58z" fill="#3f6b35"/></g>
+<clipPath id="bc105"><rect x="116" y="270" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc105)"><rect x="116" y="270" width="54" height="54" fill="#f4c38a"/><path d="M116 303.48 Q132.2 288.9 145.7 299.7 T170 294.3 V324 H116z" fill="#7a8f5a"/><path d="M116 315.9 Q143.0 307.8 170 314.28 V324 H116z" fill="#4d6a3a"/></g>
+<clipPath id="bc107"><rect x="174" y="270" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc107)"><rect x="174" y="270" width="54" height="54" fill="#b9d6ee"/><path d="M174 303.48 Q190.2 288.9 203.7 299.7 T228 294.3 V324 H174z" fill="#6c9a7b"/><path d="M174 315.9 Q201.0 307.8 228 314.28 V324 H174z" fill="#2f5d4a"/></g>
+<clipPath id="bc109"><rect x="232" y="270" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc109)"><rect x="232" y="270" width="54" height="54" fill="#cfd8e3"/><path d="M232 303.48 Q248.2 288.9 261.7 299.7 T286 294.3 V324 H232z" fill="#8a9a6a"/><path d="M232 315.9 Q259.0 307.8 286 314.28 V324 H232z" fill="#5b6b40"/></g>
+<clipPath id="bc111"><rect x="58" y="328" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc111)"><rect x="58" y="328" width="54" height="54" fill="#ffd6a5"/><path d="M58 361.48 Q74.2 346.9 87.7 357.7 T112 352.3 V382 H58z" fill="#b07d4f"/><path d="M58 373.9 Q85.0 365.8 112 372.28 V382 H58z" fill="#6b4b2e"/></g>
+<clipPath id="bc113"><rect x="116" y="328" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc113)"><rect x="116" y="328" width="54" height="54" fill="#9cc9e8"/><path d="M116 361.48 Q132.2 346.9 145.7 357.7 T170 352.3 V382 H116z" fill="#5f8f4e"/><path d="M116 373.9 Q143.0 365.8 170 372.28 V382 H116z" fill="#3f6b35"/></g>
+<clipPath id="bc115"><rect x="174" y="328" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc115)"><rect x="174" y="328" width="54" height="54" fill="#f4c38a"/><path d="M174 361.48 Q190.2 346.9 203.7 357.7 T228 352.3 V382 H174z" fill="#7a8f5a"/><path d="M174 373.9 Q201.0 365.8 228 372.28 V382 H174z" fill="#4d6a3a"/></g>
+<clipPath id="bc117"><rect x="232" y="328" width="54" height="54" rx="4"/></clipPath>
+<g clip-path="url(#bc117)"><rect x="232" y="328" width="54" height="54" fill="#b9d6ee"/><path d="M232 361.48 Q248.2 346.9 261.7 357.7 T286 352.3 V382 H232z" fill="#6c9a7b"/><path d="M232 373.9 Q259.0 365.8 286 372.28 V382 H232z" fill="#2f5d4a"/></g>
+<text x="58" y="400" class="acct" font-size="12" font-weight="500" text-anchor="start" >+ 17 more</text>
+<line x1="0" y1="418" x2="300" y2="418" class="ln" />
+<g transform="translate(58 430) scale(0.5833333333333334)" class="i i3"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="78" y="441" class="t2" font-size="12" font-weight="400" text-anchor="start" >9 not on the map</text>
+<g transform="translate(274 431) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(58 458) scale(0.5833333333333334)" class="i ip"><path d="M5 12.5l4.5 4.5L19 7.5"/></g>
+<text x="78" y="469" class="t2" font-size="12" font-weight="400" text-anchor="start" >3 linked folders · up to date</text>
+</g>
+</svg>

@@ -16,6 +16,10 @@ export const CHANNELS = {
     setStatus: 'trips:setStatus',
     delete: 'trips:delete',
     search: 'trips:search',
+    /** Phase 14: every visible trip with its dates, length and counts. */
+    overview: 'trips:overview',
+    /** Phase 14, ADR 0022: the id of the holder of items outside a trip, made on first use. */
+    loose: 'trips:loose',
   },
   folders: {
     list: 'folders:list',
@@ -46,6 +50,37 @@ export const CHANNELS = {
     duplicate: 'routes:duplicate',
     move: 'routes:move',
     delete: 'routes:delete',
+    /** Phase 14: a new route from one route's or waypoint's end to another's start. */
+    join: 'routes:join',
+  },
+  /**
+   * Phase 11: folders on disk linked to a trip. Named for folders, not photos,
+   * because Phase 12 syncs GPX through the same links.
+   */
+  linkedFolders: {
+    /** Opens the native chooser; returns a token, never a path to send back. */
+    chooseFolder: 'linkedFolders:chooseFolder',
+    link: 'linkedFolders:link',
+    unlink: 'linkedFolders:unlink',
+    /** Opens the chooser for a folder that has moved. */
+    relink: 'linkedFolders:relink',
+    setIncludeSubfolders: 'linkedFolders:setIncludeSubfolders',
+    rescan: 'linkedFolders:rescan',
+    cancelScan: 'linkedFolders:cancelScan',
+    list: 'linkedFolders:list',
+    get: 'linkedFolders:get',
+  },
+  /** Phase 11: photos in linked folders, always by id. */
+  photos: {
+    list: 'photos:list',
+    mapPoints: 'photos:mapPoints',
+    years: 'photos:years',
+    get: 'photos:get',
+    thumbnail: 'photos:thumbnail',
+    open: 'photos:open',
+    reveal: 'photos:reveal',
+    /** Phase 14: every photo of a trip's linked folders, in taken order. */
+    forTrip: 'photos:forTrip',
   },
   /** Phase 10: postcode and place search, answered on this machine. */
   search: {
@@ -86,6 +121,20 @@ export const CHANNELS = {
     planAll: 'itinerary:planAll',
     /** A POI as a stop: waypoint and stop in one undoable step. */
     addPoiStop: 'itinerary:addPoiStop',
+    /** Phase 14: a place or postcode as a stop, waypoint and stop in one undoable step. */
+    addPlaceStop: 'itinerary:addPlaceStop',
+    /** Phase 14: a waypoint from anywhere as a stop, moved or copied in first. */
+    addWaypointStop: 'itinerary:addWaypointStop',
+    /** Phase 14 Requirement 18.4: a photo as a stop, its waypoint made or reused. */
+    addPhotoStop: 'itinerary:addPhotoStop',
+    /** Phase 14: a route as a drive, brought in and linked, or with its ends as stops. */
+    addRouteLeg: 'itinerary:addRouteLeg',
+    /** Phase 14: a day break after a day, or at the end. */
+    addDay: 'itinerary:addDay',
+    /** Phase 14: a route or waypoint deleted with its plan entries, one undo step. */
+    deleteItem: 'itinerary:deleteItem',
+    /** Phase 14: a day's entries out of the plan, and its day break. */
+    removeDay: 'itinerary:removeDay',
     /** Routes the leg arriving at a stop, saves the route and links it. */
     planLeg: 'itinerary:planLeg',
     /** Routes the legs into and out of a stop inserted between two others. */
@@ -106,6 +155,8 @@ export const CHANNELS = {
     search: 'waypoints:search',
     groups: 'waypoints:groups',
     createGroup: 'waypoints:createGroup',
+    /** Phase 14 Requirement 18.3: a waypoint at a photo's location. */
+    fromPhoto: 'waypoints:fromPhoto',
   },
   tracks: {
     listForTrip: 'tracks:listForTrip',
@@ -263,6 +314,10 @@ export const EVENTS = {
   regionJobProgress: 'event:regionJobProgress',
   /** Phase 10: the postcode download. */
   postcodeProgress: 'event:postcodeProgress',
+  /** Phase 11: a linked folder's scan, at most every 250 ms. */
+  linkedFolderScanProgress: 'event:linkedFolderScanProgress',
+  /** Phase 11: a folder's index or state changed; reload its counts and photos. */
+  linkedFoldersChanged: 'event:linkedFoldersChanged',
 } as const;
 
 /**
@@ -298,6 +353,8 @@ export const MENU_ACTIONS = [
   'export:copy',
   'import:open',
   'export:open',
+  /** Phase 11: links a folder on disk to the selected trip. */
+  'trip:linkFolder',
 ] as const;
 
 export type MenuAction = (typeof MENU_ACTIONS)[number];

@@ -27,6 +27,8 @@ export interface ToolMessages {
   failed: string;
   /** What the tool is, in plain words, e.g. "The tile builder". */
   name: string;
+  /** Said after a failure, e.g. where the whole log is. Phase 14 Requirement 17.2. */
+  after?: string;
 }
 
 /** Null on success; otherwise the error to reject with. */
@@ -38,13 +40,17 @@ export function toolExitError(
   if (exit.aborted) return new ServiceError('CANCELLED', messages.cancelled);
 
   if (exit.signal !== null) {
+    const outside =
+      exit.signal === 'SIGTERM' ? ' TrailRT did not stop it. The downloaded regions are kept, so trying again will not download them.' : '';
     return new ServiceError(
       'PROVIDER_ERROR',
-      `${messages.failed} ${messages.name} was stopped by the system (${exit.signal}) before it finished.`,
+      `${messages.failed} ${messages.name} was stopped by the system (${exit.signal}) before it finished.${outside}${messages.after === undefined ? '' : ` ${messages.after}`}`,
       [
         exit.signal === 'SIGKILL'
           ? 'SIGKILL from the system usually means macOS refused to run the code (a code-signing problem) or memory ran out.'
-          : `Ended by ${exit.signal}.`,
+          : exit.signal === 'SIGTERM'
+            ? 'SIGTERM came from outside the tool: TrailRT did not send it, as nothing was cancelled. macOS, another program, or the app being quit or restarted sends it. The downloaded regions are kept, so trying again builds without downloading.'
+            : `Ended by ${exit.signal}.`,
         tail,
       ]
         .filter((part) => part.length > 0)
@@ -53,7 +59,7 @@ export function toolExitError(
   }
 
   if (exit.code !== 0) {
-    return new ServiceError('PROVIDER_ERROR', messages.failed, tail);
+    return new ServiceError('PROVIDER_ERROR', messages.after === undefined ? messages.failed : `${messages.failed} ${messages.after}`, tail);
   }
 
   return null;

@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { BoundingBox } from '@shared/geo/polygon';
 import { tilesCovering } from '@shared/geo/hgt';
@@ -201,6 +201,39 @@ export interface BuildSteps {
   mergeAvailable: (paths: EmbeddedPaths) => boolean;
   /** Phase 10: POIs and place names from the same extract. Returns a warning or null. */
   places: typeof buildPlacesOrWarn;
+  /** Phase 14: a downloaded extract still fresh enough to reuse, by its size; null to download. */
+  cached: (path: string, now: number) => number | null;
+}
+
+/**
+ * How long a downloaded region is reused before it is fetched again.
+ * Geofabrik refreshes its extracts daily; a month-old one still has the same
+ * roads for all but the newest. Phase 14 Requirement 17.1.
+ */
+export const EXTRACT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** A complete, recent download under its final name, or null. */
+export function cachedExtract(path: string, now: number): number | null {
+  try {
+    const info = statSync(path);
+    return info.isFile() && info.size > 0 && now - info.mtimeMs < EXTRACT_MAX_AGE_MS ? info.size : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Removes downloads too old to reuse, and any half-written ones. */
+function pruneDownloads(dir: string, now: number): void {
+  let names: string[];
+  try {
+    names = readdirSync(dir);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    const file = join(dir, name);
+    if (name.endsWith('.part') || (name.endsWith('.osm.pbf') && cachedExtract(file, now) === null)) rmSync(file, { force: true });
+  }
 }
 
 const REAL_STEPS: BuildSteps = {
@@ -210,15 +243,18 @@ const REAL_STEPS: BuildSteps = {
   build: importRegion,
   mergeAvailable: mergeToolPresent,
   places: buildPlacesOrWarn,
+  cached: cachedExtract,
 };
 
 /**
  * Downloads regions, merges them when there are several, and builds one graph.
  *
- * The extracts are deleted afterwards, as before: they are the raw input, often
- * several times the size of the graph, and keeping them would mean every user
- * silently carrying hundreds of megabytes. The cost is that changing the
- * selection downloads every selected region again, which the picker says.
+ * Downloading and building are separate steps (Phase 14 Requirement 17.1).
+ * Each extract is kept after the build and reused for 30 days, so a build that
+ * fails runs again without downloading, and changing the selection downloads
+ * only the regions not already here. Until then they were deleted after every
+ * build, to save disk; the trade is a few hundred megabytes for not fetching
+ * them again. Older downloads are removed when the next job starts.
  *
  * Terrain tiles for the regions are fetched last, and a failure there does not
  * fail the build: the graph is what the user asked for, and a profile can fetch
@@ -264,6 +300,7 @@ export async function downloadAndBuild(
   }
 
   mkdirSync(paths.downloadDir, { recursive: true });
+  pruneDownloads(paths.downloadDir, Date.now());
   const extracts = chosen.map((region) => join(paths.downloadDir, `${region.id}.osm.pbf`));
   const merged = join(paths.downloadDir, 'merged.osm.pbf');
 
@@ -279,6 +316,23 @@ export async function downloadAndBuild(
           regionCount: chosen.length,
           regionName: region.name,
         });
+      // Downloading and building are separate steps (Requirement 17.1): a
+      // region downloaded before is reused, so a build that fails is run
+      // again without downloading anything.
+      const kept = steps.cached(extracts[index] ?? '', Date.now());
+      if (kept !== null) {
+        options.onProgress?.({
+          phase: 'downloading',
+          receivedBytes: kept,
+          totalBytes: kept,
+          stage: null,
+          regionIndex: index + 1,
+          regionCount: chosen.length,
+          regionName: region.name,
+          cached: true,
+        });
+        continue;
+      }
       report(0, null);
       await steps.download(region.pbfUrl, extracts[index] ?? '', {
         ...withSignal,
@@ -345,9 +399,11 @@ export async function downloadAndBuild(
       placesWarning,
     };
   } finally {
-    // Always, including on failure or cancellation: a partial download is
-    // useless and would otherwise sit in the user's data directory forever.
-    for (const file of [...extracts, merged]) rmSync(file, { force: true });
+    // The merged file is remade in seconds, so it goes; the downloads stay to
+    // be reused (Requirement 17.1). A half-written download never has the
+    // final name, and `pruneDownloads` clears it and anything stale.
+    rmSync(merged, { force: true });
+    for (const file of extracts) rmSync(`${file}.part`, { force: true });
   }
 }
 

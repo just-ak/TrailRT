@@ -4,6 +4,8 @@ import { EVENTS } from '@shared/ipc/channels';
 import { closeContext, ctx, initContext } from './context';
 import { configureUserDataPath } from './paths';
 import { MigrationError } from './db/migrate';
+import { folderScanner, startFolderScanner, stopFolderScanner } from './linkedFolders/runtime';
+import { thumbnailCache } from './photoCache/runtime';
 import { registerIpcHandlers } from './ipc/register';
 import { installApplicationMenu } from './menu/appMenu';
 import {
@@ -158,6 +160,23 @@ async function start(): Promise<void> {
   };
 
   scheduleAutomaticBackups();
+
+  // Phase 11: keep linked folders in step with the disk. Started after the
+  // window, so launch never waits on a scan (Requirement 9.5).
+  startFolderScanner({
+    db: () => ctx().handle.db,
+    emit: (event) => {
+      if (event.type === 'progress') sendToRenderer(EVENTS.linkedFolderScanProgress, event.progress);
+      else sendToRenderer(EVENTS.linkedFoldersChanged, { folderId: event.folderId });
+    },
+  });
+  // Thumbnails of folders no longer linked, or files no longer indexed, and
+  // the cache bound (design §6.2). Not awaited: launch never waits on it.
+  void thumbnailCache(ctx().paths.photoThumbnailsDir)
+    .sweep(ctx().handle.db)
+    .catch((cause: unknown) => console.error('[photos] thumbnail sweep failed:', cause));
+  app.on('browser-window-focus', () => folderScanner()?.onFocus());
+  app.on('before-quit', () => stopFolderScanner());
 
   app.on('activate', () => {
     if (getMainWindow() === null) {

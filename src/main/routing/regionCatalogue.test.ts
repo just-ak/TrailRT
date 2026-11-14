@@ -1,11 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ServiceError } from '../services/errors';
 import type { TerrainStore } from '../terrain/terrainStore';
 import { embeddedPaths, type EmbeddedPaths } from './embedded';
-import { downloadAndBuild, resetCatalogue, type BuildSteps } from './regionCatalogue';
+import { downloadAndBuild, EXTRACT_MAX_AGE_MS, resetCatalogue, type BuildSteps } from './regionCatalogue';
 
 /**
  * The multi-region build, with every step replaced by a fake: no network, no
@@ -183,20 +183,45 @@ describe('downloadAndBuild', () => {
     ).rejects.toBeInstanceOf(ServiceError);
   });
 
-  it('removes every extract and the merged file, even when the build fails', async () => {
-    const calls = newCalls();
+  it('keeps the downloads when the build fails, so trying again does not download', async () => {
+    const failing = newCalls();
     await expect(
       downloadAndBuild(paths, ['derbyshire', 'cheshire'], {
-        steps: fakeSteps(calls, {
+        steps: fakeSteps(failing, {
           build: async () => {
             throw new ServiceError('PROVIDER_ERROR', 'boom');
           },
         }),
       }),
     ).rejects.toThrow('boom');
-    for (const file of ['derbyshire.osm.pbf', 'cheshire.osm.pbf', 'merged.osm.pbf']) {
-      expect(existsSync(join(paths.downloadDir, file)), file).toBe(false);
-    }
+    expect(failing.downloads).toHaveLength(2);
+    expect(existsSync(join(paths.downloadDir, 'merged.osm.pbf'))).toBe(false);
+    for (const id of ['derbyshire', 'cheshire']) expect(existsSync(join(paths.downloadDir, `${id}.osm.pbf`)), id).toBe(true);
+
+    // Phase 14 Requirement 17.1: the second attempt builds from what is here.
+    const again = newCalls();
+    const progress: { cached: boolean | undefined; regionName: string | null | undefined }[] = [];
+    await downloadAndBuild(paths, ['derbyshire', 'cheshire'], {
+      steps: fakeSteps(again),
+      onProgress: (p) => p.phase === 'downloading' && progress.push({ cached: p.cached, regionName: p.regionName }),
+    });
+    expect(again.downloads).toEqual([]);
+    expect(again.builtFrom).toEqual([join(paths.downloadDir, 'merged.osm.pbf')]);
+    expect(progress).toEqual([
+      { cached: true, regionName: 'Derbyshire' },
+      { cached: true, regionName: 'Cheshire' },
+    ]);
+  });
+
+  it('downloads only the regions not already here, and fetches a stale one again', async () => {
+    await downloadAndBuild(paths, ['derbyshire'], { steps: fakeSteps(newCalls()) });
+    const old = new Date(Date.now() - EXTRACT_MAX_AGE_MS - 60_000);
+    utimesSync(join(paths.downloadDir, 'derbyshire.osm.pbf'), old, old);
+    writeFileSync(join(paths.downloadDir, 'cheshire.osm.pbf.part'), 'half');
+    const calls = newCalls();
+    await downloadAndBuild(paths, ['derbyshire', 'cheshire'], { steps: fakeSteps(calls) });
+    expect(calls.downloads).toHaveLength(2);
+    expect(existsSync(join(paths.downloadDir, 'cheshire.osm.pbf.part'))).toBe(false);
   });
 
   it('fetches terrain for the regions and reports a failure without failing the build', async () => {

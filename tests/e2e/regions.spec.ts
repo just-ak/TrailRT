@@ -2,14 +2,15 @@ import { copyFileSync, mkdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { BUXTON } from '@fixtures/places';
-import {
+import { editSelection,
   cleanup,
   close,
   createTripViaUi,
   launch,
   makeUserDataDir,
   type Harness,
-} from './helpers';
+  openTrip,
+  tripAction } from './helpers';
 
 /**
  * Phase 7 in the running app (ADR 0018): the UK county map, the assumed-limits
@@ -47,8 +48,7 @@ test.describe('the region picker', () => {
     const { page } = harness;
 
     // Reached the way a first-time user reaches it: New Route, no map yet.
-    await page.getByRole('treeitem', { name: new RegExp(TRIP) }).click();
-    await page.getByRole('button', { name: 'New route', exact: true }).click();
+    await tripAction(page, new RegExp(TRIP), 'New Route');
     await page.getByRole('button', { name: 'Add map regions…' }).click();
 
     const dialog = page.getByRole('dialog', { name: 'Map regions for road routing' });
@@ -154,8 +154,9 @@ test.describe('the twisty score', () => {
 
     await page.reload();
     await page.waitForSelector('[role="tree"]');
-    await page.getByRole('treeitem', { name: new RegExp(TRIP) }).dblclick();
+    await openTrip(page, new RegExp(TRIP));
     await page.getByRole('treeitem', { name: /Winding/ }).first().click();
+    await editSelection(page);
     await page.getByRole('button', { name: 'Profile and points' }).click();
 
     const drawer = page.getByRole('region', { name: 'Route profile' });

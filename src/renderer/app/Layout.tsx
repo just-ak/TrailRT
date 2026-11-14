@@ -3,13 +3,14 @@ import { PANEL_LIMITS } from "@shared/domain/defaults";
 import { DrawerPane } from "../components/DrawerPane";
 import { DEFAULT_DRAWER } from "../components/drawerHeight";
 import { SplitPane } from "../components/SplitPane";
-import { LibraryPanel } from "../features/library/LibraryPanel";
+import { LeftPanel } from "../features/library/LeftPanel";
+import { SectionRail } from "../features/library/SectionRail";
 import { MapView } from "../features/map/MapView";
 import { drawerAfterSelection } from "../features/profile/drawerTarget";
 import { ProfilePanel } from "../features/profile/ProfilePanel";
-import { CalendarPanel } from "../features/itinerary/CalendarPanel";
 import { PoiPanel } from "../features/poi/PoiPanel";
-import { PropertiesPanel } from "../features/properties/PropertiesPanel";
+import { PhotoListPanel } from "../features/photos/PhotoListPanel";
+import { CompanionPanel } from "../features/companion/CompanionPanel";
 import { useSelectionStore } from "../stores/selectionStore";
 import { useUiStore } from "../stores/uiStore";
 import { useGeometryStore } from "../stores/geometryStore";
@@ -44,6 +45,8 @@ export function Layout(): ReactNode {
       selected,
     );
     if (patch !== null) useUiStore.setState(patch);
+    // Phase 11: selecting a linked folder lists its photos (design §8.3).
+    if (selected?.kind === "linkedFolder") ui.openPhotoList(selected.id);
   }, [selected]);
 
   /*
@@ -59,6 +62,8 @@ export function Layout(): ReactNode {
     () =>
       api().events.onLibraryChanged(() => {
         void useItineraryStore.getState().reload();
+        // Phase 14: the trip page's tabs read the trip's objects from here.
+        void useGeometryStore.getState().reload();
       }),
     [],
   );
@@ -74,14 +79,16 @@ export function Layout(): ReactNode {
         ownerId={profile.ownerId}
         onClose={closeProfile}
       />
-    ) : planDrawer?.kind === "calendar" ? (
-      <CalendarPanel tripId={planDrawer.tripId} onClose={closePlanDrawer} />
     ) : planDrawer?.kind === "poi" ? (
       <PoiPanel scope={planDrawer.scope} onClose={closePlanDrawer} />
+    ) : planDrawer?.kind === "photos" ? (
+      <PhotoListPanel folderId={planDrawer.folderId} onClose={closePlanDrawer} />
     ) : null;
 
   return (
     <div className="flex h-full w-full overflow-hidden bg-[var(--color-surface)]">
+      {/* Phase 14: the rail stays when the library is hidden. */}
+      <SectionRail />
       {layout.libraryVisible && (
         <SplitPane
           side="left"
@@ -91,7 +98,7 @@ export function Layout(): ReactNode {
           max={PANEL_LIMITS.libraryMax}
           onResize={(libraryWidth) => setLayout({ libraryWidth })}
         >
-          <LibraryPanel />
+          <LeftPanel />
         </SplitPane>
       )}
 
@@ -125,7 +132,7 @@ export function Layout(): ReactNode {
           max={PANEL_LIMITS.propertiesMax}
           onResize={(propertiesWidth) => setLayout({ propertiesWidth })}
         >
-          <PropertiesPanel />
+          <CompanionPanel />
         </SplitPane>
       )}
     </div>

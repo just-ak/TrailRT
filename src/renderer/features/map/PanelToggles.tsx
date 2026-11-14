@@ -20,7 +20,8 @@ export function PanelToggles(): ReactNode {
     <div
       role="group"
       aria-label="Panels"
-      className="absolute bottom-12 left-3 z-[500] flex gap-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-1 shadow-md"
+      // Placed by MapCornerStack (Phase 11 design §10.1), not by itself.
+      className="pointer-events-auto flex shrink-0 gap-1 self-start rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] p-1 shadow-md"
       data-testid="panel-toggles"
     >
       <IconButton

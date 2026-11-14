@@ -1,6 +1,13 @@
 # Phase 11: Geotagged Photos from a Linked Folder — Requirements
 
-Status: requirements only (11 November 2026). Not designed, not started.
+Status: designed (11 November 2026), see `design.md` and `tasks.md`. Built
+ahead of Phases 8 and 9 at the owner's request. Revised on 12 November 2026
+with the owner's answers: folders are linked per trip, with a view of every
+trip's photos together (question 2); the linked folder is the trip's own folder
+on disk, which Phase 12 extends to GPX files; and the scale to design for is a
+40,000-photo library built up over many years. Open questions 3–5 are answered
+by the design (§14). Question 1 moves to Phase 12, where the tracks it needs
+arrive from the same folder.
 
 Depends on Phases 1–3 (library, waypoints, tracks) and Phase 10 (marker
 clustering, icon buttons with hints, resizable panels), all shipped. It does
@@ -18,6 +25,36 @@ corner of the map.
 reads them and records where they are, and never copies, moves, renames or
 rewrites them. That is a different model from the one the codebase already
 has, described below, and the difference is deliberate.
+
+### The trip's folder on disk
+
+The owner's feedback on the design (12 November 2026) widened the idea. The
+linked folder is not only a photo folder. It is **the trip's folder on disk**:
+the planned routes, the tracks recorded when the trip was actually done, and
+the photos, all kept together where the user can see them. For someone who
+travels widely that is a better record than anything locked inside one app,
+and keeping GPX files outside the app lets people feel in control of their
+data. Later, sharing a trip as a flythrough video will make keeping images and
+video organised matter even more.
+
+The owner's own library is the scale to design for: about **40,000 photos and
+hundreds of GPX files, built up over many years**. The app must not reread
+thousands of files each time it starts. It keeps an index of each folder, and
+knows from that index what has changed.
+
+That work is split into three phases, so each can be built and tested before
+the next is designed:
+
+| Phase | What the linked folder gains |
+| --- | --- |
+| 11 (this one) | Linking, the file index, and photos read from it. Read-only. |
+| 12 | GPX kept in step with the folder in both directions, with a hash store. TrailRT writes only files it created. |
+| 13 | Video, flythroughs, and sharing, with what they produce kept in the folder. |
+
+This phase builds the parts the other two depend on: the folder link, the
+index, the scanner and the watcher. It therefore records every file of a kind a
+later phase will read (GPX and other track files, video), so those phases start
+from an index that already exists rather than adding a second walk.
 
 ### What the codebase already establishes
 
@@ -58,6 +95,10 @@ are recorded here so the design does not have to rediscover them.
 - **Library top-level nodes are views, not containers** (ADR 0004). A
   cross-trip "Photos" view fits beside Routes, Tracks and Waypoints in
   `libraryService.ts` `VIEWS`.
+- **The library already has folders.** `folderService.ts` organises trips
+  into folders in the library tree. A "trip folder" in the app would be
+  confused with those, so the app calls a folder on disk a **linked folder**,
+  and these documents use "the trip's folder on disk" only for the idea.
 - **Backups are a SQLite snapshot of the database only**
   (`backupService.ts`). A linked photo is not in the database, so it is not
   in a backup. The UI has to say so (Requirement 10).
@@ -80,7 +121,9 @@ are recorded here so the design does not have to rediscover them.
 
 | Term | Meaning |
 | --- | --- |
-| **Linked folder** | A folder on disk the user has pointed the app at. The app reads it and never writes to it. |
+| **Linked folder** | A folder on disk the user has linked to a trip: the trip's folder on disk. In this phase the app reads it and never writes to it. |
+| **File index** | The app's record of the files in a linked folder: each one's path within the folder, kind, size, modified time and fingerprint. It is how the app knows a file is unchanged without opening it. |
+| **Fingerprint** | A hash of a file's size and the bytes the app already reads for its metadata. It recognises a photo that has been moved or renamed within the folder. It is not a hash of the whole file (see the design, §0). |
 | **Photo** | An image file inside a linked folder that the app recognises as a photograph format. |
 | **Geotag** | Location data recorded in the photo's metadata (EXIF GPS), usually by the phone or camera when the picture was taken. |
 | **Located photo** | A photo with a valid geotag. It can be placed on the map. |
@@ -105,6 +148,9 @@ are recorded here so the design does not have to rediscover them.
 6. As someone who keeps photos on an external drive, I want the app to cope
    when the drive is unplugged, and pick up where it left off when it is
    plugged back in.
+7. As someone who has travelled for years, with tens of thousands of photos
+   across many trips, I want to see each trip's photos with that trip, and
+   also every photo from every trip on one map.
 
 ## Requirements
 
@@ -114,10 +160,13 @@ are recorded here so the design does not have to rediscover them.
 
 1. THE user SHALL be able to link a folder from a trip, through an icon button
    with a hint in the trip's actions and through a File menu item. Either way
-   opens the system folder chooser in the main process.
+   opens the system folder chooser in the main process. The wording is about
+   linking a folder to a trip, not about photos, because Phase 12 adds GPX to
+   the same link.
 2. A linked folder SHALL belong to one trip. Its photos SHALL appear under that
    trip in the library and with that trip on the map. A trip MAY have several
-   linked folders.
+   linked folders. The same folder MAY be linked to more than one trip
+   (confirmed by the owner, 12 November 2026).
 3. THE user SHALL choose whether subfolders are included, defaulting to
    included.
 4. Hidden files and folders, and macOS package directories, SHALL be skipped.
@@ -173,7 +222,8 @@ are recorded here so the design does not have to rediscover them.
 1. THE app SHALL rescan linked folders at launch and on request. While it is
    running it SHALL notice files that are added, changed or removed.
 2. A file SHALL be re-read only when its size or modified time has changed. An
-   unchanged folder SHALL rescan without reopening its photos.
+   unchanged folder SHALL rescan without reopening its photos. The app SHALL
+   keep this state in a file index per linked folder.
 3. A photo removed from disk SHALL disappear from the map and the library on
    the next scan. Anything the user made from it, such as a waypoint
    (Requirement 7), SHALL stay.
@@ -188,6 +238,13 @@ are recorded here so the design does not have to rediscover them.
 6. Files in iCloud Drive that are not downloaded to this Mac SHALL be listed as
    not downloaded. The app SHALL NOT force a download of a whole folder to
    read its metadata.
+7. A photo moved or renamed within its linked folder SHALL be recognised as
+   the same photo, by its fingerprint, so anything made from it keeps its
+   link. It SHALL NOT be treated as one photo removed and another added.
+8. THE file index SHALL record every file of a kind a later phase reads: GPX,
+   KML, KMZ, TCX and FIT files (Phase 12), and video files (Phase 13). This
+   phase does not open them. The folder's properties SHALL count them and say
+   they are not read yet, so their absence from the map is explained.
 
 ### Requirement 4: Photos in the library
 
@@ -207,6 +264,8 @@ are recorded here so the design does not have to rediscover them.
    number of photos taken that day. The design decides how photo times
    without a zone are assigned to days, and the UI says when that assignment
    is a guess.
+6. THE Photos view SHALL be filterable by year taken and by trip, so a library
+   built up over many years stays usable.
 
 ### Requirement 5: Photos on the map
 
@@ -216,8 +275,9 @@ are recorded here so the design does not have to rediscover them.
    and hidden from the layers control like routes, tracks, waypoints and
    points of interest.
 2. Photos SHALL be clustered, with a count, until zoomed in far enough to
-   separate them. The layer SHALL stay responsive with 20,000 located photos
-   in view of the clustering. The design fixes the measured target.
+   separate them. The layer SHALL stay responsive with 50,000 located photos
+   in view of the clustering, which covers the owner's 40,000 with headroom.
+   The design fixes the measured target.
 3. Photos at the same spot, such as a burst of shots, that no zoom level can
    separate SHALL open the preview box at the first of them, with a "1 of N"
    step through the rest.
@@ -225,6 +285,11 @@ are recorded here so the design does not have to rediscover them.
    marker SHOULD show that direction.
 5. Unavailable photos SHALL be drawn distinctly from available ones, or hidden,
    at the user's choice. They SHALL never be indistinguishable.
+6. WHEN the Photos view is selected, THE map SHALL show the located photos of
+   every trip together, subject to the view's filters (Requirement 4.6).
+   Otherwise it shows the photos of the trip on the map. A folder linked to
+   several trips SHALL have its photos shown once in the all-trips map, not
+   once per trip.
 
 ### Requirement 6: The preview box
 
@@ -280,7 +345,8 @@ The owner asked for it in the bottom-left corner of the map.
 1. THE app SHALL NOT write to, rename, move, delete or change the metadata of
    any file in a linked folder. No code path that writes SHALL be able to
    address a linked folder. The design SHALL show how that is enforced, not
-   only intended.
+   only intended. Phase 12 relaxes this for GPX files TrailRT itself creates,
+   and only for those. Photos stay read-only in every phase.
 2. THE renderer SHALL request photos and thumbnails by photo id. The main
    process SHALL resolve the id to a path and serve only files inside a
    currently linked folder. A symbolic link that resolves outside the folder
@@ -307,9 +373,12 @@ The owner asked for it in the bottom-left corner of the map.
 3. Thumbnails SHALL be made when first needed and cached in the app support
    directory. The cache SHALL be bounded in size and rebuildable at any time.
 4. THE design SHALL measure, on the target hardware, the first scan of a
-   folder of 10,000 mixed JPEG and HEIC photos, an unchanged rescan of the
-   same folder, and the time to show the first preview. It SHALL record these
-   as targets the tests hold to.
+   folder of 40,000 mixed JPEG and HEIC photos, an unchanged rescan of the
+   same photos spread across 100 linked folders, and the time to show the
+   first preview. It SHALL record these as targets the tests hold to.
+5. Starting the app SHALL NOT wait for linked folders to be scanned. Folders
+   are checked after the window has shown, and the map shows the indexed
+   photos straight away.
 
 ### Requirement 10: Backups and moving to another Mac
 
@@ -356,7 +425,7 @@ The owner asked for it in the bottom-left corner of the map.
 ## Constraints carried from the rest of the project
 
 1. **Module boundaries.** Folder scanning, metadata reading and thumbnails live
-   in the main process (`src/main/photos/` or similar). Pure parsing of
+   in the main process (`src/main/linkedFolders/` or similar). Pure parsing of
    metadata values (coordinates from degrees, minutes and seconds, offsets,
    orientation) lives in `shared/` so it can be unit-tested directly. Trip
    management does not reference a concrete metadata reader.
@@ -372,8 +441,12 @@ The owner asked for it in the bottom-left corner of the map.
   ever wanted, it needs its own requirement, an explicit per-action
   confirmation, and a backup of each original.
 - **Editing, rotating, cropping or deleting photos.**
-- **Video.** Phone videos carry location in a different container. Nobody has
-  asked for them yet.
+- **Reading GPX and other track files from the folder.** That is Phase 12.
+  This phase records them in the index (Requirement 3.8) and does nothing
+  else with them.
+- **Video.** Phone videos carry their location in a different container. Video
+  is part of Phase 13, with flythroughs and sharing. This phase records video
+  files in the index (Requirement 3.8) and does not read or place them.
 - **The Apple Photos library and iCloud Photos** (Requirement 1.5). Photos
   exported from them to a folder work like any others.
 - **Online reverse geocoding** ("taken in Buxton"). Phase 10's offline
@@ -386,13 +459,13 @@ The owner asked for it in the bottom-left corner of the map.
    time, so a photo taken at 14:32 can be placed where the track was at 14:32.
    It is the standard answer for cameras with no GPS, and BaseCamp did it. It
    needs a camera-clock offset control and a clear "placed from the track, not
-   the photo" label. Nothing would be written to the photo. Should it be part
-   of this phase or a later one?
-2. **Folder per trip, or folder for the library?** Requirement 1.2 ties a
-   folder to one trip, which matches how the library is organised. A single
-   "all my photos" folder shown on every trip's map would need a different
-   model, such as photos shown by place rather than by trip. Is per-trip
-   enough?
+   the photo" label. Nothing would be written to the photo. **Moved to Phase
+   12** (its open question 6), because that phase brings the trip's recorded
+   tracks in from the same folder.
+2. **Folder per trip, or folder for the library?** **Answered by the owner on
+   12 November 2026:** per trip, with the ability to see all. Folders are
+   linked per trip (Requirement 1.2). The Photos view shows every trip's
+   photos together (Requirements 4.6 and 5.6).
 3. **Which metadata reader?** Candidates checked on 11 November 2026:
    - `exifr` 7.1.3: MIT, no dependencies, reads JPEG, HEIC, TIFF and PNG and
      reads only the first part of the file. Its last release was May 2022,

@@ -130,7 +130,8 @@ applied only when it is labelled as assumed.
     places outside the UK.
 11. THE picker SHALL say that a new selection replaces the loaded graph, and
     that every selected region is downloaded again, because extracts are not
-    kept after a build.
+    kept after a build. *(Amended 14 November 2026 by Phase 14 Requirement 17:
+    extracts are now kept for 30 days and reused, and the picker says so.)*
 12. Offline, or without the index, the existing fallback (import a `.osm.pbf`)
     SHALL remain.
 

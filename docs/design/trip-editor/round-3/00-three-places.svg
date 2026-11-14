@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 620" width="1080" height="620" role="img" aria-labelledby="t00-three-places d00-three-places">
+<title id="t00-three-places">Three places an item can be</title>
+<desc id="d00-three-places">Not in a trip, in a trip but not in its plan, and in the plan; how an item moves between them, and what each kind becomes in a plan.</desc>
+
+<style>
+  .bg{fill:var(--ui-surface,#ffffff)} .sunk{fill:var(--ui-sunken,#f1f5f9)}
+  .ln{fill:none;stroke:var(--ui-border,#e2e8f0)} .bdf{fill:var(--ui-border,#e2e8f0)}
+  .t1{fill:var(--ui-text,#0f172a)} .t2{fill:var(--ui-text2,#475569)} .t3{fill:var(--ui-text3,#94a3b8)}
+  .acc{fill:var(--ui-accent,#2563eb)} .acct{fill:var(--ui-accent,#2563eb)}
+  .accl{fill:var(--ui-accent,#2563eb);fill-opacity:.13} .accr{fill:none;stroke:var(--ui-accent,#2563eb);stroke-width:2}
+  .on{fill:#ffffff} .onm{fill:#ffffff;fill-opacity:.78} .ph{fill:var(--ui-photo,#0d9488)} .dng{fill:#dc2626}
+  .rail{fill:none;stroke:var(--ui-text3,#94a3b8);stroke-width:2}
+  .mapbg{fill:var(--ui-map,#e9efe1)} .mapg{fill:var(--ui-map-green,#d3e4c1)} .mapw{fill:none;stroke:var(--ui-map-water,#a9cbee);stroke-width:5;stroke-linecap:round}
+  .road{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:4;stroke-linecap:round} .road2{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:2.2;stroke-linecap:round}
+  .rte{fill:none;stroke:#7c3aed;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round} .rtec{fill:none;stroke:#ffffff;stroke-width:8;stroke-linecap:round;stroke-opacity:.9}
+  .i{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i2{stroke:var(--ui-text2,#475569)} .i3{stroke:var(--ui-text3,#94a3b8)} .ia{stroke:var(--ui-accent,#2563eb)}
+  .iw{stroke:#ffffff} .ip{stroke:var(--ui-photo,#0d9488)} .ir{stroke:#7c3aed} .it{stroke:#ea580c} .iy{stroke:#dc2626} .id{stroke:#dc2626}
+  .co{fill:#f59e0b} .cot{fill:#1f2937;font-size:11px;font-weight:700}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<style>@media (prefers-color-scheme: dark){svg{--ui-surface:#0f172a;--ui-sunken:#080d17;--ui-border:#2a3550;--ui-text:#f1f5f9;--ui-text2:#94a3b8;--ui-text3:#64748b;--ui-accent:#60a5fa;--ui-photo:#2dd4bf;--ui-map:#162030;--ui-map-green:#1b2f25;--ui-map-water:#1f4069;--ui-map-road:#2c3b54}}</style>
+<rect x="0" y="0" width="1080" height="620" rx="12" class="bg" />
+<rect x="0.5" y="0.5" width="1079" height="619" rx="12" class="ln"/>
+<text x="32" y="44" class="t1" font-size="18" font-weight="700" text-anchor="start" >Three places an item can be</text>
+<text x="32" y="66" class="t2" font-size="13" font-weight="400" text-anchor="start" >A route, track or waypoint can be made anywhere and moved inward when you are ready, or back out again.</text>
+<rect x="32" y="110" width="296" height="196" rx="12" class="sunk" />
+<text x="48" y="138" class="t1" font-size="14.5" font-weight="700" text-anchor="start" >Not in a trip</text>
+<text x="48" y="157" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >In your library on its own, from the Routes,</text>
+<text x="48" y="172" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >Tracks or Waypoints section</text>
+<rect x="44" y="192" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(54 198) scale(0.625)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="76" y="210.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Wincle back roads</text>
+<rect x="44" y="226" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(54 232) scale(0.625)" class="i it"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<text x="76" y="244.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Goyt Valley walk</text>
+<rect x="44" y="260" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(54 266) scale(0.625)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="76" y="278.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Bakewell car park</text>
+<rect x="392" y="110" width="296" height="196" rx="12" class="sunk" />
+<text x="408" y="138" class="t1" font-size="14.5" font-weight="700" text-anchor="start" >In a trip, not in the plan</text>
+<text x="408" y="157" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >Part of the trip and on its map, but not on a</text>
+<text x="408" y="172" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >day</text>
+<rect x="404" y="192" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(414 198) scale(0.625)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="436" y="210.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Goyt Valley run</text>
+<rect x="404" y="226" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(414 232) scale(0.625)" class="i it"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<text x="436" y="244.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Tissington Trail</text>
+<rect x="404" y="260" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(414 266) scale(0.625)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="436" y="278.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Monsal Head</text>
+<rect x="752" y="110" width="296" height="196" rx="12" class="sunk" />
+<text x="768" y="138" class="t1" font-size="14.5" font-weight="700" text-anchor="start" >In the plan</text>
+<text x="768" y="157" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >On a day: a stop, a drive, or something</text>
+<text x="768" y="172" class="t3" font-size="11.5" font-weight="400" text-anchor="start" >recorded</text>
+<rect x="764" y="192" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(774 198) scale(0.625)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="796" y="210.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Macclesfield · stay 2 h 25</text>
+<rect x="764" y="226" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(774 232) scale(0.625)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="796" y="244.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Wincle back roads · drive</text>
+<rect x="764" y="260" width="272" height="28" rx="7" class="bg" />
+<g transform="translate(774 266) scale(0.625)" class="i it"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<text x="796" y="278.5" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Tissington Trail · Sat 13:10</text>
+<defs><marker id="mda1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ui-accent,#2563eb)"/></marker></defs>
+<defs><marker id="mdb2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ui-text3,#94a3b8)"/></marker></defs>
+<path d="M334 180 H386" stroke="var(--ui-accent,#2563eb)" stroke-width="2" marker-end="url(#mda1)"/>
+<path d="M386 240 H334" stroke="var(--ui-text3,#94a3b8)" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#mdb2)"/>
+<text x="360.0" y="158" class="acct" font-size="10.5" font-weight="600" text-anchor="middle" >Add to</text>
+<text x="360.0" y="171" class="acct" font-size="10.5" font-weight="600" text-anchor="middle" >a trip</text>
+<text x="360.0" y="260" class="t3" font-size="10.5" font-weight="600" text-anchor="middle" >Out of</text>
+<text x="360.0" y="273" class="t3" font-size="10.5" font-weight="600" text-anchor="middle" >the trip</text>
+<path d="M694 180 H746" stroke="var(--ui-accent,#2563eb)" stroke-width="2" marker-end="url(#mda1)"/>
+<path d="M746 240 H694" stroke="var(--ui-text3,#94a3b8)" stroke-width="1.6" stroke-dasharray="4 3" marker-end="url(#mdb2)"/>
+<text x="720.0" y="158" class="acct" font-size="10.5" font-weight="600" text-anchor="middle" >Add to</text>
+<text x="720.0" y="171" class="acct" font-size="10.5" font-weight="600" text-anchor="middle" >the plan</text>
+<text x="720.0" y="260" class="t3" font-size="10.5" font-weight="600" text-anchor="middle" >Out of</text>
+<text x="720.0" y="273" class="t3" font-size="10.5" font-weight="600" text-anchor="middle" >the plan</text>
+<text x="32" y="340" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >You can also skip the middle step: adding an item to a day puts it in that trip as well.</text>
+<text x="32" y="372" class="t3" font-size="11" font-weight="700" text-anchor="start" letter-spacing="0.08em">IN THE PLAN, EACH KIND BECOMES</text>
+<rect x="24" y="390" width="1032" height="66" rx="8" class="sunk" />
+<g transform="translate(36 402) scale(0.75)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="64" y="415" class="t1" font-size="13.5" font-weight="700" text-anchor="start" >A waypoint</text>
+<text x="160" y="415" class="t1" font-size="13" font-weight="400" text-anchor="start" >becomes a stop.</text>
+<text x="160" y="433" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >You set how long you stay. Arrival and leaving follow from the drives.</text>
+<g transform="translate(36 472) scale(0.75)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="64" y="485" class="t1" font-size="13.5" font-weight="700" text-anchor="start" >A route</text>
+<text x="160" y="485" class="t1" font-size="13" font-weight="400" text-anchor="start" >becomes a drive that follows it exactly.</text>
+<text x="160" y="503" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >If its ends are within 1 km of the stops either side, it replaces the drive planned by road. If not, you choose: add its</text>
+<text x="160" y="517" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >ends as stops, or join it by road.</text>
+<rect x="24" y="530" width="1032" height="66" rx="8" class="sunk" />
+<g transform="translate(36 542) scale(0.75)" class="i it"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<text x="64" y="555" class="t1" font-size="13.5" font-weight="700" text-anchor="start" >A track</text>
+<text x="160" y="555" class="t1" font-size="13" font-weight="400" text-anchor="start" >becomes something recorded, at its own times.</text>
+<text x="160" y="573" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >It lands on the day and hour it was recorded. One with no times goes where you drop it, and you say how long it took:</text>
+<text x="160" y="587" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >TrailRT does not guess.</text>
+</svg>

@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -10,12 +11,11 @@ import type {
   BatchMember,
   ObjectRef,
   TreeNode,
-  TripSortKey,
 } from "@shared/domain/types";
 import { ContextMenu, type MenuItem } from "../../components/ContextMenu";
 import * as actions from "../../lib/actions";
 import { api, call, describeError } from "../../lib/client";
-import { useLibraryStore, type ObjectSortKey } from "../../stores/libraryStore";
+import { useLibraryStore } from "../../stores/libraryStore";
 import {
   batchMembers,
   isBatchKind,
@@ -24,6 +24,16 @@ import {
 } from "../../stores/selectionStore";
 import { useUiStore } from "../../stores/uiStore";
 import { TreeRow, type ClickModifiers } from "./TreeRow";
+import { useNavStore } from "../../stores/navStore";
+import { OBJECTS_ROOT, PLAN_ROOT, TRIP_LIST_ROOT, TRIP_PAGE_ROOT } from "./libraryRoots";
+import {
+  askToUnlink,
+  linkFolderToTrip,
+  linkLooseFolder,
+  relink as relinkFolder,
+  rescan as rescanFolder,
+  showPhotos,
+} from "../photos/photoActions";
 import {
   allSelectable,
   describeSelection,
@@ -48,6 +58,20 @@ import {
  */
 
 const MIME = "application/x-trailrt-node";
+
+/** Where an item can be moved: outside any trip first (ADR 0022), then each trip. */
+function moveDestinations(
+  overview: readonly { id: string; name: string }[],
+  looseTripId: string | null,
+): { id: string; name: string }[] {
+  return [...(looseTripId === null ? [] : [{ id: looseTripId, name: "Not in a trip" }]), ...overview];
+}
+
+/**
+ * Where each list was scrolled to, by root. The trip list unmounts while a
+ * trip page is open, and ‹ Trips should find it where it was left.
+ */
+const scrollMemory = new Map<string, number>();
 
 /**
  * Which kinds can be dragged, and what they can be dropped onto.
@@ -79,6 +103,7 @@ function canAcceptDrop(node: TreeNode, dragged: readonly ObjectRef[]): boolean {
     return (
       dragged.length === 1 &&
       (node.kind === "folder" ||
+        node.heading === true ||
         (node.kind === "view" && node.viewId === "trips"))
     );
   }
@@ -98,24 +123,33 @@ function readDragged(event: React.DragEvent): ObjectRef[] {
   }
 }
 
-export function LibraryPanel(): ReactNode {
-  const {
-    tree,
-    loading,
-    error,
-    refresh,
-    toggleExpanded,
-    setExpanded,
-    sortKey,
-    sortDirection,
-    setSort,
-    objectSortKey,
-    setObjectSort,
-    showArchived,
-    setShowArchived,
-    search,
-    setSearch,
-  } = useLibraryStore();
+/**
+ * One list of the left panel, drawn from a root. Phase 14, design §4.2.
+ *
+ * The trip list, a trip's contents and each cross-trip section are different
+ * roots drawn by this one component, so selection, the keyboard model, drag,
+ * rename and the context menus behave the same everywhere (Phase 5). The
+ * root itself is not drawn.
+ *
+ * In the trip list, selecting a trip only selects it: the map and the right
+ * panel follow, and the list stays where it is. Double-click, Return or the
+ * row's arrow opens it (Requirement 2.4, as amended by the trip list flow).
+ * The list's scroll position outlives it, so coming back from a trip page
+ * finds the list as it was left.
+ */
+export function LibraryList({
+  root,
+  label,
+  emptyText,
+}: {
+  root: TreeNode;
+  label: string;
+  emptyText?: string;
+}): ReactNode {
+  const { tree, loading, error, refresh, toggleExpanded, setExpanded } = useLibraryStore();
+  const overview = useLibraryStore((s) => s.overview);
+  const looseTripId = useLibraryStore((s) => s.looseTripId);
+  const isTripList = root.id === TRIP_LIST_ROOT;
 
   const expanded = useLibraryStore((s) => s.expanded);
 
@@ -140,13 +174,10 @@ export function LibraryPanel(): ReactNode {
   /** Which row holds the roving tab stop. A path, not a selection key. */
   const [focusPath, setFocusPath] = useState<string | null>(null);
   const treeRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    void refresh();
-    return api().events.onLibraryChanged(() => {
-      void refresh();
-    });
-  }, [refresh]);
+  useLayoutEffect(() => {
+    const remembered = scrollMemory.get(root.id);
+    if (remembered !== undefined && treeRef.current !== null) treeRef.current.scrollTop = remembered;
+  }, [root.id]);
 
   const selectedKey = useMemo(
     () => (selected === null ? null : refKey(selected)),
@@ -164,8 +195,11 @@ export function LibraryPanel(): ReactNode {
     // The expansion *set* is the dependency, not the `isExpanded` predicate:
     // the predicate's identity is stable, so depending on it would never
     // recompute this when a branch opened.
-    () => flattenVisible(tree, (path) => expanded.has(path)),
-    [tree, expanded],
+    () =>
+      flattenVisible(root, (path) => path === root.id || expanded.has(path))
+        .filter((row) => row.path !== root.id)
+        .map((row) => ({ ...row, depth: row.depth - 1 })),
+    [root, expanded],
   );
 
   /**
@@ -247,6 +281,10 @@ export function LibraryPanel(): ReactNode {
         const trip = await call(
           api().trips.create({ name: "New Trip", folderId }),
         );
+        // Phase 14: the new trip is named in the trip list, then opened by selecting it.
+        const nav = useNavStore.getState();
+        nav.setSection("trips");
+        nav.closeTrip();
         await refresh();
         await select({ kind: "trip", id: trip.id });
         setRenamingId(`trip:${trip.id}`);
@@ -351,7 +389,9 @@ export function LibraryPanel(): ReactNode {
         // One reload afterwards, not one per member (Requirement 2.8).
         await useSelectionStore.getState().reload();
         showToast(
-          `Moved ${outcome.applied} object${outcome.applied === 1 ? "" : "s"} to that trip.`,
+          tripId === useLibraryStore.getState().looseTripId
+            ? `Moved ${outcome.applied} object${outcome.applied === 1 ? "" : "s"} out of the trip.`
+            : `Moved ${outcome.applied} object${outcome.applied === 1 ? "" : "s"} to that trip.`,
         );
       } catch (cause) {
         showToast(describeError(cause), "error");
@@ -516,8 +556,22 @@ export function LibraryPanel(): ReactNode {
 
   // -------------------------------------------------------- context menu
 
+  // Phase 14 Requirement 9.5: one item moves in or out of a trip from its
+  // own menu, through the batch path so it is one undo step.
+  const moveTo = (member: BatchMember): MenuItem[] => {
+    const destinations = moveDestinations(overview, looseTripId);
+    return [
+      { label: "Move to", separatorBefore: true, disabled: true },
+      ...destinations.slice(0, 9).map<MenuItem>((trip) => ({
+        label: `   → ${trip.name}`,
+        onSelect: () => void moveBatchToTrip([member], trip.id),
+      })),
+    ];
+  };
+
   const menuItems = (node: TreeNode, batch: BatchMember[]): MenuItem[] => {
     const ref = node.ref;
+
 
     /*
      * Batch actions replace the per-object ones when the click landed inside a
@@ -526,9 +580,34 @@ export function LibraryPanel(): ReactNode {
      * multi-object property editing is explicitly out of scope for this phase.
      */
     if (batch.length > 1) {
-      const trips = rows.filter((row) => row.node.kind === "trip");
+      // Every visible trip, from the overview: on a trip page no trip rows are
+      // drawn. ADR 0022: "Not in a trip" comes first.
+      const trips = moveDestinations(overview, looseTripId).map((trip) => ({ node: { name: trip.name, ref: { kind: "trip" as const, id: trip.id } } }));
+      // Requirement 13.5: two routes or waypoints can be joined by a new route,
+      // from the first one's end to the second one's start, in list order.
+      const [joinFrom, joinTo] = batch;
+      const joinable =
+        batch.length === 2 &&
+        joinFrom !== undefined &&
+        joinTo !== undefined &&
+        (joinFrom.kind === "route" || joinFrom.kind === "waypoint") &&
+        (joinTo.kind === "route" || joinTo.kind === "waypoint");
+      const join: MenuItem[] = joinable
+        ? [
+            {
+              label: "Join with a New Route",
+              separatorBefore: true,
+              onSelect: () => void actions.joinWithRoute({ kind: joinFrom.kind as "route" | "waypoint", id: joinFrom.id }, { kind: joinTo.kind as "route" | "waypoint", id: joinTo.id }, false),
+            },
+            {
+              label: "Join with a Straight Line",
+              onSelect: () => void actions.joinWithRoute({ kind: joinFrom.kind as "route" | "waypoint", id: joinFrom.id }, { kind: joinTo.kind as "route" | "waypoint", id: joinTo.id }, true),
+            },
+          ]
+        : [];
       return [
         { label: describeSelection(batch), disabled: true },
+        ...join,
         {
           label: "Move to Trip",
           separatorBefore: true,
@@ -557,7 +636,16 @@ export function LibraryPanel(): ReactNode {
       ];
     }
 
-    if (node.kind === "view" && node.viewId === "trips") {
+    // Phase 14: empty space on a trip's page offers what can be added to it.
+    if (node.id === TRIP_PAGE_ROOT) {
+      return [
+        { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
+        { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+        { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
+      ];
+    }
+
+    if ((node.kind === "view" && node.viewId === "trips") || node.heading === true || node.id === TRIP_LIST_ROOT) {
       return [
         { label: "New Trip", onSelect: () => void createTrip(null) },
         { label: "New Folder", onSelect: () => void createFolder(null) },
@@ -608,11 +696,16 @@ export function LibraryPanel(): ReactNode {
         { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
         {
           label: "New Straight-Line Route",
-          onSelect: () => actions.startStraightLineRoute(),
+          onSelect: () => void actions.startStraightLineRoute(),
         },
         {
           label: "New Waypoint",
-          onSelect: () => actions.startPlacingWaypoint(),
+          onSelect: () => void actions.startPlacingWaypoint(),
+        },
+        {
+          // Phase 11. Named for the folder, not photos (design §4.1).
+          label: "Link Folder…",
+          onSelect: () => void linkFolderToTrip(ref.id, node.name),
         },
         {
           label: "Rename…",
@@ -677,6 +770,7 @@ export function LibraryPanel(): ReactNode {
             actions.openPointTable("route", ref.id);
           },
         },
+        ...moveTo({ kind: "route", id: ref.id }),
         {
           label: "Delete Route",
           danger: true,
@@ -721,6 +815,21 @@ export function LibraryPanel(): ReactNode {
           onSelect: () =>
             void confirmBatchDelete([{ kind: "track", id: ref.id }]),
         },
+        ...moveTo({ kind: "track", id: ref.id }),
+      ];
+    }
+
+    if (ref?.kind === "linkedFolder") {
+      return [
+        { label: "Show Photos", onSelect: () => showPhotos(ref.id) },
+        { label: "Rescan", onSelect: () => void rescanFolder(ref.id) },
+        { label: "Relink…", onSelect: () => void relinkFolder(ref.id) },
+        {
+          label: "Unlink…",
+          danger: true,
+          separatorBefore: true,
+          onSelect: () => askToUnlink(ref.id, node.name),
+        },
       ];
     }
 
@@ -732,6 +841,7 @@ export function LibraryPanel(): ReactNode {
           separatorBefore: true,
           onSelect: () => void actions.duplicateWaypoint(ref.id),
         },
+        ...moveTo({ kind: "waypoint", id: ref.id }),
         {
           label: "Delete Waypoint",
           danger: true,
@@ -741,8 +851,55 @@ export function LibraryPanel(): ReactNode {
       ];
     }
 
-    return [{ label: "New Trip", onSelect: () => void createTrip(null) }];
+    // The list's own space: what makes sense in this section (owner
+    // feedback, 14 Nov 2026: the Routes section offered only New Trip).
+    switch (root.id) {
+      case "section:routes":
+        return [
+          { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
+          { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+          { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+        ];
+      case "section:waypoints":
+        return [
+          { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
+          { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+        ];
+      case "section:tracks":
+      case "section:imported":
+        return [{ label: "Import Files…", onSelect: () => void actions.chooseFilesToImport() }];
+      case "section:photos":
+        return [{ label: "Link a Folder…", onSelect: () => void linkLooseFolder() }];
+      case OBJECTS_ROOT:
+      case PLAN_ROOT:
+      case TRIP_PAGE_ROOT:
+        return [
+          { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
+          { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+          { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
+          { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+        ];
+      default:
+        return [
+          { label: "New Trip", onSelect: () => void createTrip(null) },
+          { label: "New Folder", onSelect: () => void createFolder(null) },
+        ];
+    }
   };
+
+  // Phase 14: the header's More menu asks for a new trip or folder.
+  // A request is consumed once, so a list mounted later never repeats it.
+  useEffect(
+    () =>
+      useNavStore.subscribe((state) => {
+        const request = state.request;
+        if (request === null) return;
+        useNavStore.setState({ request: null });
+        if (request.kind === "newTrip") void createTrip(null);
+        else void createFolder(null);
+      }),
+    [createTrip, createFolder],
+  );
 
   // Native menu actions that act on the library selection.
   useEffect(() => {
@@ -860,10 +1017,23 @@ export function LibraryPanel(): ReactNode {
           }
           return;
         }
-        case "Escape":
+        case "Escape": {
           event.preventDefault();
-          useSelectionStore.getState().collapseToAnchor();
+          // A batch collapses to its anchor; a single selection clears, which
+          // brings back the year on the right (the trip list flow).
+          const selection = useSelectionStore.getState();
+          if (selection.selectedKeys.size > 1) selection.collapseToAnchor();
+          else void select(null);
           return;
+        }
+        case "Enter": {
+          const row = rows.find((candidate) => candidate.path === current);
+          if (isTripList && row?.ref?.kind === "trip") {
+            event.preventDefault();
+            useNavStore.getState().openTrip(row.ref.id);
+          }
+          return;
+        }
         case "a":
         case "A": {
           if (!event.metaKey) return;
@@ -879,6 +1049,7 @@ export function LibraryPanel(): ReactNode {
     [
       anchorKey,
       focusPath,
+      isTripList,
       renamingId,
       rows,
       select,
@@ -903,6 +1074,7 @@ export function LibraryPanel(): ReactNode {
   const renderedRows = rows.map((row) => {
     const nodeKey = row.ref === null ? null : refKey(row.ref);
     const inSelection = nodeKey !== null && selectedKeys.has(nodeKey);
+    const hasChildren = row.node.children.length > 0;
 
     return (
       <TreeRow
@@ -910,13 +1082,17 @@ export function LibraryPanel(): ReactNode {
         node={row.node}
         depth={row.depth}
         selected={nodeKey !== null && nodeKey === selectedKey}
+        twoLine={isTripList && row.node.kind === "trip"}
         inSelection={inSelection}
         expanded={expanded.has(row.path)}
-        hasChildren={row.node.children.length > 0}
+        hasChildren={hasChildren}
         renaming={renamingId === row.path}
         dropTarget={dropTargetId === row.path}
         focusable={tabStop === row.path}
         onToggle={() => toggleExpanded(row.path)}
+        {...(isTripList && row.ref?.kind === "trip"
+          ? { onOpen: () => useNavStore.getState().openTrip(row.node.ref?.id ?? "") }
+          : {})}
         onFocusRow={() => setFocusPath(row.path)}
         onSelect={(modifiers) => handleRowClick(row.node, modifiers)}
         onContextMenu={(event) => {
@@ -948,131 +1124,33 @@ export function LibraryPanel(): ReactNode {
     );
   });
 
-  const searching = search.trim().length > 0;
-
   return (
-    <div className="flex h-full flex-col">
-      <div className="shrink-0 border-b border-[var(--color-border-subtle)] px-2 py-2">
-        <input
-          type="search"
-          value={search}
-          placeholder="Search trips and waypoints"
-          aria-label="Search trips"
-          onChange={(event) => void setSearch(event.target.value)}
-          className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-1 text-[13px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
-        />
-        <div className="mt-1.5 flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)]">
-          <label htmlFor="sortKey" className="sr-only">
-            Sort trips by
-          </label>
-          <select
-            id="sortKey"
-            value={sortKey}
-            onChange={(event) =>
-              setSort(event.target.value as TripSortKey, sortDirection)
-            }
-            className="rounded border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-1 py-0.5"
-          >
-            <option value="name">Name</option>
-            <option value="updatedAt">Modified</option>
-            <option value="createdAt">Created</option>
-          </select>
-          <button
-            type="button"
-            aria-label="Toggle sort direction"
-            onClick={() =>
-              setSort(sortKey, sortDirection === "asc" ? "desc" : "asc")
-            }
-            className="rounded border border-[var(--color-border-subtle)] px-1.5 py-0.5 hover:bg-[var(--color-surface-sunken)]"
-          >
-            {sortDirection === "asc" ? "↑" : "↓"}
-          </button>
-          <label className="ml-auto flex items-center gap-1">
-            <input
-              type="checkbox"
-              checked={showArchived}
-              onChange={(event) => setShowArchived(event.target.checked)}
-            />
-            Archived
-          </label>
-        </div>
-
-        <div className="mt-1.5 flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)]">
-          {/*
-            Objects are sorted separately from trips: distance is meaningless
-            for a trip, and a trip's modified date is not a route's. One
-            control for both would be wrong for half the tree.
-          */}
-          <label htmlFor="objectSortKey" className="sr-only">
-            Sort routes and tracks by
-          </label>
-          <select
-            id="objectSortKey"
-            value={objectSortKey}
-            onChange={(event) =>
-              setObjectSort(event.target.value as ObjectSortKey)
-            }
-            className="rounded border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-1 py-0.5"
-          >
-            <option value="name">Objects: name</option>
-            {/* Offered now that tracks and routes both have a distance. */}
-            <option value="distance">Objects: distance</option>
-          </select>
-
-          {/*
-            Import is reachable without a selection, because the first thing a
-            new user does is bring in their existing files and there is nothing
-            selected yet.
-          */}
-          <button
-            type="button"
-            // A distinct name from the trip panel’s import icon, so assistive
-            // technology and tests can tell the two apart.
-            aria-label="Import files"
-            onClick={() => void actions.chooseFilesToImport()}
-            className="ml-auto rounded border border-[var(--color-border-subtle)] px-1.5 py-0.5 hover:bg-[var(--color-surface-sunken)]"
-          >
-            Import…
-          </button>
-          <button
-            type="button"
-            aria-label="Export selection"
-            onClick={() => {
-              const scope = actions.currentExportScope();
-              if (scope === null) {
-                showToast("Select a trip or object to export.", "error");
-                return;
-              }
-              actions.openExportDialog(scope);
-            }}
-            className="rounded border border-[var(--color-border-subtle)] px-1.5 py-0.5 hover:bg-[var(--color-surface-sunken)]"
-          >
-            Export…
-          </button>
-        </div>
-      </div>
-
+    <div className="flex min-h-0 flex-1 flex-col">
       <div
         ref={treeRef}
         role="tree"
-        aria-label="Trip library"
+        aria-label={label}
         // Declared so assistive technology announces that more than one row
         // can be selected at once. Without it, `aria-selected` on several rows
         // reads as a bug rather than a feature.
         aria-multiselectable="true"
         tabIndex={-1}
         onKeyDown={onTreeKeyDown}
+        onScroll={(event) => scrollMemory.set(root.id, event.currentTarget.scrollTop)}
+        // A click on the list's empty space clears the selection. Rows stop
+        // their own clicks, so this only sees the space between and below them.
+        onClick={(event) => {
+          if (event.target === event.currentTarget) void select(null);
+        }}
         className="min-h-0 flex-1 overflow-y-auto py-1 outline-none"
         onContextMenu={(event) => {
           event.preventDefault();
-          if (tree !== null) {
-            setMenu({
-              x: event.clientX,
-              y: event.clientY,
-              node: tree,
-              inSelection: false,
-            });
-          }
+          setMenu({
+            x: event.clientX,
+            y: event.clientY,
+            node: root,
+            inSelection: false,
+          });
         }}
       >
         {loading && tree === null && (
@@ -1087,7 +1165,10 @@ export function LibraryPanel(): ReactNode {
           </p>
         )}
 
-        {searching ? <SearchResults selectedKey={selectedKey} /> : renderedRows}
+        {renderedRows}
+        {tree !== null && rows.length === 0 && emptyText !== undefined && (
+          <p className="px-3 py-2 text-[12px] text-[var(--color-text-muted)]">{emptyText}</p>
+        )}
       </div>
 
       {/*
@@ -1148,7 +1229,7 @@ export function LibraryPanel(): ReactNode {
 }
 
 /** Flat search results across trips and waypoints. */
-function SearchResults({
+export function SearchResults({
   selectedKey,
 }: {
   selectedKey: string | null;
@@ -1169,7 +1250,11 @@ function SearchResults({
         <button
           key={`trip:${trip.id}`}
           type="button"
-          onClick={() => void select({ kind: "trip", id: trip.id })}
+          onClick={() => {
+            // Phase 14: a trip found by search opens, as it does from the list.
+            void useLibraryStore.getState().setSearch("");
+            useNavStore.getState().openTrip(trip.id);
+          }}
           className={`block w-full truncate px-3 py-1 text-left text-[13px] ${
             selectedKey === `trip:${trip.id}`
               ? "bg-[var(--color-accent)] text-white"
@@ -1184,7 +1269,13 @@ function SearchResults({
         <button
           key={`waypoint:${waypoint.id}`}
           type="button"
-          onClick={() => void select({ kind: "waypoint", id: waypoint.id })}
+          onClick={() => {
+            void useLibraryStore.getState().setSearch("");
+            // ADR 0022: one outside a trip opens no trip page; it shows in the Waypoints section.
+            if (waypoint.tripId === useLibraryStore.getState().looseTripId) useNavStore.getState().setSection("waypoints");
+            else useNavStore.getState().openTrip(waypoint.tripId);
+            void select({ kind: "waypoint", id: waypoint.id });
+          }}
           className={`block w-full truncate px-3 py-1 text-left text-[13px] ${
             selectedKey === `waypoint:${waypoint.id}`
               ? "bg-[var(--color-accent)] text-white"

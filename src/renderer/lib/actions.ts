@@ -25,7 +25,9 @@ import {
 import { AppError, api, call, callOr, describeError } from './client';
 import { useEditorStore } from '../stores/editorStore';
 import { useGeometryStore } from '../stores/geometryStore';
+import { useItineraryStore } from '../stores/itineraryStore';
 import { useLibraryStore } from '../stores/libraryStore';
+import { useNavStore } from '../stores/navStore';
 import { useRoutingStore } from '../stores/routingStore';
 import { useSelectionStore } from '../stores/selectionStore';
 import { useSettingsStore } from '../stores/settingsStore';
@@ -217,6 +219,80 @@ export async function createWaypoint(
   }
 }
 
+/** The trip open on the trip page, if any (Phase 14 Requirement 18.3). */
+function openTripId(): string | null {
+  const nav = useNavStore.getState();
+  return nav.section === 'trips' ? nav.openTripId : null;
+}
+
+/**
+ * The open trip when it has a plan a photo can be added to (Requirement
+ * 18.4), or null.
+ */
+export function photoPlanTripId(): string | null {
+  const tripId = openTripId();
+  const plan = useItineraryStore.getState();
+  return tripId !== null && plan.tripId === tripId && plan.view !== null ? tripId : null;
+}
+
+/**
+ * Use as a Waypoint (Phase 14 Requirement 18.3): at the photo's location, in
+ * the open trip or else the photo's own. A photo used before gives back its
+ * waypoint. Selects it.
+ */
+export async function photoToWaypoint(photoId: string): Promise<void> {
+  try {
+    const tripId = openTripId();
+    const waypoint = await call(api().waypoints.fromPhoto({ photoId, ...(tripId === null ? {} : { tripId }) }));
+    await refreshAll();
+    await useSelectionStore.getState().select({ kind: 'waypoint', id: waypoint.id });
+    toast(`${waypoint.name} is a waypoint. Drag it into the plan, or edit it on the right.`);
+  } catch (cause) {
+    toast(describeError(cause), 'error');
+  }
+}
+
+/** Add to the Plan (Requirement 18.4): a stop on the day the photo was taken. */
+export async function photoToPlan(photoId: string): Promise<void> {
+  const tripId = photoPlanTripId();
+  if (tripId === null) return;
+  try {
+    const { waypoint } = await call(api().itinerary.addPhotoStop({ tripId, photoId }));
+    await Promise.all([refreshAll(), useItineraryStore.getState().reload()]);
+    await useSelectionStore.getState().select({ kind: 'waypoint', id: waypoint.id });
+    toast(`${waypoint.name} added to the plan.`);
+  } catch (cause) {
+    toast(describeError(cause), 'error');
+  }
+}
+
+/**
+ * Join with a New Route (Phase 14 Requirement 13.5): from the first one's end
+ * to the second one's start, by road or as a straight line. Selects the new
+ * route, which is one undo step.
+ */
+export async function joinWithRoute(
+  from: { kind: 'route' | 'waypoint'; id: string },
+  to: { kind: 'route' | 'waypoint'; id: string },
+  straight: boolean,
+): Promise<void> {
+  try {
+    const route = await call(api().routes.join({ from, to, straight }));
+    await refreshAll();
+    await useSelectionStore.getState().select({ kind: 'route', id: route.id });
+    toast(`Joined with ${route.name}. Undo with ⌘Z.`);
+  } catch (cause) {
+    toast(describeError(cause), 'error');
+  }
+}
+
+/** The map's right-click Add a Waypoint Here: made where the user is (ADR 0022), then selected. */
+export async function addWaypointAt(point: { lat: number; lon: number }): Promise<void> {
+  const tripId = await destinationTripId();
+  if (tripId === null) return;
+  await createWaypoint(tripId, point.lat, point.lon);
+}
+
 export async function moveWaypoint(
   id: string,
   lat: number,
@@ -298,11 +374,8 @@ export async function redo(): Promise<void> {
  * so there is no sensible "draw with nothing selected".
  */
 export async function startDrawingRoute(): Promise<void> {
-  const tripId = currentTripId();
-  if (tripId === null) {
-    toast('Select a trip first — a route has to belong to one.', 'error');
-    return;
-  }
+  const tripId = await destinationTripId();
+  if (tripId === null) return;
 
   const status = await useRoutingStore.getState().loadStatus();
   if (status !== null && status.available) {
@@ -318,12 +391,9 @@ export async function startDrawingRoute(): Promise<void> {
  * For paths no road graph knows — off-road, ferries, private land. A menu
  * command rather than a toggle, so the default never has to be switched back.
  */
-export function startStraightLineRoute(): void {
-  const tripId = currentTripId();
-  if (tripId === null) {
-    toast('Select a trip first — a route has to belong to one.', 'error');
-    return;
-  }
+export async function startStraightLineRoute(): Promise<void> {
+  const tripId = await destinationTripId();
+  if (tripId === null) return;
   useEditorStore.getState().startDrawRoute(tripId, 'chosen');
 }
 
@@ -342,13 +412,36 @@ export async function startRouteAt(point: { lat: number; lon: number }): Promise
   }
 }
 
-export function startPlacingWaypoint(): void {
-  const tripId = currentTripId();
-  if (tripId === null) {
-    toast('Select a trip first — a waypoint has to belong to one.', 'error');
-    return;
-  }
+export async function startPlacingWaypoint(): Promise<void> {
+  const tripId = await destinationTripId();
+  if (tripId === null) return;
   useEditorStore.getState().startPlaceWaypoint(tripId);
+}
+
+/** ADR 0022: the holder of items outside a trip, made on first use. */
+export async function looseTripId(): Promise<string | null> {
+  try {
+    return (await call(api().trips.loose())).id;
+  } catch (cause) {
+    toast(describeError(cause), 'error');
+    return null;
+  }
+}
+
+/**
+ * Where something new goes: where the user is (Phase 14 Requirement 9.2,
+ * ADR 0022). In the Trips section, the open trip or the trip of what is
+ * selected; in a cross-trip section, or with no trip in view, outside any
+ * trip.
+ */
+export async function destinationTripId(): Promise<string | null> {
+  const nav = useNavStore.getState();
+  if (nav.section === 'trips') {
+    if (nav.openTripId !== null) return nav.openTripId;
+    const tripId = currentTripId();
+    if (tripId !== null) return tripId;
+  }
+  return looseTripId();
 }
 
 /** The trip implied by the current selection, whatever kind it is. */

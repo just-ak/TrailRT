@@ -83,6 +83,11 @@ export function joinMinutes(hours: string, minutes: string): number | null {
   return h * 60 + m;
 }
 
+/** Today's local date, `YYYY-MM-DD`. */
+export function today(now: Date = new Date()): string {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+}
+
 /** Tomorrow's date, for a new itinerary's default start. */
 export function tomorrow(now: Date = new Date()): string {
   const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);

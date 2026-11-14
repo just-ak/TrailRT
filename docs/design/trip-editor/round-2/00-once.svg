@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 600" width="1080" height="600" role="img" aria-labelledby="t00-once d00-once">
+<title id="t00-once">Shown once</title>
+<desc id="d00-once">What both panels show today, and where each lives under the rule: structure on the left, details of the selection on the right.</desc>
+
+<style>
+  .bg{fill:var(--ui-surface,#ffffff)} .sunk{fill:var(--ui-sunken,#f1f5f9)}
+  .ln{fill:none;stroke:var(--ui-border,#e2e8f0)} .bdf{fill:var(--ui-border,#e2e8f0)}
+  .t1{fill:var(--ui-text,#0f172a)} .t2{fill:var(--ui-text2,#475569)} .t3{fill:var(--ui-text3,#94a3b8)}
+  .acc{fill:var(--ui-accent,#2563eb)} .acct{fill:var(--ui-accent,#2563eb)}
+  .accl{fill:var(--ui-accent,#2563eb);fill-opacity:.13} .accr{fill:none;stroke:var(--ui-accent,#2563eb);stroke-width:2}
+  .on{fill:#ffffff} .onm{fill:#ffffff;fill-opacity:.78} .ph{fill:var(--ui-photo,#0d9488)} .dng{fill:#dc2626}
+  .rail{fill:none;stroke:var(--ui-text3,#94a3b8);stroke-width:2}
+  .mapbg{fill:var(--ui-map,#e9efe1)} .mapg{fill:var(--ui-map-green,#d3e4c1)} .mapw{fill:none;stroke:var(--ui-map-water,#a9cbee);stroke-width:5;stroke-linecap:round}
+  .road{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:4;stroke-linecap:round} .road2{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:2.2;stroke-linecap:round}
+  .rte{fill:none;stroke:#7c3aed;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round} .rtec{fill:none;stroke:#ffffff;stroke-width:8;stroke-linecap:round;stroke-opacity:.9}
+  .i{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i2{stroke:var(--ui-text2,#475569)} .i3{stroke:var(--ui-text3,#94a3b8)} .ia{stroke:var(--ui-accent,#2563eb)}
+  .iw{stroke:#ffffff} .ip{stroke:var(--ui-photo,#0d9488)} .ir{stroke:#7c3aed} .it{stroke:#ea580c} .iy{stroke:#dc2626} .id{stroke:#dc2626}
+  .co{fill:#f59e0b} .cot{fill:#1f2937;font-size:11px;font-weight:700}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<style>@media (prefers-color-scheme: dark){svg{--ui-surface:#0f172a;--ui-sunken:#080d17;--ui-border:#2a3550;--ui-text:#f1f5f9;--ui-text2:#94a3b8;--ui-text3:#64748b;--ui-accent:#60a5fa;--ui-photo:#2dd4bf;--ui-map:#162030;--ui-map-green:#1b2f25;--ui-map-water:#1f4069;--ui-map-road:#2c3b54}}</style>
+<rect x="0" y="0" width="1080" height="600" rx="12" class="bg" />
+<rect x="0.5" y="0.5" width="1079" height="599" rx="12" class="ln"/>
+<text x="32" y="44" class="t1" font-size="18" font-weight="700" text-anchor="start" >Shown more than once today</text>
+<text x="32" y="66" class="t2" font-size="13" font-weight="400" text-anchor="start" >The same facts on both sides, and a third time in the editor behind the pencil.</text>
+<text x="32" y="102" class="t3" font-size="11" font-weight="700" text-anchor="start" letter-spacing="0.08em">WHAT</text>
+<text x="300" y="102" class="t3" font-size="11" font-weight="700" text-anchor="start" letter-spacing="0.08em">LEFT PANEL</text>
+<text x="520" y="102" class="t3" font-size="11" font-weight="700" text-anchor="start" letter-spacing="0.08em">RIGHT PANEL</text>
+<text x="790" y="102" class="t3" font-size="11" font-weight="700" text-anchor="start" letter-spacing="0.08em">ONCE, AFTER</text>
+<line x1="32" y1="112" x2="1048" y2="112" class="ln" />
+<rect x="24" y="120" width="1032" height="50" rx="6" class="sunk" />
+<text x="32" y="142" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Trip name</text>
+<text x="300" y="142" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Page header</text>
+<text x="520" y="142" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Trip view title, editor Name</text>
+<circle cx="506" cy="138" r="4" class="dng"/>
+<text x="790" y="142" class="t1" font-size="12.5" font-weight="500" text-anchor="start" >Left header, renamed in place</text>
+<g transform="translate(770 130) scale(0.5833333333333334)" class="i ia"><path d="M5 12l5 5 9-10"/></g>
+<text x="32" y="192" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Dates</text>
+<text x="300" y="192" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Header line</text>
+<text x="520" y="192" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Trip view subtitle, editor Start</text>
+<circle cx="506" cy="188" r="4" class="dng"/>
+<text x="790" y="192" class="t1" font-size="12.5" font-weight="500" text-anchor="start" >Left header; the right sets when you leave</text>
+<g transform="translate(770 180) scale(0.5833333333333334)" class="i ia"><path d="M5 12l5 5 9-10"/></g>
+<rect x="24" y="220" width="1032" height="50" rx="6" class="sunk" />
+<text x="32" y="242" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Stops and drives, in order</text>
+<text x="300" y="242" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Day cards</text>
+<text x="520" y="242" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Hour grid, editor stop list</text>
+<circle cx="506" cy="238" r="4" class="dng"/>
+<text x="790" y="242" class="t1" font-size="12.5" font-weight="500" text-anchor="start" >Left day cards, reordered there</text>
+<g transform="translate(770 230) scale(0.5833333333333334)" class="i ia"><path d="M5 12l5 5 9-10"/></g>
+<text x="32" y="292" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Each stop’s times</text>
+<text x="300" y="292" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Day card rows</text>
+<text x="520" y="292" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Hour blocks, editor stop card</text>
+<circle cx="506" cy="288" r="4" class="dng"/>
+<text x="790" y="292" class="t1" font-size="12.5" font-weight="500" text-anchor="start" >Left rows; the right sets the stay</text>
+<g transform="translate(770 280) scale(0.5833333333333334)" class="i ia"><path d="M5 12l5 5 9-10"/></g>
+<rect x="24" y="320" width="1032" height="50" rx="6" class="sunk" />
+<text x="32" y="342" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Counts</text>
+<text x="300" y="342" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Objects 9 · Photos 27 tabs</text>
+<text x="520" y="342" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Photo chip, editor Contents</text>
+<circle cx="506" cy="338" r="4" class="dng"/>
+<text x="790" y="342" class="t1" font-size="12.5" font-weight="500" text-anchor="start" >Left tabs</text>
+<g transform="translate(770 330) scale(0.5833333333333334)" class="i ia"><path d="M5 12l5 5 9-10"/></g>
+<text x="32" y="392" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Import, export, link a folder</text>
+<text x="300" y="392" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Header buttons</text>
+<text x="520" y="392" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Editor Contents buttons</text>
+<circle cx="506" cy="388" r="4" class="dng"/>
+<text x="790" y="392" class="t1" font-size="12.5" font-weight="500" text-anchor="start" >Left header</text>
+<g transform="translate(770 380) scale(0.5833333333333334)" class="i ia"><path d="M5 12l5 5 9-10"/></g>
+<rect x="24" y="420" width="1032" height="50" rx="6" class="sunk" />
+<text x="32" y="442" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Add and remove stops</text>
+<text x="300" y="442" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >—</text>
+<text x="520" y="442" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Editor Add a stop, ×</text>
+<circle cx="506" cy="438" r="4" class="dng"/>
+<text x="790" y="442" class="t1" font-size="12.5" font-weight="500" text-anchor="start" >Left, in the day cards</text>
+<g transform="translate(770 430) scale(0.5833333333333334)" class="i ia"><path d="M5 12l5 5 9-10"/></g>
+<rect x="24" y="496" width="1032" height="64" rx="10" class="accl" />
+<text x="44" y="523" class="t1" font-size="14" font-weight="700" text-anchor="start" >The left holds what is in the trip and its order, and you change that structure there.</text>
+<text x="44" y="544" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >The right holds the details of the one thing selected. Only its name appears on both sides, as the right’s heading.</text>
+</svg>

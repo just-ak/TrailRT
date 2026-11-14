@@ -39,6 +39,7 @@ export const layerVisibilitySchema = z
     tracks: z.boolean(),
     waypoints: z.boolean(),
     pois: z.boolean().optional(),
+    photos: z.boolean().optional(),
   })
   .strict();
 
@@ -54,6 +55,14 @@ export const libraryTreeRequest = z
      * objects that have one.
      */
     sortKey: z.enum(['name', 'distance', 'updatedAt']).default('name'),
+    /** Phase 11: the Photos view's Year and Trip filters (design §8.2). */
+    photos: z
+      .object({
+        year: z.union([z.number().int().min(1800).max(2200), z.literal('none')]).optional(),
+        tripId: z.uuid().optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -258,6 +267,10 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
     .object({ key: z.literal('transportMode'), value: transportModeSchema })
     .strict(),
   z.object({ key: z.literal('showScaleBar'), value: z.boolean() }).strict(),
+  z.object({ key: z.literal('photoUnavailable'), value: z.enum(['show', 'hide']) }).strict(),
+  z.object({ key: z.literal('librarySection'), value: z.enum(['trips', 'routes', 'tracks', 'waypoints', 'photos', 'imported']) }).strict(),
+  z.object({ key: z.literal('openTripId'), value: idSchema.nullable() }).strict(),
+  z.object({ key: z.literal('tripTab'), value: z.enum(['plan', 'objects', 'photos']) }).strict(),
   z.object({ key: z.literal('routeAlternatives'), value: z.boolean() }).strict(),
   z.object({ key: z.literal('ukDefaultSpeedLimits'), value: z.boolean() }).strict(),
   z
@@ -428,6 +441,11 @@ export const waypointMoveToTripRequest = z
 
 export const waypointSearchRequest = z
   .object({ query: z.string().trim().max(200) })
+  .strict();
+
+/** Phase 14 Requirement 18.3: in `tripId`, or else the photo's own trip. */
+export const waypointFromPhotoRequest = z
+  .object({ photoId: idSchema, tripId: idSchema.optional() })
   .strict();
 
 export const waypointGroupsRequest = z.object({ tripId: idSchema }).strict();
@@ -1145,6 +1163,60 @@ export const itineraryLinkLegRequest = z
   .object({ id: idSchema, routeId: idSchema.nullable() })
   .strict();
 
+/** Phase 14 Requirement 16: delete a route or waypoint with its plan entries. */
+export const itineraryDeleteItemRequest = z.object({ kind: z.enum(['route', 'waypoint']), id: idSchema }).strict();
+
+/** Phase 14 Requirement 15: add a day after a day (or at the end), and remove a day. */
+export const itineraryAddDayRequest = z.object({ tripId: idSchema, afterDate: dateSchema.optional() }).strict();
+export const itineraryRemoveDayRequest = z.object({ tripId: idSchema, date: dateSchema }).strict();
+
+/** Phase 14 Requirement 13.5: join two routes or waypoints with a new route. */
+const joinEndSchema = z.object({ kind: z.enum(['route', 'waypoint']), id: idSchema }).strict();
+export const routeJoinRequest = z.object({ from: joinEndSchema, to: joinEndSchema, straight: z.boolean() }).strict();
+
+/** Phase 14 Requirement 12.6: an item elsewhere is moved or copied in. */
+const transferSchema = z.enum(['move', 'copy']);
+
+/** Phase 14: a waypoint from anywhere as a stop, brought into the trip first. */
+export const itineraryAddWaypointStopRequest = z
+  .object({
+    tripId: idSchema,
+    waypointId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+    transfer: transferSchema.optional(),
+  })
+  .strict();
+
+/** Phase 14 Requirement 18.4: a photo as a stop. The photo's place is read in main. */
+export const itineraryAddPhotoStopRequest = z
+  .object({
+    tripId: idSchema,
+    photoId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+  })
+  .strict();
+
+/** Phase 14: a route placed in the plan as an entry of its own, at `index`. */
+export const itineraryAddRouteLegRequest = z
+  .object({
+    tripId: idSchema,
+    routeId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS),
+    transfer: transferSchema.optional(),
+  })
+  .strict();
+
+/** Phase 14: a place or postcode from the offline search, as a stop. */
+export const itineraryAddPlaceStopRequest = z
+  .object({
+    tripId: idSchema,
+    name: nameSchema,
+    lat: latSchema,
+    lon: lonSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+  })
+  .strict();
+
 export const itineraryAddPoiStopRequest = z
   .object({
     poiId: z.number().int().positive(),
@@ -1170,3 +1242,48 @@ export const itinerarySetLegModeRequest = z
     label: z.string().trim().max(200).nullable().optional(),
   })
   .strict();
+
+// --------------------------------------------- Phase 11: linked folders, photos
+
+export const linkedFolderChooseRequest = z.object({ tripId: idSchema }).strict();
+
+/** The token is the one `chooseFolder` returned; the path never comes back. */
+export const linkedFolderLinkRequest = z
+  .object({ token: idSchema, includeSubfolders: z.boolean() })
+  .strict();
+
+export const linkedFolderIdRequest = z.object({ folderId: idSchema }).strict();
+
+export const linkedFolderSetIncludeSubfoldersRequest = z
+  .object({ folderId: idSchema, include: z.boolean() })
+  .strict();
+
+export const linkedFolderListRequest = z.object({ tripId: idSchema.optional() }).strict();
+
+export const photoListRequest = z.object({ folderId: idSchema }).strict();
+
+/** A photo is named by its index row's id, never by a path (design §7.2). */
+export const photoIdRequest = z.object({ photoId: idSchema }).strict();
+
+/** A year the Photos view can filter on, or photos with no date. */
+export const photoYearSchema = z.union([z.number().int().min(1800).max(2200), z.literal('none')]);
+
+export const photoMapPointsRequest = z.union([
+  z.object({ tripId: idSchema }).strict(),
+  z
+    .object({
+      all: z.literal(true),
+      includeArchived: z.boolean().default(false),
+      year: photoYearSchema.optional(),
+      tripId: idSchema.optional(),
+    })
+    .strict(),
+]);
+
+export const photoYearsRequest = z.object({ includeArchived: z.boolean().default(false) }).strict();
+
+// --------------------------------------------------- Phase 14: the library
+
+export const tripsOverviewRequest = z.object({ includeArchived: z.boolean().default(false) }).strict();
+
+export const photosForTripRequest = z.object({ tripId: idSchema }).strict();

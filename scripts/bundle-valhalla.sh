@@ -286,6 +286,17 @@ signed=0
 while IFS= read -r -d '' f; do
   codesign --force --sign - --timestamp=none "$f" >/dev/null 2>&1 && signed=$((signed + 1))
 done < <(find "$OUT" -type f \( -name "*.dylib" -o -name "*.node" -o -perm -u+x \) -print0)
+# The graph-building tools run LuaJIT, which needs executable memory it was
+# not signed with. Signed here exactly as build/sign-mac.cjs signs them in the
+# app, so `npm run dev` and the tests run what the user runs. A tool signed
+# with the hardened runtime but without this entitlement is killed with "Code
+# Signature Invalid / Invalid Page" while reading roads, once LuaJIT compiles
+# anything: a single county may finish first; three do not.
+for tool in valhalla_build_tiles valhalla_build_admins; do
+  [ -f "$OUT/bin/$tool" ] || continue
+  codesign --force --sign - --timestamp=none --options runtime \
+    --entitlements "$REPO/build/entitlements.valhalla-tools.plist" "$OUT/bin/$tool" >/dev/null
+done
 echo "  signed $signed files"
 
 # --------------------------------------------------------------- verify
