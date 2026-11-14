@@ -1,4 +1,4 @@
-import { Plus, SlidersHorizontal, Upload } from "lucide-react";
+import { MapPin, MapPinOff, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LibrarySection, TripSortKey } from "@shared/domain/types";
 import { ContextMenu, type MenuItem } from "../../components/ContextMenu";
@@ -8,6 +8,7 @@ import { api } from "../../lib/client";
 import { useLibraryStore, type ObjectSortKey } from "../../stores/libraryStore";
 import { useNavStore } from "../../stores/navStore";
 import { useSelectionStore } from "../../stores/selectionStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
 import { linkFolderToSelectedTrip, linkLooseFolder } from "../photos/photoActions";
 import { PhotoViewFilters } from "../photos/PhotoViewFilters";
@@ -162,6 +163,7 @@ function Header(): ReactNode {
         <IconButton variant="ghost" hint="Import files" onClick={() => void actions.chooseFilesToImport()}>
           <Upload size={16} aria-hidden="true" />
         </IconButton>
+        <WaypointsOnMap />
         <IconButton
           variant="ghost"
           hint="Library options"
@@ -184,6 +186,30 @@ function Header(): ReactNode {
       {options && <Options onClose={() => setOptions(false)} />}
       {more !== null && <ContextMenu x={more.x} y={more.y} items={moreItems} onClose={() => setMore(null)} />}
     </div>
+  );
+}
+
+/**
+ * Waypoints on the map, from the left panel (Phase 14 Requirement 19): the
+ * same saved setting as Layers › Waypoints, one click away, for trips with
+ * hundreds of them. Pressed and highlighted while they are hidden, so a map
+ * without its waypoints is never a surprise.
+ */
+function WaypointsOnMap(): ReactNode {
+  const visibility = useSettingsStore((s) => s.settings.layerVisibility);
+  const hidden = visibility.waypoints === false;
+  return (
+    <IconButton
+      variant={hidden ? "active" : "ghost"}
+      hint="Hide waypoints on the map"
+      aria-pressed={hidden}
+      data-testid="waypoints-on-map"
+      onClick={() =>
+        void useSettingsStore.getState().set({ key: "layerVisibility", value: { ...visibility, waypoints: hidden } })
+      }
+    >
+      {hidden ? <MapPinOff size={16} aria-hidden="true" /> : <MapPin size={16} aria-hidden="true" />}
+    </IconButton>
   );
 }
 

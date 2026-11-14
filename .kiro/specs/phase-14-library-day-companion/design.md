@@ -638,13 +638,22 @@ As built (task 11):
   { tripId, photoId, index }` makes or reuses the waypoint and adds the stop
   in one batch, then plans the legs.
 
+### 5.12 Waypoints off the map from the left panel (Requirement 19)
+
+`WaypointsOnMap` in `LeftPanel.tsx` sits in the header row beside Import. It
+reads and writes `settings.layerVisibility.waypoints`, the setting the
+Layers menu already uses, so there is one source of truth and nothing new to
+persist; `MapView` already passes no waypoints to the layer when it is off.
+The button keeps one label, "Hide waypoints on the map", with `aria-pressed`
+true while they are hidden, the accent outline, and a crossed-out pin.
+
 ## 6. Risks
 
 - **Scope.** The largest UI change since Phase 1. Mitigated by the order of
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 23).
+  checklist (task 24).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

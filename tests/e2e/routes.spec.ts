@@ -263,6 +263,26 @@ test.describe('waypoints', () => {
     expect(result).toBeNull();
   });
 
+  test('the left panel’s toggle takes waypoints off the map and back, as Layers does (Phase 14 task 20)', async () => {
+    const { page } = harness;
+    const markers = page.locator('.trailrt-waypoint-marker');
+    const toggle = page.getByTestId('waypoints-on-map');
+    await expect(markers.first()).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+
+    await toggle.click();
+    await expect(markers).toHaveCount(0);
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    // The same setting as Layers › Waypoints.
+    await page.getByRole('button', { name: 'Map layers' }).click();
+    await expect(page.getByRole('checkbox', { name: 'Waypoints' })).not.toBeChecked();
+    await page.getByRole('button', { name: 'Map layers' }).click();
+
+    await toggle.click();
+    await expect(markers.first()).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  });
+
   test('persists waypoints across a restart', async () => {
     const dir = makeUserDataDir();
     let session = await launch(dir);

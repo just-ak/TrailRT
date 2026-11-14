@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 23 here, against the new panels.
+after task 24 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -355,7 +355,17 @@ after task 23 here, against the new panels.
     (2,056 unit, 174 end-to-end)
   - _Requirements: 18.1–18.5_
 
-- [ ] 20. The day and what is in it
+- [x] 20. Waypoints off the map from the left panel
+  - `WaypointsOnMap` in the left panel's header row, on
+    `settings.layerVisibility.waypoints` (design §5.12)
+  - End-to-end: the toggle hides the waypoint markers and unticks Layers ›
+    Waypoints, and shows them again; the lists are unchanged
+  - Done: as above. `routes.spec.ts` hides and shows the markers from the
+    toggle and checks Layers › Waypoints follows. `npm run verify` passes
+    (2,056 unit, 175 end-to-end)
+  - _Requirements: 19.1–19.3_
+
+- [ ] 21. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -363,19 +373,19 @@ after task 23 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 21. The left panel as drawn
+- [ ] 22. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 22. The Photos section
+- [ ] 23. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 23. End-to-end and verification pass
+- [ ] 24. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

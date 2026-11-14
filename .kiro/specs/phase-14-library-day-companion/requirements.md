@@ -449,6 +449,20 @@ Additionally, photographs could be used as waypoints."
 5. USING the same photo again in the same trip SHALL reuse the waypoint it
    already made rather than make another at the same place.
 
+## Requirement 19: Waypoints off the map from the left panel
+
+Added 14 November 2026 from the owner's feedback: "show/hide waypoints on
+the left menu as a little toggle, due to large numbers of waypoints in some
+circumstances". Asked what it should hide, the owner chose the map.
+
+1. THE left panel's top row SHALL have a small toggle that hides and shows
+   waypoints on the map, whatever section or tab is open.
+2. IT SHALL be the same saved setting as Layers › Waypoints, so each shows
+   what the other did, and it SHALL survive a restart.
+3. WHILE waypoints are hidden the toggle SHALL look pressed, so a map
+   without them is never a surprise. The lists in the left panel SHALL be
+   unchanged.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its
