@@ -1,0 +1,95 @@
+# Windows build — experimental and unsupported.
+#
+# Packages the app for Windows x64 with no changes to the code or to
+# electron-builder.yml: the Windows settings are passed on the command line.
+# The result is for trying TrailRT on Windows, not a release. Windows is not a
+# supported platform (TrailRT targets macOS on Apple silicon, ADR 0013), and in
+# this build:
+#
+# - Routing does not work. Following roads, posted limits, and building map
+#   regions all need the embedded Valhalla engine, which is built only for
+#   macOS arm64 and is gitignored. resources/valhalla is created empty so
+#   packaging succeeds; the app then reports routing as unavailable.
+# - Photo thumbnails do not work. They are made by macOS Quick Look.
+# - iCloud "not downloaded" detection uses macOS's /usr/bin/stat.
+# - The installer is unsigned, so Windows SmartScreen warns on first run.
+#
+# Trips, routes, tracks and waypoints, the map, and GPX/KML/TCX/FIT
+# import and export are platform-neutral and should work.
+
+name: Windows build (experimental)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  # @just-ak/kiro-spec-handbook is installed from GitHub Packages.
+  packages: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: bash
+    env:
+      # No Windows code-signing certificate: build unsigned rather than fail.
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # downloads/ holds the macOS DMGs in Git LFS; not needed here.
+          lfs: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          # Writes an .npmrc that sends only the @just-ak scope to GitHub
+          # Packages; everything else still comes from the npm registry.
+          registry-url: https://npm.pkg.github.com
+          scope: '@just-ak'
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build the app
+        run: npm run build
+
+      - name: Package for Windows x64
+        run: |
+          # electron-builder.yml copies resources/valhalla, which is a macOS
+          # build artefact and not in the repository.
+          mkdir -p resources/valhalla
+          npx electron-builder --win nsis zip --x64 --publish never \
+            -c.nsis.artifactName='${productName}-${version}-windows-${arch}-setup.${ext}' \
+            -c.win.artifactName='${productName}-${version}-windows-${arch}.${ext}'
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: TrailRT-windows-x64
+          path: |
+            release/*.exe
+            release/*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Summary
+        run: |
+          {
+            echo '### TrailRT for Windows x64 (experimental, unsupported)'
+            echo
+            echo 'Not working in this build: routing and map regions (no Windows Valhalla), photo thumbnails (macOS Quick Look), iCloud download detection.'
+            echo 'Unsigned: SmartScreen will warn on first run.'
+          } >> "$GITHUB_STEP_SUMMARY"
