@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ObjectRef } from '@shared/domain/types';
 import { useNavStore } from './navStore';
 import { useSelectionStore } from './selectionStore';
 
@@ -13,20 +14,23 @@ import { useSelectionStore } from './selectionStore';
 
 interface CompanionState {
   editing: boolean;
-  edit(): void;
+  /** What the editor was opened for (see `companionView`). */
+  editingRef: ObjectRef | null;
+  edit(ref?: ObjectRef | null): void;
   back(): void;
 }
 
 export const useCompanionStore = create<CompanionState>((set) => ({
   editing: false,
-  edit: () => set({ editing: true }),
-  back: () => set({ editing: false }),
+  editingRef: null,
+  edit: (ref) => set({ editing: true, editingRef: ref ?? useSelectionStore.getState().selected }),
+  back: () => set({ editing: false, editingRef: null }),
 }));
 
 useSelectionStore.subscribe((state, previous) => {
-  if (state.selected === null && previous.selected !== null) useCompanionStore.setState({ editing: false });
+  if (state.selected === null && previous.selected !== null) useCompanionStore.setState({ editing: false, editingRef: null });
 });
 
 useNavStore.subscribe((state, previous) => {
-  if (state.openTripId !== previous.openTripId) useCompanionStore.setState({ editing: false });
+  if (state.openTripId !== previous.openTripId) useCompanionStore.setState({ editing: false, editingRef: null });
 });

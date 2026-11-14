@@ -444,11 +444,25 @@ export async function downloadExtract(
     },
   });
 
+  // Written beside the destination and renamed only once whole, so a file
+  // under the final name is always a complete download: the region build
+  // reuses it rather than downloading again (Phase 14 Requirement 17.1).
+  const partial = `${destination}.part`;
   await pipeline(
     Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]),
     counter,
-    createWriteStream(destination),
+    createWriteStream(partial),
   );
+  if (totalBytes !== null && received !== totalBytes) {
+    const { rmSync } = await import('node:fs');
+    rmSync(partial, { force: true });
+    throw new ServiceError(
+      'PROVIDER_UNAVAILABLE',
+      `The region download stopped early (${received} of ${totalBytes} bytes). Try again.`,
+    );
+  }
+  const { renameSync } = await import('node:fs');
+  renameSync(partial, destination);
 
   options.onProgress?.({ receivedBytes: received, totalBytes });
   return received;

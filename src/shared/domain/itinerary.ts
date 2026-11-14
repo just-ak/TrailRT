@@ -75,8 +75,17 @@ export interface ItineraryStop {
   /**
    * The stop's place. A plain id with no foreign key, so a deleted waypoint
    * shows as missing and undoing the deletion heals the link. Design §2.2.
+   * Null for a stop that is only a point (Phase 14 Requirement 13.3).
    */
-  waypointId: Id;
+  waypointId: Id | null;
+  /** Where a stop with no waypoint is: the start or end of a route. */
+  point: StopPoint | null;
+  /**
+   * Phase 14 Requirement 14: `route` for a route placed in the plan as a
+   * drive of its own, in `entryRouteId`; `stop` for a waypoint or a point.
+   */
+  kind: 'stop' | 'route' | 'day';
+  entryRouteId: Id | null;
   /** The route of the leg **arriving** at this stop. Always null on the first stop. */
   legRouteId: Id | null;
   legMode: LegMode;
@@ -100,6 +109,13 @@ export interface ItineraryStop {
   notes: string | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+/** A stop that is not a waypoint: a place on the map with a name, nothing more. */
+export interface StopPoint {
+  lat: number;
+  lon: number;
+  name: string;
 }
 
 /** Everything the itinerary editor can change at trip level. */
@@ -147,8 +163,23 @@ export interface StopLeg {
   fits: boolean | null;
 }
 
+/** A route placed in the plan as an entry of its own (Phase 14 Requirement 14). */
+export interface StopDrive {
+  routeId: Id;
+  name: string;
+  distanceM: number | null;
+  mode: TransportMode;
+}
+
 export interface StopView extends ItineraryStop {
+  /** Where the entry is reached: a stop's place, or the start of a route entry's route. */
   place: StopPlace | null;
+  /** Where it is left from: the same place for a stop, the end of the route for a route entry. */
+  placeOut: StopPlace | null;
+  /** For a route entry, the route it drives. */
+  drive: StopDrive | null;
+  /** True when it starts where the entry before it ends, so nothing joins them (Requirement 14.3). */
+  joined: boolean;
   leg: StopLeg | null;
   /**
    * Why a by-road leg has no route, when it has none: no routing available,

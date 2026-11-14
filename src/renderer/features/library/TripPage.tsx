@@ -16,6 +16,7 @@ import { useSelectionStore } from "../../stores/selectionStore";
 import { useUiStore } from "../../stores/uiStore";
 import { linkFolderToTrip } from "../photos/photoActions";
 import { LibraryList } from "./LibraryList";
+import { PlanCards } from "./PlanCards";
 import { linkedFoldersRoot, objectsRoot, planRoot } from "./libraryRoots";
 
 /**
@@ -83,9 +84,13 @@ export function TripPage({ trip }: { trip: TreeNode }): ReactNode {
           </button>
         ))}
       </div>
-      {tab === "plan" && (
+      {tab === "plan" && dated && (
+        // Phase 14 task 10: the plan's structure is changed here, as day cards.
+        <PlanCards tripId={tripId} view={view} geometry={geometry?.tripId === tripId ? geometry : null} photos={photos} />
+      )}
+      {tab === "plan" && !dated && (
         <>
-          {!dated && <NoPlanYet tripId={tripId} />}
+          <NoPlanYet tripId={tripId} />
           <LibraryList
             root={plan}
             label={`${trip.name} plan`}
@@ -261,8 +266,8 @@ function TripHeader({ tripId, name }: { tripId: string; name: string }): ReactNo
 
   const items: MenuItem[] = [
     { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
-    { label: "New Straight-Line Route", onSelect: () => actions.startStraightLineRoute() },
-    { label: "New Waypoint", onSelect: () => actions.startPlacingWaypoint() },
+    { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+    { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
     { label: "Rename…", separatorBefore: true, onSelect: () => setRenaming(true) },
     {
       label: "Duplicate",
@@ -303,7 +308,7 @@ function TripHeader({ tripId, name }: { tripId: string; name: string }): ReactNo
         <button
           type="button"
           aria-label="Back to trips"
-          onClick={() => useNavStore.getState().closeTrip()}
+          onClick={() => useNavStore.getState().backToList()}
           onDragEnter={() => useNavStore.getState().closeTrip()}
           className="-ml-1 flex items-center gap-0.5 rounded px-1 py-0.5 text-[12.5px] font-medium text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)]"
         >

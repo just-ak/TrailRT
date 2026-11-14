@@ -26,6 +26,17 @@ export interface PhotoLayerInput {
   /** The anchor's direction and its reference, from its details. */
   anchorDirection: { degrees: number; ref: 'T' | 'M' | null } | null;
   onSelect: (ids: readonly string[]) => void;
+  /** Right-click on one photo (Phase 14 Requirement 18.3). */
+  onContextMenu?: (id: string, x: number, y: number) => void;
+}
+
+/** A photo's own right-click menu, never the map's. */
+function menuOn(marker: L.Marker, id: string, onMenu: { current: PhotoLayerInput['onContextMenu'] }): void {
+  marker.on('contextmenu', (event: L.LeafletMouseEvent) => {
+    L.DomEvent.stop(event);
+    event.originalEvent.preventDefault();
+    onMenu.current?.(id, event.originalEvent.clientX, event.originalEvent.clientY);
+  });
 }
 
 function boundsOf(map: L.Map): Bounds {
@@ -43,9 +54,11 @@ export function usePhotoLayer(map: L.Map | null, input: PhotoLayerInput): void {
   const groupRef = useRef<L.LayerGroup | null>(null);
   const [view, setView] = useState<{ bounds: Bounds; zoom: number; maxZoom: number } | null>(null);
   const onSelectRef = useRef(input.onSelect);
+  const onMenuRef = useRef(input.onContextMenu);
   useEffect(() => {
     onSelectRef.current = input.onSelect;
-  }, [input.onSelect]);
+    onMenuRef.current = input.onContextMenu;
+  }, [input.onSelect, input.onContextMenu]);
 
   useEffect(() => {
     if (map === null) return undefined;
@@ -96,6 +109,7 @@ export function usePhotoLayer(map: L.Map | null, input: PhotoLayerInput): void {
           zIndexOffset: 250,
         });
         marker.on('click', () => onSelectRef.current([points.ids[first] ?? '']));
+        menuOn(marker, points.ids[first] ?? '', onMenuRef);
         group.addLayer(marker);
         continue;
       }
@@ -129,6 +143,7 @@ export function usePhotoLayer(map: L.Map | null, input: PhotoLayerInput): void {
         keyboard: true,
         zIndexOffset: 900,
       });
+      menuOn(marker, points.ids[anchor] ?? '', onMenuRef);
       group.addLayer(marker);
     }
   }, [map, view, points, folders, visible, showUnavailable, anchorId, anchorDirection]);

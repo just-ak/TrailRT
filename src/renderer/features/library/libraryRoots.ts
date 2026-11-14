@@ -22,11 +22,16 @@ function viewNode(tree: TreeNode | null, id: ViewId): TreeNode | null {
   return tree?.children.find((c) => c.kind === 'view' && c.viewId === id) ?? null;
 }
 
-/** A trip as a row of the list: its second line, and no children, because selecting it opens it. */
+/**
+ * A trip as a row of the list: its second line, and its contents, which open
+ * in place under the chevron. Selecting the row only selects the trip; opening
+ * its page is a separate step (the trip list flow,
+ * `docs/design/library-panel/trip-list-flow/`).
+ */
 function tripRow(node: TreeNode, overview: Map<string, TripOverview>, today: string): TreeNode {
   const trip = node.ref === undefined ? undefined : overview.get(node.ref.id);
   const detail = trip === undefined ? node.detail : tripMeta(trip, trip.startDate === today ? 'Today' : null);
-  return { ...node, children: [], ...(detail === undefined ? {} : { detail }) };
+  return { ...node, ...(detail === undefined ? {} : { detail }) };
 }
 
 function folderRow(node: TreeNode, overview: Map<string, TripOverview>, today: string): TreeNode {
@@ -61,7 +66,7 @@ export function tripListRoot(tree: TreeNode | null, overviews: readonly TripOver
     defaultExpanded: true,
     children: group.rows.flatMap((row) => {
       const node = nodeById.get(row.trip.id);
-      return node === undefined ? [] : [{ ...node, children: [], detail: row.meta }];
+      return node === undefined ? [] : [{ ...node, detail: row.meta }];
     }),
   }));
   if (missing.length > 0) {

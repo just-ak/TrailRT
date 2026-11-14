@@ -1,9 +1,9 @@
 import { haversineDistance } from '@shared/geo/distance';
+import { isNear } from '@shared/itinerary/routeFit';
 import type { RoutingProvider, TransportMode } from '@shared/routing/RoutingProvider';
 import type { Db } from '../db/client';
 import * as itineraryRepo from '../db/repositories/itineraries';
 import * as routeRepo from '../db/repositories/routes';
-import * as waypointRepo from '../db/repositories/waypoints';
 import type { Mutation } from './folderService';
 import * as itineraryService from './itineraryService';
 import * as routeService from './routeService';
@@ -58,12 +58,15 @@ export async function autoPlan(
   const stops = itineraryRepo.listStops(db, tripId);
   for (let index = 1; index < stops.length; index += 1) {
     const stop = stops[index];
-    const previous = stops[index - 1];
-    if (stop === undefined || previous === undefined || stop.legMode !== 'road') continue;
+    // A day break is not a place: the drive is from the entry before it.
+    const previous = stops.slice(0, index).findLast((s) => s.kind !== 'day');
+    if (stop === undefined || previous === undefined || stop.kind === 'day' || stop.legMode !== 'road') continue;
 
-    const from = waypointRepo.findWaypoint(db, previous.waypointId);
-    const to = waypointRepo.findWaypoint(db, stop.waypointId);
-    if (from === null || to === null || from.tripId !== tripId || to.tripId !== tripId) continue;
+    const from = itineraryService.stopPlaceOut(db, previous, tripId);
+    const to = itineraryService.stopPlace(db, stop, tripId);
+    if (from === null || to === null) continue;
+    // A route entry that starts where the entry before it ends needs no join.
+    if (isNear(haversineDistance(from, to))) continue;
 
     const current = stop.legRouteId === null ? null : routeRepo.findRoute(db, stop.legRouteId);
     if (current !== null && current.tripId === tripId && fits(db, current.id, from, to)) continue;

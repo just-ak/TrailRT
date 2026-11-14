@@ -295,13 +295,13 @@ test.describe('multi-selection in the library', () => {
     await page.getByRole('treeitem', { name: /^Plain 1/ }).click();
     // Requirement 1.3: a container's deletion cascades, so batching one behind
     // a keystroke is not offered. In the trip list a modifier click on a trip
-    // behaves as a plain one: it opens the trip, alone.
+    // behaves as a plain one: it selects the trip, alone, and the list stays.
     await page.getByRole('button', { name: 'Back to trips' }).click();
-    await page
-      .getByRole('treeitem', { name: /^Objects Trip/ })
-      .click({ modifiers: ['Meta'] });
+    const trip = page.getByRole('treeitem', { name: /^Objects Trip/ });
+    await trip.click({ modifiers: ['Meta'] });
 
-    await expect(page.getByTestId('trip-header')).toContainText('Objects Trip');
+    await expect(trip).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('trip-header')).toHaveCount(0);
     await expect(page.getByText(/ selected$/)).toHaveCount(0);
   });
 });

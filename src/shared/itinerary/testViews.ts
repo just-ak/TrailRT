@@ -18,6 +18,9 @@ export function stop(id: string, name: string, at: LatLon, overrides: Partial<It
     tripId: 't',
     seq: 0,
     waypointId: `wp-${id}`,
+    point: null,
+    kind: 'stop',
+    entryRouteId: null,
     legRouteId: routeM === null ? null : `r-${id}`,
     legMode: 'road',
     legTransport: null,
@@ -34,6 +37,9 @@ export function stop(id: string, name: string, at: LatLon, overrides: Partial<It
     updatedAt: 0,
     ...overrides,
     place: { id: `wp-${id}`, name, lat: at.lat, lon: at.lon, symbol: null },
+    placeOut: { id: `wp-${id}`, name, lat: at.lat, lon: at.lon, symbol: null },
+    drive: null,
+    joined: false,
     planIssue: null,
     leg: routeM === null ? null : { routeId: `r-${id}`, name: 'Road', distanceM: routeM, mode: 'auto', fits: true },
   };
@@ -53,7 +59,18 @@ export function viewOf(stops: StopView[]): ItineraryView {
     updatedAt: 0,
   };
   const timeline = computeTimeline(
-    { itinerary, stops: stops.map((s) => ({ stop: s, position: s.place, leg: s.leg })), walkingSpeedKmh: 4.5, fallbackZone: 'UTC' },
+    {
+      itinerary,
+      stops: stops.map((s) => ({
+        stop: s,
+        position: s.place,
+        // As the service does: a joined entry has nothing between it and the one before.
+        leg: s.joined ? { routeId: null, distanceM: 0, mode: 'auto' as const, joined: true } : s.leg,
+        drive: s.drive === null ? null : { routeId: s.drive.routeId, distanceM: s.drive.distanceM, mode: s.drive.mode },
+      })),
+      walkingSpeedKmh: 4.5,
+      fallbackZone: 'UTC',
+    },
     resolveTimeZone,
   );
   return { itinerary, stops, timeline };

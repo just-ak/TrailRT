@@ -129,7 +129,7 @@ test.describe('import', () => {
     await showTripList(page);
     const trip = page.getByRole('treeitem', { name: /alps-full/ });
     await expect(trip).toBeVisible();
-    await trip.click();
+    await trip.dblclick();
     await expect(page.getByTestId('trip-header')).toContainText('alps-full');
 
     const counts = await page.evaluate(async () => {
@@ -357,6 +357,9 @@ test.describe('export', () => {
     expect(written).toContain('<gpx');
     expect(written).toContain('creator="TrailRT"');
 
+    // From the trip list, an import makes a new trip named after the file
+    // (Phase 14 Requirement 9.6); from a section it would go outside any trip.
+    await showTripList(page);
     await stubOpenDialog([target]);
     await openImport(page);
     await confirmImport(page);

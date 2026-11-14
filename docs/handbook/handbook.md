@@ -2,8 +2,8 @@
 title: "Specification Handbook"
 subtitle: "Kiro Specification Reference"
 author: ""
-date: "2026-11-11T22:37:15Z"
-revision: "1d38a32"
+date: "2026-11-13T13:08:38Z"
+revision: "5387bf4"
 papersize: a4
 toc-depth: 3
 toc-title: "Table of Contents"
@@ -20,11 +20,11 @@ link-citations: true
 | --- | --- |
 | Title | Specification Handbook |
 | Organisation | — |
-| Build date | 2026-11-11T22:37:15Z |
-| Source revision | 1d38a32 |
-| Specifications | 11 |
-| Requirements | 106 |
-| Tasks | 161 |
+| Build date | 2026-11-13T13:08:38Z |
+| Source revision | 5387bf4 |
+| Specifications | 14 |
+| Requirements | 140 |
+| Tasks | 184 |
 | Diagrams | 0 |
 | Source of truth | `.kiro/specs` |
 
@@ -37,7 +37,7 @@ link-citations: true
 
 | Revision | Date | Notes |
 | --- | --- | --- |
-| 1d38a32 | 2026-11-11T22:37:15Z | Handbook build |
+| 5387bf4 | 2026-11-13T13:08:38Z | Handbook build |
 
 
 \newpage
@@ -48,7 +48,7 @@ No dedicated `architecture` spec was found in the source tree.
 
 | Status | Specs |
 | --- | ---: |
-| unspecified | 11 |
+| unspecified | 14 |
 
 
 \newpage
@@ -62,6 +62,9 @@ No dedicated `architecture` spec was found in the source tree.
 | SPEC-PHASE-1-FOUNDATION | [Phase 1: Application Foundation — Requirements](#spec-phase-1-foundation) | — | unspecified | 14 | 18 | 0 |
 | SPEC-PHASE-10-ROAD-TRIP-PLANNING | [Phase 10: Road Trip Planning — Requirements](#spec-phase-10-road-trip-planning) | — | unspecified | 17 | 30 | 0 |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS | [Phase 11: Geotagged Photos from a Linked Folder — Requirements](#spec-phase-11-geotagged-photos) | — | unspecified | 11 | 13 | 0 |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC | [Phase 12: GPX Kept in Step with a Linked Folder — Requirements](#spec-phase-12-folder-gpx-sync) | — | unspecified | 12 | 0 | 0 |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING | [Phase 13: Video, Flythroughs and Sharing — Requirements](#spec-phase-13-media-flythroughs-sharing) | — | unspecified | 4 | 0 | 0 |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION | [Phase 14: The library and the day companion — requirements](#spec-phase-14-library-day-companion) | — | unspecified | 18 | 23 | 0 |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS | [Phase 2: Routes and Waypoints — Requirements](#spec-phase-2-routes-waypoints) | — | unspecified | 7 | 16 | 0 |
 | SPEC-PHASE-3-TRACKS-IMPORT-EXPORT | [Phase 3: Tracks and Import/Export — Requirements](#spec-phase-3-tracks-import-export) | — | unspecified | 8 | 21 | 0 |
 | SPEC-PHASE-4-ADVANCED-MAPPING | [Phase 4: Advanced Mapping — Requirements](#spec-phase-4-advanced-mapping) | — | unspecified | 8 | 20 | 0 |
@@ -124,6 +127,40 @@ No dedicated `architecture` spec was found in the source tree.
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:R9 | [Req 9: Scale and responsiveness](#req-phase-11-geotagged-photos-9) |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:R10 | [Req 10: Backups and moving to another Mac](#req-phase-11-geotagged-photos-10) |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:R11 | [Req 11: Testing](#req-phase-11-geotagged-photos-11) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R1 | [Req 1: Turning sync on](#req-phase-12-folder-gpx-sync-1) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R2 | [Req 2: The hash store](#req-phase-12-folder-gpx-sync-2) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R3 | [Req 3: Reading files in](#req-phase-12-folder-gpx-sync-3) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R4 | [Req 4: Writing files out](#req-phase-12-folder-gpx-sync-4) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R5 | [Req 5: What TrailRT may write (ADR 0020 §5)](#req-phase-12-folder-gpx-sync-5) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R6 | [Req 6: Edits, renames and removals](#req-phase-12-folder-gpx-sync-6) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R7 | [Req 7: Conflicts](#req-phase-12-folder-gpx-sync-7) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R8 | [Req 8: Undo and recovery](#req-phase-12-folder-gpx-sync-8) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R9 | [Req 9: Scale](#req-phase-12-folder-gpx-sync-9) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R10 | [Req 10: The library and the map](#req-phase-12-folder-gpx-sync-10) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R11 | [Req 11: Backups and another Mac](#req-phase-12-folder-gpx-sync-11) |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R12 | [Req 12: Testing](#req-phase-12-folder-gpx-sync-12) |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R1 | [Req 1: Video in linked folders](#req-phase-13-media-flythroughs-sharing-1) |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R2 | [Req 2: Flythroughs (investigation first)](#req-phase-13-media-flythroughs-sharing-2) |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R3 | [Req 3: Sharing](#req-phase-13-media-flythroughs-sharing-3) |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R4 | [Req 4: Privacy when sharing](#req-phase-13-media-flythroughs-sharing-4) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R1 | [Req 1: The rail and its sections](#req-phase-14-library-day-companion-1) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R2 | [Req 2: The trip list](#req-phase-14-library-day-companion-2) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R3 | [Req 3: The trip page](#req-phase-14-library-day-companion-3) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R4 | [Req 4: The companion](#req-phase-14-library-day-companion-4) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R5 | [Req 5: Editing](#req-phase-14-library-day-companion-5) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R6 | [Req 6: Retiring the calendar drawer](#req-phase-14-library-day-companion-6) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R7 | [Req 7: The Photos section](#req-phase-14-library-day-companion-7) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R8 | [Req 8: Testing](#req-phase-14-library-day-companion-8) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R9 | [Req 9: Items outside a trip](#req-phase-14-library-day-companion-9) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R10 | [Req 10: As drawn](#req-phase-14-library-day-companion-10) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R11 | [Req 11: One place for each fact](#req-phase-14-library-day-companion-11) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R12 | [Req 12: Things made outside a plan](#req-phase-14-library-day-companion-12) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R13 | [Req 13: Less strict, and quicker to start](#req-phase-14-library-day-companion-13) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R14 | [Req 14: Routes and waypoints in any order](#req-phase-14-library-day-companion-14) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R15 | [Req 15: Adding and removing days](#req-phase-14-library-day-companion-15) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R16 | [Req 16: Right-click in the plan, and reordering within a day](#req-phase-14-library-day-companion-16) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R17 | [Req 17: Region builds that can be tried again](#req-phase-14-library-day-companion-17) |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R18 | [Req 18: Routes that look movable, and photos as waypoints](#req-phase-14-library-day-companion-18) |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:R1 | [Req 1: Route creation](#req-phase-2-routes-waypoints-1) |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:R2 | [Req 2: Route editing](#req-phase-2-routes-waypoints-2) |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:R3 | [Req 3: Waypoint management](#req-phase-2-routes-waypoints-3) |
@@ -249,18 +286,41 @@ No dedicated `architecture` spec was found in the source tree.
 | SPEC-PHASE-10-ROAD-TRIP-PLANNING:T29 | ☑ | Icon buttons with hints |
 | SPEC-PHASE-10-ROAD-TRIP-PLANNING:T30 | ☑ | End-to-end tests and verification |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:T1 | ☑ | Spec, ADR 0020 and the out-of-order build |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T2 | ☐ | Synthetic photo fixtures |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T3 | ☐ | TIFF parsing and EXIF values (pure) |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T4 | ☐ | Containers and the metadata reader |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T5 | ☐ | Storage: linked folders and the file index |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T6 | ☐ | Linking, refusals, undo and the write guard |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T7 | ☐ | Scanner, fingerprints and watcher |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T8 | ☐ | Path resolution, thumbnails, IPC and preload |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T9 | ☐ | Library: tree, Photos view and the photo list |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T10 | ☐ | Photo map layer, one trip and all trips |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T11 | ☐ | The preview box |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T2 | ☑ | Synthetic photo fixtures |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T3 | ☑ | TIFF parsing and EXIF values (pure) |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T4 | ☑ | Containers and the metadata reader |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T5 | ☑ | Storage: linked folders and the file index |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T6 | ☑ | Linking, refusals, undo and the write guard |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T7 | ☑ | Scanner, fingerprints and watcher |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T8 | ☑ | Path resolution, thumbnails, IPC and preload |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T9 | ☑ | Library: tree, Photos view and the photo list |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T10 | ☑ | Photo map layer, one trip and all trips |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS:T11 | ☑ | The preview box |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:T12 | ☐ | Photo to waypoint, export and backups |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:T13 | ☐ | End-to-end and verification pass |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T1 | ☑ | Spec, ADR 0021 and the out-of-order build |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T2 | ☑ | Pure layout: the day scale, trip groups and day cards |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T3 | ☑ | Data: trip overview, a trip's photos, navigation settings |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T4 | ☑ | The rail and the left panel's lists |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T5 | ☑ | The trip page |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T6 | ☑ | The companion, its editors, and the trip's hours |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T7 | ☑ | The trip list flow |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T8 | ☑ | Items outside a trip |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T9 | ☑ | Details on the right |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T10 | ☑ | Structure on the left |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T11 | ☑ | Things made outside a plan |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T12 | ☑ | Right-click where you are |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T13 | ☑ | A plan without waypoints |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T14 | ☑ | Join two with a new route |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T15 | ☑ | Routes and waypoints in any order |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T16 | ☑ | Adding and removing days |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T17 | ☑ | Right-click in the plan, and reordering within a day |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T18 | ☑ | Region builds that can be tried again |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T19 | ☑ | Routes that look movable, and photos as waypoints |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T20 | ☐ | The day and what is in it |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T21 | ☐ | The left panel as drawn |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T22 | ☐ | The Photos section |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:T23 | ☐ | End-to-end and verification pass |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:T1 | ☑ | Shared contracts for routes and waypoints |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:T2 | ☑ | Route and waypoint repositories |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:T3 | ☑ | Route service with geometry and derived statistics |
@@ -4202,9 +4262,9 @@ CREATE TABLE folder_files (
   folder_id      TEXT NOT NULL REFERENCES linked_folders(id) ON DELETE CASCADE,
   relative_path  TEXT NOT NULL,               -- POSIX separators, NFC
   kind           TEXT NOT NULL,               -- 'photo' | 'geodata' | 'video'
-  format         TEXT NOT NULL,               -- 'jpeg' | 'heic' | 'gpx' | 'kml' | 'kmz' | 'tcx' | 'fit' | 'mov' | 'mp4'
+  format         TEXT NOT NULL,               -- 'jpeg' | 'heic' | 'gpx' | 'kml' | 'kmz' | 'tcx' | 'fit' | 'mov' | 'mp4' | 'm4v'
   size_bytes     INTEGER NOT NULL,
-  mtime_ms       INTEGER NOT NULL,
+  mtime_ms       REAL NOT NULL,               -- stat's fractional milliseconds, compared exactly
   fingerprint    TEXT,                        -- §5.3; null for a file not read (every non-photo in this phase)
   UNIQUE (folder_id, relative_path),
   CHECK (kind IN ('photo','geodata','video'))
@@ -4253,8 +4313,16 @@ CREATE INDEX idx_photo_metadata_state ON photo_metadata(state);
 - **`real_path`** is resolved at link and relink time. It drives the
   containment refusals (§4.2) and lets the all-trips map show a folder linked
   to two trips once (§9.1).
-- Drizzle definitions are added to `schema.ts`, and the SQL is generated with
-  `npm run db:generate` and checked in as migration version 7.
+- Drizzle definitions are added to `schema.ts`. The SQL is **hand-written**
+  as `0006_linked_folders.sql`, migration version 7, like 0002 to 0005: the
+  drizzle-kit journal stops at 0001, so `db:generate` would emit every table
+  since. The table definitions above also gain `CHECK`s for the direction
+  reference (`T` or `M`) and orientation (1–8).
+- `mtime_ms` is **REAL**, not INTEGER. `stat` reports fractional
+  milliseconds, and the scanner compares the stored value with a fresh one
+  exactly. Truncating it would make every unchanged file look changed.
+- The collection format (`shared/io/collection.ts`) accepts a `photo`
+  waypoint source, as Phase 10 did for `poi`.
 
 Repositories: `db/repositories/linkedFolders.ts`, `db/repositories/folderFiles.ts`
 and `db/repositories/photoMetadata.ts`. They provide upsert by `(folder_id,
@@ -4266,8 +4334,10 @@ counts by kind and state, taken-time order, and compact map points.
 ##### 3.1 Formats
 
 `.jpg`, `.jpeg` and `.heic`, matched case-insensitively, then confirmed by the
-file's signature: `FF D8` for JPEG, an `ftyp` box with brand `heic`, `heix` or
-`mif1` for HEIC. A file whose signature does not match its extension is
+file's signature: `FF D8 FF` for JPEG, an `ftyp` box whose major or
+compatible brands include `heic`, `heix`, `heim`, `heis` or `mif1` for HEIC.
+`mif1` is the generic HEIF brand, so an AVIF named `.heic` is read the same way,
+which is correct: the EXIF item is found the same way in any HEIF file. A file whose signature does not match its extension is
 `unreadable`, with the reason "Not a JPEG image" or "Not a HEIC image"
 (Requirement 2.8).
 
@@ -4359,7 +4429,12 @@ export type PhotoReadResult =
   | { ok: false; reason: string };
 ```
 
-`shared/photos/exifReader.ts` implements it from §3.2 and §3.3. The scanner is
+`shared/photos/exifReader.ts` implements it from §3.2 and §3.3. A file whose
+container fails (not the image it claims, cut short) is `ok: false`, so the
+photo is `unreadable`. A sound image whose EXIF block is missing or damaged is
+`ok: true` with no location, and a damaged block's reason goes in
+`locationRejected`, so the photo is `unlocated` with that reason: the image
+itself is fine and can still be previewed. The scanner is
 given a reader, so a second implementation (for raw formats, later) does not
 touch the scanner, the services or trip management.
 
@@ -4379,7 +4454,11 @@ Two IPC steps, like the import pipeline's staging:
 Entry points (Requirement 1.1): an icon button with a hint in the trip's
 properties actions (`TripDetails`, `data-testid="trip-actions"`), the trip's
 context menu, and **File › Link Folder to Trip…**, which acts on the selected
-trip and is disabled without one. The wording names the folder and the trip,
+trip. Native menu items are not enabled per selection anywhere in the app
+(Rename, Duplicate and Delete Trip all act on the selection), so this one
+follows them: chosen with no trip selected, it says "Select a trip to link a
+folder to." rather than greying out. It arrives with the link dialog in task 9,
+so it is never a menu item that does nothing. The wording names the folder and the trip,
 not photos, so it stays right when Phase 12 adds GPX to the same link.
 
 ##### 4.2 Refusals, with their explanations
@@ -4392,9 +4471,12 @@ not photos, so it stays right when Phase 12 adds GPX to the same link.
 | Contains, or is inside, TrailRT's own data folder | "This folder contains TrailRT's own data, so it cannot be linked." This also keeps the thumbnail cache out of every linked folder (§7.3). |
 | macOS refuses to list it, `EPERM` or `EACCES` (Requirement 1.7) | "macOS has not given TrailRT access to this folder. Allow it in System Settings › Privacy & Security › Files and Folders (or Full Disk Access), then rescan." It is never reported as empty. |
 
-Containment compares real paths (`fs.realpath`), with NFC normalisation, after
-resolving each side, so a symlinked or differently-cased spelling of the same
-folder is still caught.
+Containment compares real paths, with NFC normalisation, after resolving each
+side, so a symlinked or differently-cased spelling of the same folder is still
+caught. It must be the **native** `realpath` (`fs.promises.realpath`), which
+returns the on-disk case on macOS; the JavaScript `fs.realpathSync` keeps the
+case it was given, so it would miss a differently-cased spelling. Refusals are
+`ServiceError('BLOCKED', message)`.
 
 The same folder may be linked to **different** trips. Requirement 1.2 ties a
 link to a trip, not the folder itself.
@@ -4430,7 +4512,12 @@ demand.
 **Trip deletion** cascades to the trip's folder rows. It is already
 non-undoable (ADR 0001), and orphaned thumbnail directories are removed by a
 sweep at launch. **Trip duplication** copies the link rows, index rows and
-metadata rows with `INSERT … SELECT` under new ids. No files are touched. A
+metadata rows under new ids (`copyLinkedFoldersForTrip`, inside the
+duplication's transaction). Note that trip duplication in the code copies
+**only the trip row**: its routes, tracks and waypoints are not copied, though
+the comment in `tripService.duplicate` says they would be. That gap predates
+this phase and is reported separately. The linked folders are copied
+regardless, because this phase's own behaviour should be right. No files are touched. A
 duplicated waypoint made from a photo still names the original trip's folder
 id, so `photos:forWaypoint` finds its photo in the copy by fingerprint, through
 the trip-wide lookup (§11.3).
@@ -4467,7 +4554,11 @@ updated, and is not opened in this phase. Rows for paths not seen in a complete
 walk are deleted at the end, in one transaction, after move detection (§5.3).
 
 A walk interrupted by an error, a cancellation or the folder vanishing deletes
-nothing. Only a walk that finished can say a file is gone.
+nothing. Only a walk that finished can say a file is gone. A subfolder macOS
+will not list makes the walk **partial**: the rest is read, and nothing is
+deleted. Cancellation is checked again immediately before deletion, because a
+rescan with nothing to read would otherwise never look at the signal (a defect
+the task 7 tests found).
 
 ##### 5.3 Fingerprints and moves (Requirement 3.7)
 
@@ -4501,10 +4592,15 @@ the whole file, so the check has to happen **before** opening it. A dataless
 file has the `SF_DATALESS` flag (`0x40000000`) and occupies no blocks. Node's
 `Stats` exposes `blocks` but not `st_flags`, so:
 
-1. `size > 0 && blocks === 0` marks a candidate, which costs nothing.
+1. `size > 0 && blocks === 0` marks a candidate, which costs nothing. A sparse
+   local file looks the same, which is why the next step exists.
 2. Candidates are confirmed in batches of up to 200 paths with `/usr/bin/stat
-   -f '%f'`, run with `execFile` and an argument array, never a shell. Those
-   with the flag are stored as `not-downloaded` and never opened.
+   -f '%f:%N'`, run with `execFile` and an argument array, never a shell. Each
+   line carries its path, because `stat` keeps going past a file that has
+   gone. Those with the flag are stored as `not-downloaded` and never opened.
+   A candidate whose flags cannot be read is treated as not downloaded:
+   wrongly listing a sparse file so is a small error, and wrongly opening a
+   dataless file downloads it.
 3. Legacy `.Name.ext.icloud` placeholders are listed as `not-downloaded` under
    their real name.
 
@@ -4556,9 +4652,14 @@ says "Changes made on other computers appear when you rescan." A watcher error
 (the volume unmounting) marks the folder missing and starts the 30 s check.
 
 There is one watcher per linked folder that is currently reachable. Each is an
-FSEvents stream, which macOS handles cheaply. Task 7 measures 100 at once. If
-that proves costly, folders on the same volume can share one watcher on their
-common parent, with events filtered by path, without changing the scanner.
+FSEvents stream, which macOS handles cheaply. **Measured on 12 November 2026**:
+100 recursive watchers opened in 3 ms in total, a change in each of the 100
+reached its watcher within 59 ms, and the process grew by 7.7 MB. So one
+watcher per folder stands; sharing one per volume is not needed.
+
+An FSEvents stream takes a moment to start, and a change made in that moment
+can be missed. That is the case the "hint, not record" rule exists for: the
+focus rescan and Rescan catch it.
 
 ##### 5.8 Folder states
 
@@ -4594,7 +4695,25 @@ Bounded at 512 MB (about 9,500 thumbnails at the measured size). A served
 thumbnail's file `mtime` is set to now. When the total passes the bound, the
 least recently served files are deleted down to 90%. Deleting the whole
 directory is always safe, which is what "rebuildable at any time" means. A
-launch sweep removes directories with no folder row.
+launch sweep removes directories with no folder row, thumbnails of files no
+longer indexed, and half-written files.
+
+As built (task 8):
+
+- The size and modified time in the name are read from the disk when the
+  preview asks, not from the index, so a photo edited since the last scan gets
+  a fresh thumbnail at once rather than after the rescan.
+- The `not-downloaded` check is made twice: against the index, and against the
+  disk at that moment (`blocks === 0`, confirmed by `stat`), because a photo
+  can be evicted to iCloud after it was scanned.
+- Two requests for the same thumbnail share one Quick Look call. A thumbnail
+  is written beside its final name and renamed, so a reader never sees half a
+  file, and a cached file that does not parse as a JPEG is made again.
+- Folder directories with no row are removed after undo, redo and restoring a
+  backup, as well as at unlink and launch, because all three can remove rows
+  without passing through the unlink handler.
+- The width and height are read from the JPEG's frame header, so a cached
+  thumbnail is served without decoding it.
 
 ##### 6.3 Serving them (Requirement 8.3)
 
@@ -4621,17 +4740,20 @@ same folders and must not need channels named after photos.
 | `linkedFolders:list` | `{ tripId? }` | Folder rows with counts by kind and state, and runtime state |
 | `photos:list` | `{ folderId }` | Rows for the drawer, taken-time order |
 | `photos:mapPoints` | `{ tripId } \| { all: true, year?, tripId? }` | Compact located points (§9.1) |
-| `photos:years` | `{}` | Years with photos, and a count with no date, for the Photos view filter |
+| `photos:years` | `{ includeArchived }` | Years with photos, and a count with no date, for the Photos view filter. Archived trips count only when the library shows them |
 | `photos:get` | `{ photoId }` | One photo's details for the preview |
 | `photos:thumbnail` | `{ photoId }` | Bytes |
 | `photos:open` / `photos:reveal` | `{ photoId }` | `shell.openPath` / `shell.showItemInFolder` |
-| `photos:addWaypoints` | `{ photoIds, tripId }` | One undo step |
-| `photos:forWaypoint` | `{ waypointId }` | The photo a waypoint came from, if available |
+| `photos:addWaypoints` | `{ photoIds, tripId }` | One undo step. Task 12, with its service |
+| `photos:forWaypoint` | `{ waypointId }` | The photo a waypoint came from, if available. Task 12 |
 
 A photo id is its `folder_files.id`. Every request is validated with zod and
 every handler returns a result. Events: `linkedFolders:scanProgress` and
 `linkedFolders:changed`, which tells the renderer to reload folder and photo
 data. The preload exposes each by name; there is no generic passthrough.
+As built, the two events follow the app's existing naming for pushes,
+`event:linkedFolderScanProgress` and `event:linkedFoldersChanged`, exposed as
+`events.onLinkedFolderScanProgress` and `events.onLinkedFoldersChanged`.
 
 ##### 7.2 Path resolution — `main/linkedFolders/resolve.ts`
 
@@ -4646,9 +4768,20 @@ data. The preload exposes each by name; there is no generic passthrough.
    points out, is refused here (Requirement 8.2).
 4. Refuses unless the folder is currently linked and `available`.
 
-`photos:thumbnail`, `photos:open`, `photos:reveal` and the scanner's own reads
-all go through it, so "Open" and "Show in Finder" act only on paths the main
-process resolved (Requirement 8.4).
+`photos:thumbnail`, `photos:open` and `photos:reveal` all go through it, so
+"Open" and "Show in Finder" act only on paths the main process resolved
+(Requirement 8.4).
+
+The scanner does not call it per file, and needs no equivalent: it builds
+paths only from entries it found by walking the folder itself, never follows a
+symbolic link (`lstat` on every entry), and opens with `O_NOFOLLOW` (§5.1). The
+first draft of this section said the scanner's reads went through
+`resolveFilePath`; for 40,000 files that would be two extra `realpath` calls
+each, for no protection the walk does not already give.
+
+A folder that the scanner has marked `missing` or `denied` is refused with the
+folder's own message before the disk is touched. `scanning` is not a reason to
+refuse.
 
 ##### 7.3 Read-only, enforced (Requirement 8.1)
 
@@ -4659,13 +4792,21 @@ Three layers, each tested:
    source file in `src/main/linkedFolders/` and fails if any calls a write API (`writeFile`,
    `appendFile`, `createWriteStream`, `rename`, `rm`, `unlink`, `utimes`,
    `chmod`, `chown`, `copyFile`, `mkdir`, `truncate`, `symlink`, `link`, or the
-   `w`/`a`/`+` open flags). Thumbnails live in `main/photoCache/`, which
+   `w`/`a`/`+` open flags). As built, it also refuses `O_WRONLY`, `O_RDWR`,
+   `O_CREAT`, `O_APPEND` and `O_TRUNC`, dynamic `import()`, and any child
+   process except `execFile('/usr/bin/stat', …)`, which only reads flags
+   (§5.4). Comments are stripped first, so prose is not mistaken for a call.
+   The test proves itself on a temporary copy of the module with one
+   offending file added at a time. Thumbnails live in `main/photoCache/`, which
    writes only below its own directory, and that directory cannot be inside a
    linked folder (§4.2).
 2. **Every other writer is guarded.** The app writes outside its data
-   directory in exactly two places: an export to a user-chosen file, and
-   **Save a Copy…** of the database. Both call `assertNotInLinkedFolder(path)`
-   first. It refuses a target inside any linked folder: "That folder is linked
+   directory in four places, all in `ipc/register.ts`: export, **Save a
+   Copy…** of the database, calendar (`.ics`) export, and Save image. (The
+   first draft of this design counted two; the code has four.) All four call
+   `assertNotInLinkedFolder(db, path)` after the save dialog and before
+   writing, and every other write in the main process goes into the app's
+   own data folder, which §4.2 keeps out of every linked folder. It refuses a target inside any linked folder: "That folder is linked
    for photos, and TrailRT never writes into a linked folder. Choose somewhere
    else." Linked folders are read-only from TrailRT's point of view, including
    for new files.
@@ -4699,6 +4840,13 @@ Node detail: "312 photos · 18 without location", with "· unavailable" or
 not read appear in the properties panel, not the node detail, so the tree
 stays short.
 
+As built (task 9): hovering a folder row shows its real path. Linking a
+folder opens its trip and the trip's Linked folders row, so the new row is in
+view. The properties panel loads one folder through a `linkedFolders:get`
+channel added for it, rather than listing every folder to find one. The
+folder rows are built in the main process with the rest of the tree, and
+their photo counts come from one grouped query for every folder.
+
 ##### 8.2 The Photos view (Requirement 4.2)
 
 `ViewId` gains `'photos'`, added to `VIEWS` after Waypoints: every linked folder
@@ -4716,6 +4864,16 @@ taken time; and **Trip**, "All trips" by default. Both narrow the folder list
 and the all-trips map together. The year is the year part of `taken_local`,
 the same wall-clock rule as §8.4.
 
+As built (task 9): view rows have no header of their own, so the two filters
+sit in a bar under the Photos row while it is open. The filter travels with
+the tree request (`library:tree { photos: { year?, tripId? } }`), as the
+object sort order already does, and the main process narrows the view's
+folders, so the renderer never holds every folder's years. While a filter is
+on, the Photos row keeps its chevron even when nothing matches, so the filter
+can always be changed back. A trip's own Linked folders row is never
+filtered. Selecting the Photos view itself, for the all-trips map, is task
+10.
+
 ##### 8.3 The photo list drawer (Requirements 4.3 and 4.4)
 
 Selecting a `linkedFolder` node opens a new drawer kind, `{ kind: 'photos',
@@ -4728,6 +4886,14 @@ so 40,000 rows cost the same as 30.
 Selecting a row selects the photo: it opens the preview box, and a located
 photo off screen is panned into view. Multi-select (shift and command, as in
 the library) enables **Add as waypoints**.
+
+As built (task 9): the drawer opens when a linked folder is selected, and
+from Show Photos in its properties and context menu. The selection is held
+in `photoStore` (`selection.ids`, `selection.anchor`), so the map layer (task
+10) pans to the anchor and the preview box (task 11) shows it without either
+knowing about the list. Up and down arrows move the selection. **Add as
+waypoints** appears with task 12, which builds it: a button with nothing
+behind it would do nothing.
 
 ##### 8.4 Photos per day (Requirement 4.5)
 
@@ -4773,6 +4939,29 @@ relative_path)`, the earliest-linked, so each photo appears once
 - Markers use a camera glyph in a dedicated colour, distinct from waypoints and
   POIs.
 
+As built (task 10):
+
+- The clustering is `shared/photos/mapLayer.ts`, pure and column-wise: it
+  works on indices into the `Float64Array`s, so 50,000 points never become
+  50,000 objects. Measured over 50,000 points across Great Britain, in a
+  1,200 × 800 px view: at most 6.0 ms at any zoom (5.8 ms median at zoom 5,
+  4.2 ms at zoom 8, under 1 ms from zoom 11), against the 50 ms target. The
+  most markers drawn was 744, at zoom 8, against a bound of about 1,250 cells.
+- `photos:mapPoints` returns points in taken-time order, undated last, so a
+  burst's members are already in the order the preview steps through them.
+- The selected photo is taken out of the clusters and drawn on its own, above
+  them, so a selection is never hidden inside a cluster.
+- A cluster counts as unavailable only when all its members are; a mixed
+  cluster is drawn normally.
+- The view's bounds and zoom are held as state, set on every `moveend` and
+  `zoomend`, which is what triggers the redraw.
+- Selecting the Photos view clears the library selection, so the map shows no
+  single trip, then sets `photoStore.allTrips`. Selecting any object leaves
+  it, through a subscription in `photoStore` to the selection store, so no
+  caller has to remember to.
+- Clicking a photo on the map selects it in `photoStore` but not in the
+  library. The preview box (task 11) shows it.
+
 ##### 9.3 Bursts (Requirement 5.3)
 
 A cluster is **inseparable** when its members' bounding box spans less than one
@@ -4782,7 +4971,10 @@ earliest member, with "1 of N" stepping through that burst in taken-time order.
 ##### 9.4 Direction (Requirement 5.4)
 
 The selected photo's marker, when it has a direction, shows a small wedge
-rotated to the bearing, with "true" or "magnetic" in its hint. Other markers do
+rotated to the bearing, with "true" or "magnetic" in its hint. As built, the
+reference comes from the selected photo's details (`photos:get`), which
+`photoStore` loads for the anchor. The map's columns carry the bearing alone,
+so 50,000 points do not each carry a letter only one marker uses. Other markers do
 not, which keeps 50,000 markers plain.
 
 ##### 9.5 Unavailable photos (Requirement 5.5)
@@ -4834,12 +5026,38 @@ a hint saying why.
 The box is a `region` with a label. While focus is inside it, the left and
 right arrow keys step and Escape closes.
 
+As built (task 11):
+
+- **Add as a waypoint** arrives with task 12, which builds what it does. The
+  other actions are all here.
+- Stepping goes through the burst when the photo was opened from one;
+  otherwise through the photo's folder in taken-time order, taken from the
+  open list when it is that folder and fetched with `photos:list` when not.
+  A click in the list or on the map starts a new sequence, so a burst never
+  lingers behind a later click.
+- While the next photo's details load, the box keeps showing the last ones
+  rather than unmounting. The first build unmounted for that moment, which
+  lost keyboard focus after one arrow press, so Escape did nothing; the
+  end-to-end test caught it.
+- Accuracy uses the same unit formatting as altitude ("±8 m", "±26 ft").
+- Not downloaded offers Show in Finder (which downloads it) but not Open.
+- The box sits in `MapCornerStack` with `max-height: calc(100% − 84px)` and
+  `max-width: calc(100% − 80px)`. At the app's smallest window, 1,024 × 700,
+  with both side panels and the photo list open, the map is under 500 px
+  tall and the box shrinks to fit. Tested.
+
 ##### 10.4 Unavailable and not downloaded (Requirement 6.7)
 
 The box says "Unavailable — *Folder* is not connected", or "Not downloaded from
 iCloud — open it in Finder to download", and shows the cached thumbnail when one
 exists. The cache can serve a thumbnail without resolving the source path, so
-this works while the drive is unplugged. Open is disabled; Show in Finder stays
+this works while the drive is unplugged.
+
+As built (task 11): task 8's cache resolved the source path first, so it
+could not do this. It now tries the source and, when the folder is missing or
+denied, the file has gone, or the photo is not downloaded, serves the newest
+thumbnail it holds for that photo, marked `fromCache`, which the box shows
+faded. Only when there is none is the reason passed on. Open is disabled; Show in Finder stays
 enabled when only the file is missing but the folder is there.
 
 ##### 10.5 What is loaded (Requirement 6.6)
@@ -4897,9 +5115,11 @@ all. Unlocated photos in the selection are skipped and reported ("12 added;
 ##### 13.1 Fixtures — `scripts/generate-fixtures.mjs` gains a photos section
 
 Generated into `test-data/generated/photos/` (gitignored, like the other
-generated fixtures), by an Electron step that makes base JPEGs with
-`nativeImage`, writes EXIF with `scripts/lib/exif-write.mjs`, and converts to
-HEIC with `sips`. Every location comes from `@fixtures/places`, the Buxton
+generated fixtures). The generator writes a BMP and converts it to the base
+JPEG with `sips`, writes EXIF with `test-data/photos/exifWrite.ts`, and
+converts to HEIC with `sips`. That needs no Electron step, which the first
+draft of this section planned. `withExif` removes the EXIF and Photoshop
+segments `sips` adds, so a fixture carries only what its spec says. Every location comes from `@fixtures/places`, the Buxton
 square (Requirement 11.2).
 
 | Fixture | Proves |
@@ -4916,7 +5136,7 @@ square (Requirement 11.2).
 | `not-an-image.jpg`, `not-an-image.heic` | Unreadable: signature does not match |
 | `nested/deeper/ashbourne.jpg` | Subfolders on and off |
 | `.hidden/buxton.jpg` | Skipped |
-| `link-out` → outside the folder | Not followed |
+| `link-out` → `../photos-outside` | Not followed |
 | `Library.photoslibrary/` | Refused when chosen; skipped when nested |
 | `notes.png` | Counted as an unsupported format |
 | `burst/1..5.jpg` | Same location: one inseparable cluster |
@@ -4990,7 +5210,10 @@ Persistence restarts the app with the same data directory.
 - **The fingerprint is not a content hash.** A change that kept the size and
   the first 64 KB the same would not be seen as a change, but the scanner does
   not use it to detect changes. The size and modified time do that.
-- **100 watchers at once** is unmeasured until task 7 (§5.7).
+- **A move during a cancelled scan** loses its pairing. The new path's row is
+  written and the old one kept; the next complete scan removes the old row
+  rather than moving it. Waypoint links survive through the fingerprint
+  (§11.3), but the photo gets a new row id and thumbnail.
 
 
 ### Tasks {#tasks-phase-11-geotagged-photos}
@@ -5013,21 +5236,28 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     targets (§0), with hashing and clustering measured
   - _Requirements: [2.2](#req-phase-11-geotagged-photos-2), [9.4](#req-phase-11-geotagged-photos-9)_
 
-- [ ] 2. Synthetic photo fixtures
-  - `scripts/lib/exif-write.mjs`: EXIF writer, both byte orders, every tag in
+- [x] 2. Synthetic photo fixtures
+  - `test-data/photos/exifWrite.ts`: EXIF writer, both byte orders, every tag in
     design §3.3, with deliberate malformations (no reference, zero denominator,
-    out of range)
-  - `scripts/generate-fixtures.mjs`: an Electron step for base JPEGs
-    (`nativeImage`), HEIC through `sips`, and the folder tree in design §13.1
+    out of range). TypeScript beside `places.ts` rather than
+    `scripts/lib/exif-write.mjs`, so it is type-checked and tests import it as
+    `@fixtures/photos/exifWrite`; the generator imports it directly (Node 26
+    strips types)
+  - `scripts/generate-fixtures.mjs`: base JPEGs converted by `sips` from a BMP
+    the script writes (no Electron step needed), HEIC through `sips`, and the
+    folder tree in design §13.1
     (nested, hidden, symlink out, `.photoslibrary`, `notes.png`, burst,
     truncated and fake files, plus `tracks/day-1.gpx`, `tracks/day-2.fit` and
     `clip.mov` for the index) under `test-data/generated/photos/`
   - Every location from `@fixtures/places`; none invented
   - Unit tests: the writer round-trips through the task 3 parser once that
     exists; until then, byte-level checks of the TIFF header and IFD counts
+    (`src/shared/photos/exifWrite.test.ts`, 17 tests). Every generated fixture
+    was also read back with `exifr` as an independent check: both byte orders
+    and both HEIC files decode to the values written
   - _Requirements: [11.2](#req-phase-11-geotagged-photos-11), [11.3](#req-phase-11-geotagged-photos-11)_
 
-- [ ] 3. TIFF parsing and EXIF values (pure)
+- [x] 3. TIFF parsing and EXIF values (pure)
   - `shared/photos/tiff.ts`: both byte orders, `ExifIFD` and `GPSInfo`
     pointers, bounds-checked offsets, IFD cycles refused
   - `shared/photos/exifValues.ts`: DMS to degrees with hemisphere signs;
@@ -5041,9 +5271,12 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     each rejection with its reason; time with `+01:00`, `-05:30` and none;
     invalid dates refused; every orientation value; big- and little-endian
     blocks give identical results
+  - Done: `tiff.test.ts` and `exifValues.test.ts`, 82 tests, built on the
+    task 2 writer (the round trip it promised). The parser decodes only the
+    wanted tags, so the writer's `Make` text is provably never read
   - _Requirements: [2.1](#req-phase-11-geotagged-photos-2), [2.3](#req-phase-11-geotagged-photos-2), [2.4](#req-phase-11-geotagged-photos-2), [2.5](#req-phase-11-geotagged-photos-2), [2.6](#req-phase-11-geotagged-photos-2), [2.7](#req-phase-11-geotagged-photos-2), [11.1](#req-phase-11-geotagged-photos-11)_
 
-- [ ] 4. Containers and the metadata reader
+- [x] 4. Containers and the metadata reader
   - `shared/photos/containers.ts`: `RangeReader`; JPEG marker walk to the Exif
     `APP1`; HEIC `ftyp` brands, `meta` → `iinf` → `iloc` (versions 0–2), one
     extra ranged read when the item lies past the first 64 KB; typed failures
@@ -5057,9 +5290,14 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     with exactly one extra read; truncated and fake files give their reasons
     and do not throw; a reader handed a 5 MB file reads at most 64 KB plus the
     item's length
+  - Done: `containers.test.ts` (HEIC built box by box across `iloc` versions
+    0–2 and 0/4/8-byte fields, every read counted, 4,000 corrupted inputs
+    without a throw) and `fileReader.test.ts` (every fixture through the real
+    file system, symlinks refused, descriptors counted through `/dev/fd` and
+    proven to catch a missing `close`, fixtures unchanged after reading)
   - _Requirements: [2.2](#req-phase-11-geotagged-photos-2), [2.8](#req-phase-11-geotagged-photos-2), [9.2](#req-phase-11-geotagged-photos-9), [11.1](#req-phase-11-geotagged-photos-11)_
 
-- [ ] 5. Storage: linked folders and the file index
+- [x] 5. Storage: linked folders and the file index
   - `schema.ts`: `linked_folders`, `folder_files`, `photo_metadata` per design
     §2; migration `0006_linked_folders.sql` (version 7) generated and
     registered
@@ -5074,9 +5312,13 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     direction without its reference; trip deletion cascades through all three
     tables; ordering puts photos with no taken time last; a folder linked to
     two trips yields its photos once in all-trips points
+  - Done: `src/main/db/linkedFolders.test.ts`, 27 tests; `npm run verify`
+    passes (142 end-to-end). The migration is hand-written, like 0002–0005,
+    because the drizzle journal stops at 0001. The collection format accepts
+    a `photo` waypoint source, as Phase 10 did for `poi`
   - _Requirements: [3.2](#req-phase-11-geotagged-photos-3), [3.3](#req-phase-11-geotagged-photos-3), [3.8](#req-phase-11-geotagged-photos-3), [5.6](#req-phase-11-geotagged-photos-5), [7.2](#req-phase-11-geotagged-photos-7), [10.1](#req-phase-11-geotagged-photos-10)_
 
-- [ ] 6. Linking, refusals, undo and the write guard
+- [x] 6. Linking, refusals, undo and the write guard
   - `main/services/linkedFolderService.ts`: `chooseFolder` (token, design
     §4.1), `link`, `unlink`, `restore`, `relink`, `setIncludeSubfolders`, `list`;
     `real_path` resolved at link and relink
@@ -5084,17 +5326,22 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     folder twice, nested either way, TrailRT's data folder, `EPERM`/`EACCES`;
     real-path and NFC comparison
   - Commands `linkedFolder:unlink`, `linkedFolder:restore`,
-    `linkedFolder:relink`, `linkedFolder:setIncludeSubfolders`; `reconcile()`
-    after undo and redo
+    `linkedFolder:relink`, `linkedFolder:setIncludeSubfolders`. The
+    `reconcile()` call after undo and redo moved to task 7, which builds the
+    scanner it calls
   - Trip duplication copies link, index and metadata rows
   - `main/linkedFolders/writeGuard.ts` `assertNotInLinkedFolder`, called by
-    export and Save a Copy
+    all four handlers that write to a path the user chose: export, Save a
+    Copy, calendar export and Save image (design §7.3)
   - Unit tests: each refusal; a symlinked spelling of a linked folder is caught;
     link → unlink → undo restores the same folder id; relink keeps rows matched
     by relative path; export into a linked folder is refused
+  - Done: `linkedFolderService.test.ts`, 25 tests, against a temp tree with a
+    symlinked and a differently-cased spelling, a `.photoslibrary` and a
+    folder macOS refuses; `npm run verify` passes (142 end-to-end)
   - _Requirements: [1.2](#req-phase-11-geotagged-photos-1), [1.3](#req-phase-11-geotagged-photos-1), [1.5](#req-phase-11-geotagged-photos-1), [1.6](#req-phase-11-geotagged-photos-1), [1.7](#req-phase-11-geotagged-photos-1), [1.8](#req-phase-11-geotagged-photos-1), [3.5](#req-phase-11-geotagged-photos-3), [8.1](#req-phase-11-geotagged-photos-8)_
 
-- [ ] 7. Scanner, fingerprints and watcher
+- [x] 7. Scanner, fingerprints and watcher
   - `main/linkedFolders/classify.ts`: photo, geodata and video extensions
     (design §3.1)
   - `main/linkedFolders/scanner.ts`: async walk (design §5.1) skipping hidden
@@ -5103,6 +5350,8 @@ Update `docs/progress-mindmap.svg` as each task changes status.
   - Incremental: unchanged size and `mtimeMs` are not opened; deletion only
     after a complete walk, in one transaction
   - Fingerprints and move pairing (design §5.3)
+  - `reconcile()` called by the IPC layer after every undo and redo, and after
+    link, unlink, restore and relink (carried from task 6)
   - Not downloaded: `blocks === 0` candidates confirmed by batched
     `/usr/bin/stat -f '%f'` (`execFile`, no shell); `.icloud` placeholders
   - Folder states `available` / `scanning` / `missing` / `denied`; launch scan;
@@ -5119,9 +5368,15 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     fingerprint are not paired; a GPX file is indexed and never opened (spy on
     the reader)
   - Measured: 100 watchers at once, recorded in design §5.7
+  - Done: `scanner.test.ts` (28) and `folderScanner.test.ts` (10, one against
+    the real `fs.watch`, stable over 15 runs once the stream is let start);
+    `npm run verify` passes (142 end-to-end). The cancellation tests found a
+    real defect, fixed: a rescan with nothing to read never checked the
+    signal, so a cancelled scan could still delete rows. Events reach the
+    renderer in task 8
   - _Requirements: [1.4](#req-phase-11-geotagged-photos-1), [3.1](#req-phase-11-geotagged-photos-3), [3.2](#req-phase-11-geotagged-photos-3), [3.3](#req-phase-11-geotagged-photos-3), [3.4](#req-phase-11-geotagged-photos-3), [3.6](#req-phase-11-geotagged-photos-3), [3.7](#req-phase-11-geotagged-photos-3), [3.8](#req-phase-11-geotagged-photos-3), [8.2](#req-phase-11-geotagged-photos-8), [9.1](#req-phase-11-geotagged-photos-9), [9.2](#req-phase-11-geotagged-photos-9), [9.5](#req-phase-11-geotagged-photos-9)_
 
-- [ ] 8. Path resolution, thumbnails, IPC and preload
+- [x] 8. Path resolution, thumbnails, IPC and preload
   - `main/linkedFolders/resolve.ts` per design §7.2
   - `main/photoCache/thumbnails.ts`: Quick Look at 640 px, JPEG 80, cache
     layout and 512 MB bound from design §6.2, launch sweep; never for a
@@ -5129,22 +5384,33 @@ Update `docs/progress-mindmap.svg` as each task changes status.
   - The `linkedFolders` and `photos` IPC namespaces and events from design
     §7.1, zod schemas, results, preload entries by name; `photos:open` and
     `photos:reveal` by id
-  - File › Link Folder to Trip… menu item
+  - ~~File › Link Folder to Trip… menu item~~ moved to task 9: a menu item
+    with no dialog behind it would do nothing (design §4.1)
   - Read-only source scan test over `src/main/linkedFolders/` (design §7.3)
   - Unit tests: `..` and symlink-out refused by `resolve`; a changed photo gets
     a new thumbnail name; eviction keeps the bound; every handler rejects a
     malformed payload; the source scan fails when a write API is added (proven
     with a temporary file in the test)
+  - Done: `resolve.test.ts` (11), `thumbnails.test.ts` (13),
+    `readOnly.test.ts` (4), `linkedFolderHandlers.test.ts` (18, the real
+    handlers registered against a stubbed Electron) and `photoService.test.ts`
+    (4); `npm run verify` passes (1,875 unit, 142 end-to-end). A mutation
+    check confirmed the symlink tests fail without the containment check.
+    `photos:addWaypoints` and `photos:forWaypoint` arrive with their service
+    in task 12. Divergences recorded in design §4.1, §6.2, §7.1, §7.2, §7.3
   - _Requirements: [1.1](#req-phase-11-geotagged-photos-1), [6.6](#req-phase-11-geotagged-photos-6), [8.2](#req-phase-11-geotagged-photos-8), [8.3](#req-phase-11-geotagged-photos-8), [8.4](#req-phase-11-geotagged-photos-8), [8.5](#req-phase-11-geotagged-photos-8), [9.3](#req-phase-11-geotagged-photos-9)_
 
-- [ ] 9. Library: tree, Photos view and the photo list
+- [x] 9. Library: tree, Photos view and the photo list
   - Tree: Linked folders group and `linkedFolder` nodes (design §8.1);
     `ObjectKind`, `TreeNodeKind` and `ViewId` additions; folder properties with
     counts by kind, Rescan, Relink, Unlink (with its confirmation) and Include
     subfolders
   - Photos view: Year and Trip filters from `photos:years` (design §8.2)
   - Link dialog with Include subfolders; icon button in trip actions; trip
-    context menu item
+    context menu item; File › Link Folder to Trip… (moved from task 8, so it
+    arrives with the dialog it opens)
+  - The renderer listens for scan progress and folder changes
+    (`events.onLinkedFolderScanProgress`, `events.onLinkedFoldersChanged`)
   - Drawer kind `photos`: virtualised list in taken-time order with states and
     reasons; selection opens the preview and pans to an off-screen photo;
     multi-select
@@ -5153,9 +5419,17 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     the year filter, with "No date"; day assignment by wall-clock date, with
     the camera-time flag; list rows for every state; properties counting
     files not read yet
+  - Done: `libraryPhotos.test.ts` (9, the tree against a real database),
+    `shared/photos/library.test.ts` (12) and `photoSelection.test.ts` (6);
+    a new end-to-end spec, `tests/e2e/photos.spec.ts` (6), links a copy of
+    the fixtures through the real chooser handler, then checks the tree, the
+    properties, the list, the refusal of a second link, the Photos view and
+    unlink with undo; `npm run verify` passes (1,903 unit, 148 end-to-end). The preview and the pan to an
+    off-screen photo read the list's selection in tasks 11 and 10. Recorded
+    in design §8.1 to §8.3
   - _Requirements: [1.1](#req-phase-11-geotagged-photos-1), [1.3](#req-phase-11-geotagged-photos-1), [1.8](#req-phase-11-geotagged-photos-1), [3.8](#req-phase-11-geotagged-photos-3), [4.1](#req-phase-11-geotagged-photos-4), [4.2](#req-phase-11-geotagged-photos-4), [4.3](#req-phase-11-geotagged-photos-4), [4.4](#req-phase-11-geotagged-photos-4), [4.5](#req-phase-11-geotagged-photos-4), [4.6](#req-phase-11-geotagged-photos-4)_
 
-- [ ] 10. Photo map layer, one trip and all trips
+- [x] 10. Photo map layer, one trip and all trips
   - `photoStore` with trip and all-trips modes (design §9.1);
     `features/map/usePhotoLayer.ts` with viewport clustering
     (design §9.2); inseparable bursts; direction wedge on the selected photo;
@@ -5166,9 +5440,16 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     burst rule (< 1 m, or maximum zoom); 50,000 synthetic points re-cluster
     within the §0 target on the target hardware; selecting the Photos view
     switches to all-trips mode and leaving it switches back
+  - Done: `mapLayer.test.ts` (11) and `photoMapScope.test.ts` (5); three
+    more end-to-end checks in `photos.spec.ts` (markers on the map, the
+    selected photo's wedge facing 271° true, the seven-photo burst at Leek,
+    the Layers toggle, the Photos view's all-trips mode and back);
+    `npm run verify` passes (1,919 unit, 151 end-to-end). Re-clustering
+    50,000 photos measured at 6.0 ms at worst, against 50 ms. Recorded in
+    design §9.2 and §9.4
   - _Requirements: [5.1](#req-phase-11-geotagged-photos-5), [5.2](#req-phase-11-geotagged-photos-5), [5.3](#req-phase-11-geotagged-photos-5), [5.4](#req-phase-11-geotagged-photos-5), [5.5](#req-phase-11-geotagged-photos-5), [5.6](#req-phase-11-geotagged-photos-5)_
 
-- [ ] 11. The preview box
+- [x] 11. The preview box
   - `MapCornerStack` holding the readout, the panel toggles and the preview box
     (design §10.1)
   - `features/photos/PhotoPreview.tsx`: thumbnail via `blob:` URL (revoked on
@@ -5178,6 +5459,15 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     unavailable and not-downloaded states with the cached thumbnail
   - Unit tests: the view model's text for every state; nothing rendered for an
     absent altitude or accuracy; "1 of N" stepping within a burst
+  - Done: `previewModel.test.ts` (12) and three more cache tests (16 in
+    all); three more end-to-end checks in `photos.spec.ts` (the box above
+    the toggles with a `blob:` picture, the keys stepping and closing it, its
+    fit in the smallest window; a burst opening at "1 of 7 here"; an
+    unplugged folder's photo saying so and showing its saved thumbnail);
+    `npm run verify` passes (1,934 unit, 154 end-to-end). Task 8's cache had
+    to learn to serve a saved thumbnail without the source; the test also
+    caught focus lost after one arrow press. Add as a waypoint arrives with
+    task 12. Recorded in design §10.3 and §10.4
   - _Requirements: [6.1](#req-phase-11-geotagged-photos-6), [6.2](#req-phase-11-geotagged-photos-6), [6.3](#req-phase-11-geotagged-photos-6), [6.4](#req-phase-11-geotagged-photos-6), [6.5](#req-phase-11-geotagged-photos-6), [6.6](#req-phase-11-geotagged-photos-6), [6.7](#req-phase-11-geotagged-photos-6)_
 
 - [ ] 12. Photo to waypoint, export and backups
@@ -5209,6 +5499,2057 @@ Update `docs/progress-mindmap.svg` as each task changes status.
     owner's permission; design §15 updated with the result
   - `npm run verify` and `npm run package` (with `verify:package`) pass
   - _Requirements: [3.6](#req-phase-11-geotagged-photos-3), [9.1](#req-phase-11-geotagged-photos-9), [9.4](#req-phase-11-geotagged-photos-9), [9.5](#req-phase-11-geotagged-photos-9), [11.4](#req-phase-11-geotagged-photos-11), [11.5](#req-phase-11-geotagged-photos-11)_
+
+
+
+\newpage
+
+\notespage
+
+\newpage
+
+## Phase 12: GPX Kept in Step with a Linked Folder — Requirements — `SPEC-PHASE-12-FOLDER-GPX-SYNC` {#spec-phase-12-folder-gpx-sync}
+
+**Version:** — · **Status:** unspecified · **Slug:** `phase-12-folder-gpx-sync`
+
+### Requirements {#requirements-phase-12-folder-gpx-sync}
+
+
+Status: requirements only (12 November 2026), from the owner's feedback on the
+Phase 11 design. Not designed. Under the rule in `../README.md` its design
+waits until Phase 11 is built and tested, because it builds directly on
+Phase 11's folder link, file index, scanner and watcher.
+
+Depends on Phase 3 (import and export), Phase 10 (dated trips) and Phase 11
+(linked folders and the file index). It does **not** depend on Phase 8 or
+Phase 9. Its order relative to them is the owner's call.
+
+#### Introduction
+
+The owner's direction, 12 November 2026:
+
+> Linking on to this we could have external GPX tracks also in a folder for a
+> trip. So that it becomes a trip folder, with planned routes, with tracks for
+> when it was actually done, with photos. This would make a much better
+> resource, especially for global travellers. Having the GPX tracks external
+> will make people feel in control of their data, but we must make sure it is
+> a continuous import/export, perhaps with a hash store so that internally we
+> know what is in sync and not, as we don't want to keep reading thousands of
+> files each time. My photo library from travels is 40,000, and hundreds of GPX
+> files, over lots of years.
+
+So a trip's linked folder becomes the trip's complete record on disk. The
+tracks recorded on the trip are read in from it. The routes planned in TrailRT
+are written out to it. Both stay in step without the user importing or
+exporting by hand. A hash store tells TrailRT which files match what it holds,
+without reading them again.
+
+This is the first phase in which TrailRT **writes into a linked folder**.
+Phase 11 is strictly read-only, and ADR 0020 §5 fixed the limits of what this
+phase may write before any writer exists. They are restated in Requirement 5
+and are not relaxed here.
+
+##### What the codebase establishes
+
+From the code after Phase 10 and the Phase 11 design. The design must confirm
+these against the code once Phase 11 is built.
+
+- **Phase 11 provides the index.** `folder_files` already records every GPX,
+  KML, KMZ, TCX and FIT file in a linked folder (kind `geodata`) with its size
+  and modified time, and the scanner and watcher already notice them change.
+  This phase adds a sync record per file, and a whole-file SHA-256 in
+  `fingerprint`. It needs no second walk.
+- **Hashing is cheap for these files.** Measured for Phase 11 (design §0): a
+  2 MB GPX file hashes in 0.6 ms. Hundreds of files hash in well under a second.
+  Reading them is the cost, and the size and modified time spare an unchanged
+  file from being read at all.
+- **The importers exist** for GPX, KML, KMZ, TCX and FIT (`src/main/io/`), with
+  the Phase 3 fidelity rules and an import report. An imported track keeps its
+  original bytes in `track_sources`, with a content hash, so a track survives
+  its file being deleted or changed.
+- **Imports are not undoable.** `register.ts` says so: an import can write
+  hundreds of thousands of rows, so it leaves the undo stack alone, and
+  deleting the imported trip is the documented way back. An automatic import
+  from a folder needs a different way back (Requirement 8).
+- **Imports have no duplicate detection.** Importing the same file twice makes
+  two copies. A folder import must not, so the sync record is what says a file
+  is already in.
+- **The GPX writer is deterministic.** `io/gpx/write.ts` stamps no creation
+  time and serialises numbers exactly. The same route always writes the same
+  bytes, so "has TrailRT changed this route since it wrote the file?" can be
+  answered by comparing the hash of what it would write now with the hash it
+  recorded. No revision counter is needed on routes.
+- **Writers to arbitrary paths are guarded.** Phase 11's
+  `assertNotInLinkedFolder` refuses an export or Save a Copy into a linked
+  folder. This phase adds the one sanctioned writer, which that guard must
+  still refuse to everything else.
+
+##### Four distinctions this phase must keep
+
+1. **A file TrailRT created is not a file the user brought.** A route TrailRT
+   wrote can be rewritten when the route changes. A track recorded by a phone
+   or a Garmin device is the user's original, and TrailRT never writes to it.
+2. **Changed is not touched.** A file whose modified time changed but whose
+   content hash did not has not changed. It is not re-imported, and it is not a
+   conflict.
+3. **A conflict is never settled silently.** When both the file and TrailRT's
+   copy have changed since they last matched, nothing is overwritten on either
+   side until the user chooses.
+4. **Missing is not deleted.** A folder that is unplugged, or a file that has
+   gone, never causes anything in TrailRT to be deleted without the user
+   asking. A route deleted in TrailRT never causes its file to be deleted
+   without the user asking.
+
+#### Terms
+
+| Term | Meaning |
+| --- | --- |
+| **Synced folder** | A linked folder (Phase 11) with GPX sync turned on. |
+| **Brought file** | A GPX or other track file the user put in the folder. TrailRT reads it and never writes to it. |
+| **Owned file** | A GPX file TrailRT created in the folder. TrailRT may rewrite it, and may move it to the Trash with the user's confirmation. |
+| **Hash store** | For each file: its path within the folder, size, modified time, the SHA-256 of its content when TrailRT last read or wrote it, whether TrailRT owns it, and which TrailRT objects it corresponds to. |
+| **In step** | The file's content hash is the one recorded, and the TrailRT objects are as they were when it was recorded. |
+| **Export folder** | The subfolder of a synced folder that TrailRT writes its owned files into. |
+
+#### User stories
+
+1. As a traveller, I want to drop the GPX tracks from my phone or bike computer
+   into the trip's folder and see them on the trip, without importing them one
+   by one.
+2. As a planner, I want the routes I plan in TrailRT to appear as GPX files in
+   the trip's folder, so I can copy them to a device or another app, and so
+   my plans exist outside TrailRT.
+3. As someone with years of trips, I want starting TrailRT to be quick, not to
+   reread hundreds of GPX files that have not changed.
+4. As someone who edits GPX files in other tools, I want TrailRT to notice my
+   change, and to ask me rather than overwrite it when it has changed the same
+   route too.
+5. As someone who keeps my recordings as originals, I want TrailRT never to
+   rewrite a file it did not create.
+
+#### Requirements
+
+##### Requirement 1: Turning sync on {#req-phase-12-folder-gpx-sync-1}
+###### Acceptance criteria
+
+1. THE user SHALL be able to turn GPX sync on and off for each linked folder,
+   from the folder's properties and when linking it. Turning it off stops
+   reading and writing. It deletes nothing on either side.
+2. WHEN sync is turned on THE app SHALL show what it will do before doing it:
+   how many files it will read in, how many routes it will write out, and
+   where.
+3. THE user SHALL choose the export folder, a subfolder of the synced folder.
+   The design proposes a default name (open question 3).
+4. A synced folder on a volume TrailRT cannot write to (read-only, or refused
+   by macOS) SHALL still be read. Writing SHALL pause, and the folder SHALL
+   say why.
+
+##### Requirement 2: The hash store {#req-phase-12-folder-gpx-sync-2}
+###### Acceptance criteria
+
+1. THE app SHALL keep a hash store entry for every track file in a synced
+   folder, as defined in Terms.
+2. A file whose size and modified time match its entry SHALL NOT be opened.
+3. A file whose size or modified time differs SHALL be hashed. IF the hash
+   matches the entry THEN only its size and modified time SHALL be updated. It
+   has been touched, not changed.
+4. FROM the hash store and the TrailRT objects, THE app SHALL work out each
+   file's state:
+   - **in step**;
+   - **new on disk**, not yet read in;
+   - **changed on disk**, while TrailRT's objects are as they were;
+   - **changed in TrailRT**, while the file is as it was (owned files only);
+   - **edited in TrailRT**, the same for a brought file, which is never
+     written (Requirement 6.2);
+   - **changed in both**, a conflict;
+   - **removed from disk**;
+   - **removed in TrailRT**;
+   - **not yet written**, a route with no file yet.
+5. THE hash store SHALL be backed up with the database. It is real state, not
+   a cache: without it TrailRT cannot tell which side changed. IF it is lost or
+   does not match the folder THEN the app SHALL compare contents again. A file
+   that matches SHALL be in step, and every difference SHALL be a conflict for
+   the user (Requirement 7). Nothing SHALL be overwritten on the strength of a
+   guess.
+
+##### Requirement 3: Reading files in {#req-phase-12-folder-gpx-sync-3}
+###### Acceptance criteria
+
+1. A new track file in a synced folder SHALL be read in to the folder's trip
+   through the Phase 3 importers, with the same fidelity rules and an import
+   report. GPX, KML, KMZ, TCX and FIT SHALL be read. Only GPX is written
+   (Requirement 4).
+2. EACH object read in SHALL record which file it came from. A file SHALL be
+   read in once, however many times the folder is scanned.
+3. WHEN a brought file changes on disk and its objects are unchanged in
+   TrailRT, THE app SHALL replace them with the file's new content. The
+   previous version SHALL be recoverable (Requirement 8).
+4. A file that cannot be read SHALL be listed with the reason, and SHALL NOT
+   stop the rest of the folder being read. It SHALL be tried again only when
+   it changes.
+5. THE app SHALL NOT read in the owned files it wrote itself as new objects.
+6. Reading in SHALL be automatic when sync is on, and SHALL tell the user what
+   arrived. The design decides whether a first sync of many files asks first
+   (open question 4).
+
+##### Requirement 4: Writing files out {#req-phase-12-folder-gpx-sync-4}
+###### Acceptance criteria
+
+1. EACH route in the folder's trip SHALL be written as a GPX file in the
+   export folder, and rewritten when the route changes. The design decides
+   whether tracks and waypoints made in TrailRT are written too (open
+   question 1), and whether files are one per route or one per trip (open
+   question 2).
+2. A write SHALL be atomic: written to a temporary file in the same folder,
+   then renamed over the target. An interrupted write SHALL leave the previous
+   file whole.
+3. Writes SHALL be debounced, so that dragging a route's shape does not write
+   the file at every step. The design fixes the interval.
+4. Every file TrailRT writes SHALL be recorded as owned, with the hash of what
+   it wrote.
+5. File names SHALL come from the route name, made safe for the file system.
+   A name already taken by a file TrailRT does not own SHALL NOT be reused.
+   TrailRT picks another name.
+
+##### Requirement 5: What TrailRT may write (ADR 0020 §5) {#req-phase-12-folder-gpx-sync-5}
+###### Acceptance criteria
+
+1. TrailRT SHALL write only owned files. It SHALL NOT write to, rename, move or
+   delete a brought file, a photo, a video or any other file.
+2. TrailRT SHALL NOT overwrite an owned file whose content hash differs from
+   the one recorded when it last wrote or read it. That is a conflict
+   (Requirement 7).
+3. TrailRT SHALL NOT delete any file outright. It MAY move an owned file to the
+   Trash, after the user confirms (Requirement 6.4).
+4. All writing into a linked folder SHALL go through one module, which
+   enforces Requirements 5.1–5.3 itself rather than trusting its callers. Phase
+   11's read-only modules SHALL stay unable to write, and its write guard SHALL
+   keep refusing every other writer.
+5. TrailRT SHALL write only inside the export folder.
+
+##### Requirement 6: Edits, renames and removals {#req-phase-12-folder-gpx-sync-6}
+###### Acceptance criteria
+
+1. WHEN an owned file's route changes in TrailRT, and the file is as TrailRT
+   left it, THE file SHALL be rewritten.
+2. WHEN a brought file's objects are edited in TrailRT, THE file SHALL be left
+   alone and its state SHALL be **edited in TrailRT**. THE user MAY save the
+   edited version as a new owned file in the export folder. The original stays
+   untouched.
+3. WHEN a file is removed from disk, ITS objects SHALL stay in TrailRT,
+   marked **removed from disk**. THE user MAY then delete them, or, for a
+   route, write it out again as an owned file.
+4. WHEN a route with an owned file is deleted in TrailRT, THE file SHALL stay,
+   marked **removed in TrailRT**. THE user MAY move it to the Trash, after a
+   confirmation that names the file. Undoing the route's deletion SHALL bring
+   it back in step with its file.
+5. A file renamed or moved within the synced folder SHALL be recognised by its
+   content hash, and SHALL keep its objects. It SHALL NOT be read in again as a
+   new file. A match SHALL be used only when it is unambiguous.
+6. WHILE a synced folder is missing (Phase 11 Requirement 3.4), NOTHING SHALL
+   be read or written for it. Changes made in TrailRT meanwhile SHALL be
+   written when it returns, unless the file changed on disk meanwhile too, in
+   which case that is a conflict.
+
+##### Requirement 7: Conflicts {#req-phase-12-folder-gpx-sync-7}
+###### Acceptance criteria
+
+1. A file changed on disk whose objects have also changed in TrailRT SHALL be
+   a conflict. So SHALL every difference found when the hash store is lost or
+   does not match (Requirement 2.5).
+2. NOTHING SHALL be overwritten on either side while a file is in conflict.
+3. THE user SHALL be able to settle each conflict by keeping TrailRT's
+   version (for an owned file, rewrite it), taking the file's version (read it
+   in, recoverably), or keeping both (the file's version read in as new
+   objects, TrailRT's written as a new owned file).
+4. Conflicts SHALL be visible without searching for them. Each affected folder
+   and object SHALL be marked, and there SHALL be one place that lists them
+   all.
+
+##### Requirement 8: Undo and recovery {#req-phase-12-folder-gpx-sync-8}
+###### Acceptance criteria
+
+1. Every change that sync makes in TrailRT SHALL be recoverable. That covers
+   reading a new file in, replacing objects from a changed file, and taking a
+   file's version in a conflict. The design decides how, given that imports
+   are not on the undo stack. One way is to keep the replaced objects
+   recoverable for a set time.
+2. Writing a file SHALL never lose content. The file it replaces was written
+   by TrailRT and matched the hash store, so its content is TrailRT's previous
+   version of the route, which the design SHALL keep recoverable.
+3. THE user SHALL be able to tell sync to ignore a file. Its objects are
+   removed from the trip, and it is not read in again unless the user stops
+   ignoring it.
+
+##### Requirement 9: Scale {#req-phase-12-folder-gpx-sync-9}
+###### Acceptance criteria
+
+1. A rescan of synced folders whose track files have not changed SHALL open
+   none of them.
+2. THE design SHALL measure, on the target hardware, the first sync of 500
+   GPX files and an unchanged rescan of them alongside the 40,000 photos of
+   Phase 11. It SHALL record these as targets the tests hold to.
+3. Reading in SHALL run without blocking other requests, with progress, and
+   SHALL be cancellable. A cancelled first sync SHALL keep what it had read in
+   and record the rest as new on disk.
+
+##### Requirement 10: The library and the map {#req-phase-12-folder-gpx-sync-10}
+###### Acceptance criteria
+
+1. Objects read in from a synced folder SHALL appear in the trip as ordinary
+   tracks, routes and waypoints, with a mark showing their file and state. The
+   hint SHALL give the file's path within the folder.
+2. THE linked folder's node and properties SHALL show its sync summary, for
+   example "212 in step · 3 new · 1 conflict".
+3. THE user SHALL be able to sync now, pause sync, and open the export folder
+   in Finder.
+
+##### Requirement 11: Backups and another Mac {#req-phase-12-folder-gpx-sync-11}
+###### Acceptance criteria
+
+1. A backup SHALL include the hash store, as Requirement 2.5 requires.
+2. AFTER a restore on another Mac, synced folders SHALL be unavailable until
+   relinked (Phase 11 Requirement 3.5). They SHALL then be compared by content,
+   with files that match in step and every difference a conflict. Nothing SHALL
+   be overwritten on either side as a result of the restore.
+
+##### Requirement 12: Testing {#req-phase-12-folder-gpx-sync-12}
+###### Acceptance criteria
+
+1. Fixtures SHALL be synthetic GPX, KML, TCX and FIT files, with geography from
+   `@fixtures/places`, the Buxton square.
+2. Unit tests SHALL cover every state in Requirement 2.4 and every transition
+   between them, with no Electron in the loop, against a temp folder.
+3. A test SHALL prove Requirement 5.1: after every sync scenario, every
+   brought file and every photo is byte-identical, with its original modified
+   time.
+4. A test SHALL prove Requirement 4.2 by interrupting a write and checking the
+   previous file is whole.
+5. A test SHALL prove a touched file (modified time changed, content the same)
+   is neither read in again nor a conflict.
+6. A test SHALL prove a renamed file keeps its objects.
+7. End-to-end tests SHALL cover: a GPX file dropped into the folder appearing
+   on the trip; a route planned in TrailRT appearing as a file; a conflict
+   shown and settled each of the three ways; the folder going missing and
+   coming back with changes on both sides; persistence across a restart.
+
+#### Constraints carried from the rest of the project
+
+1. **Module boundaries.** Sync is its own main-process module. It uses Phase 3's
+   importers and writers and Phase 11's index, and does not change how either
+   works. Trip management does not reference it.
+2. **Errors cross IPC as results, never exceptions**, and every handler
+   validates its payload with zod.
+3. **Imported geometry is preserved byte-faithfully** (architecture rules).
+   Reading in through sync is an import in every respect that matters.
+4. **No network.** Sync is between the app and a folder on this Mac. Folders in
+   iCloud Drive or on a network volume sync through whatever the user already
+   uses. TrailRT adds no cloud service.
+
+#### Out of scope
+
+- **Writing into brought files**, ever (Requirement 5.1).
+- **Merging** two versions of a route point by point. A conflict is settled by
+  choosing a side or keeping both.
+- **Formats other than GPX for writing.** KML, KMZ, TCX and FIT are read only.
+- **Syncing with a device directly.** A device's own GPX folder could be linked
+  like any other, but device transfer is Phase 9's investigation.
+- **Photos and video.** Phase 11 reads photos. Phase 13 adds video. Neither is
+  ever written.
+
+#### Unresolved questions for the owner and the design stage
+
+1. **What is written out?** Routes, as planned, are the obvious case. Should
+   tracks drawn or edited in TrailRT, and the trip's waypoints, be written too?
+   The default proposed is routes only, with waypoints as a single
+   `waypoints.gpx`.
+2. **One file per route, or one per trip?** One per route keeps every hash
+   independent, so editing one route rewrites one small file. One per trip
+   is tidier on disk but rewrites everything on any change. The default
+   proposed is one per route.
+3. **Folder layout.** What should the export folder be called by default
+   (`Routes`, `Planned`, `TrailRT`)? Should TrailRT suggest a layout for a new
+   trip's folder, such as `Routes/`, `Tracks/` and `Photos/`, or leave the
+   layout entirely to the user? The default proposed is a `Routes` subfolder,
+   with no other suggestions.
+4. **Automatic or asked?** Reading new files in automatically is what makes it
+   continuous. A first sync of a folder with hundreds of files might be better
+   confirmed once. The default proposed is to confirm the first sync of a
+   folder, then read in automatically.
+5. **Trip dates from tracks.** Recorded tracks carry times. Should a synced
+   folder's tracks offer to set an undated trip's dates (Phase 10)?
+6. **Match unlocated photos to a track by time?** Moved here from Phase 11 (its
+   open question 1). With the trip's recorded tracks read in from the same
+   folder, a photo with no geotag taken at 14:32 can be placed where the track
+   was at 14:32. It needs a camera-clock offset control and a clear "placed
+   from the track, not the photo" label, and nothing is written to the photo.
+   Should it be part of this phase?
+7. **Order.** This phase needs only Phases 3, 10 and 11. Should it be built
+   straight after Phase 11, ahead of Phases 8 and 9?
+
+
+
+\newpage
+
+\notespage
+
+\newpage
+
+## Phase 13: Video, Flythroughs and Sharing — Requirements — `SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING` {#spec-phase-13-media-flythroughs-sharing}
+
+**Version:** — · **Status:** unspecified · **Slug:** `phase-13-media-flythroughs-sharing`
+
+### Requirements {#requirements-phase-13-media-flythroughs-sharing}
+
+
+Status: requirements only (12 November 2026), from the owner's direction.
+Mostly investigation deliverables at this stage, like Phase 9, because the
+central questions are which renderer, which terrain and tile data, and which
+video encoder can be used under the project's licence and policies. Not
+designed. Its design waits until Phases 11 and 12 are built and tested.
+
+Depends on Phase 7 (terrain), Phase 11 (linked folders and photos) and
+Phase 12 (owned files written into a linked folder).
+
+#### Introduction
+
+The owner's direction, 12 November 2026:
+
+> Sharing routes onto social media will be a further step, with flythroughs
+> being created, so storing images, videos etc. organised becomes even more
+> important.
+
+A **flythrough** is a short video that flies the map along a route or track,
+over the terrain, with the trip's photos and videos appearing at the places
+they were taken. It is the kind of thing people share after a trip. This phase
+makes them, adds video to what a linked folder holds, and gives the user a way
+to share the result.
+
+The trip's folder on disk (Phases 11 and 12) is where all of it is kept. Videos
+are read from it, and what this phase produces is written into it as owned
+files, under the rules of ADR 0020 §5.
+
+##### What the codebase and the project's policies establish
+
+- **The map is 2D.** Leaflet draws raster tiles and has no camera tilt or
+  terrain. A flythrough needs a 3D renderer. That is a new dependency, and the
+  licence check comes first (`licensing.md`).
+- **Terrain heights exist, as data.** Phase 7 reads the open Terrain Tiles
+  dataset (`src/main/terrain/terrainStore.ts`) in its `skadi` height-file
+  layout, for profiles. A 3D renderer usually wants terrain as image tiles. The
+  same dataset publishes those, but it is a separate download with its own
+  size and caching cost.
+- **Base-map tiles have usage terms.** A video renders thousands of tile views.
+  The public OpenStreetMap tile servers' usage policy is not written for that.
+  Which tile sources may be used to render a video that is then published is a
+  licensing question, not a technical one.
+- **No accounts, no cloud dependency** (`licensing.md`, ADR 0007). Posting to a
+  social network through its API needs an app registration and secret keys,
+  which cannot be kept secret in GPL source. It also needs an account per user,
+  and terms that change. Sharing has to work without TrailRT holding anyone's
+  account.
+- **macOS has a share sheet**, and Electron exposes it (`ShareMenu`). It hands a
+  file to whatever the user has installed, including the social apps, Messages
+  and AirDrop, with no account in TrailRT.
+- **Phase 11 already indexes video files** (`kind = 'video'`) and counts them,
+  without opening them.
+- **Photos carry their location.** Sharing a photo as it is shares where it
+  was taken, and a route that starts at home shares where the user lives.
+
+#### Requirements
+
+##### Requirement 1: Video in linked folders {#req-phase-13-media-flythroughs-sharing-1}
+###### Acceptance criteria
+
+1. Phone videos (`.mov`, `.mp4`, `.m4v`) in a linked folder SHALL be read for
+   their recorded location and capture time, and placed on the map like
+   photos, distinguished from them.
+2. THE preview box (Phase 11 Requirement 6) SHALL show a video's poster frame,
+   duration and details. Playing it SHALL open it in the default app, unless
+   the design shows in-app playback can be done without loading the file into
+   the renderer by path.
+3. Videos SHALL follow every Phase 11 rule for photos: never written, read
+   only as much as needed, not-downloaded iCloud files not forced to download,
+   and missing location kept missing.
+
+##### Requirement 2: Flythroughs (investigation first) {#req-phase-13-media-flythroughs-sharing-2}
+**Deliverable:** a findings document, then the feature if the findings
+support it.
+
+###### Acceptance criteria
+
+1. THE investigation SHALL compare 3D map renderers that can tilt the camera
+   over terrain, run inside the renderer process under the existing CSP or a
+   documented change to it, and carry a licence compatible with GPL-3.0.
+2. IT SHALL establish which terrain and base-map sources may lawfully be used
+   to render a video for publication, and whether they can be cached for
+   offline rendering.
+3. IT SHALL compare ways to encode the video: the WebCodecs encoder built into
+   Electron's Chromium, with a container writer, against a bundled encoder such
+   as FFmpeg. It SHALL cover licence, size, signing under the hardened runtime
+   (the ADR 0013 amendment), and speed.
+4. IT SHALL measure the time to render a two-minute 1080p flythrough on the
+   target hardware.
+5. THE feature, if built, SHALL let the user pick a route or track, the
+   length, the aspect (landscape, portrait for stories, and square), and which
+   photos and videos appear. It SHALL render to a video file, show progress,
+   and be cancellable.
+6. A flythrough SHALL be rendered on this Mac. No cloud rendering service.
+
+##### Requirement 3: Sharing {#req-phase-13-media-flythroughs-sharing-3}
+###### Acceptance criteria
+
+1. THE user SHALL be able to share a flythrough video, a still map image of a
+   route or track, and its GPX file, through the macOS share sheet.
+2. TrailRT SHALL NOT hold social network accounts, tokens or keys, and SHALL
+   NOT post on the user's behalf. Sharing hands a file to the app the user
+   chooses.
+3. Everything produced for sharing SHALL be written as owned files into the
+   trip's linked folder, in a subfolder for them, so it is kept with the trip.
+   The design decides the name.
+
+##### Requirement 4: Privacy when sharing {#req-phase-13-media-flythroughs-sharing-4}
+###### Acceptance criteria
+
+1. THE user SHALL be able to set privacy zones, places such as home, around
+   which shared routes, tracks and flythroughs are trimmed or blurred. The
+   design decides which.
+2. Photos included in anything shared SHALL have their location removed from
+   the shared copy by default. The original is never touched (ADR 0020 §5);
+   only the copy written for sharing differs.
+3. BEFORE anything is shared THE app SHALL show what it contains: the places
+   it reveals, and whether photo locations are kept or removed.
+
+#### Out of scope
+
+- **Posting through social network APIs**, and any TrailRT account
+  (`licensing.md`).
+- **Editing videos**, beyond choosing which appear in a flythrough.
+- **Cloud rendering or storage.**
+
+#### Unresolved questions for the owner
+
+1. **Which networks matter most?** That decides the aspect ratios and lengths
+   to offer first (for example 9:16 under a minute for stories, 16:9 for
+   longer videos).
+2. **Music or narration** in flythroughs? Music brings licensing questions of
+   its own.
+3. **Privacy zones:** trim the line near a zone, or blur the map there?
+4. **Is the share sheet enough**, given that it reaches any installed social
+   app, or is a specific network wanted despite the account and policy cost?
+
+
+
+\newpage
+
+\notespage
+
+\newpage
+
+## Phase 14: The library and the day companion — requirements — `SPEC-PHASE-14-LIBRARY-DAY-COMPANION` {#spec-phase-14-library-day-companion}
+
+**Version:** — · **Status:** unspecified · **Slug:** `phase-14-library-day-companion`
+
+### Requirements {#requirements-phase-14-library-day-companion}
+
+
+Status: requirements, design and tasks written 12 November 2026. **Built now,
+at the owner's request**, while Phase 11's tasks 12 and 13 wait: those two
+finish against the new panels rather than twice (design §1).
+
+#### Why
+
+The owner's verdict on the left panel: "it works but it's cumbersome and not
+fluid". A design review weighed eight directions and two rounds of mock-ups;
+the owner chose **Option E, the day companion**, worked through in ten views.
+
+- Review: `docs/design/library-panel/` (Options A to F)
+- The chosen design, view by view: `docs/design/library-panel/option-e/`
+  (`01-library.svg` to `10-photos-section.svg`)
+
+The design rests on one rule. **The left panel holds the trip's structure, the
+map holds place, and whatever is selected, the right panel answers "when is
+it, and what is around it".**
+
+What it fixes, from the review's diagnosis:
+
+| # | Today | After |
+| --- | --- | --- |
+| 1 | Five rows of controls before the first trip | One header row |
+| 2 | One object highlighted twice when it appears twice | One highlight |
+| 3 | Five levels of nesting in 280 px | One level inside a trip |
+| 4 | Containers and cross-trip views drawn alike | A rail of sections; views stay views (ADR 0004) |
+| 5 | Trips indistinguishable on their row | Dates, length and counts, or "Empty" |
+| 7 | No way to focus on one trip, while the map shows one | The panel opens one trip, as the map does |
+| — | A stop's timing and its place edited in two places | One card |
+| — | The trip's hours in the calendar drawer, apart from the plan | The right panel, beside it |
+
+#### Glossary
+
+- **Rail** — the column of section icons at the window's left edge.
+- **Section** — what the rail switches between: Trips, Routes, Tracks,
+  Waypoints, Photos, Imported, Recent.
+- **Trip page** — one trip in the left panel: header, actions, and the Plan,
+  Objects and Photos tabs.
+- **Day card** — one day of a dated trip on the Plan tab.
+- **Companion** — the right panel in its reading state.
+- **Hour scale** — a day drawn by the hour, in a Plan lane and a Recorded
+  lane, with photos as dots at the times they were taken.
+
+#### Requirement 1: The rail and its sections {#req-phase-14-library-day-companion-1}
+**User story:** As a user, I want to switch between my trips and my
+cross-trip lists in one click, without them being mixed in one tree.
+
+1. THE window SHALL show a rail at its left edge with Trips, Routes, Tracks,
+   Waypoints, Photos, Imported and Recent. Recent SHALL be shown as arriving
+   later, not as an empty list.
+2. SELECTING a section SHALL show it in the left panel. The section, and the
+   trip open in Trips, SHALL persist across restarts.
+3. Routes, Tracks, Waypoints and Imported SHALL be flat lists across the
+   visible trips, each row naming its trip, as the views of ADR 0004 do now.
+   They SHALL remain views: nothing is stored in them.
+4. THE rail SHALL be reachable from the keyboard and each icon SHALL have a
+   hint and an accessible name.
+5. THE library SHALL NOT have a "My Collection" root.
+
+#### Requirement 2: The trip list {#req-phase-14-library-day-companion-2}
+**User story:** As a user, I want to tell my trips apart at a glance, look
+through them without losing my place, and open one when I mean to.
+
+1. THE Trips section SHALL list trips in groups: coming up (dated, ending
+   today or later), ideas with no dates, then past trips by year; and folders
+   with their trips.
+2. EACH trip row SHALL show its name and a second line: its dates, its length
+   and counts, or "Empty". A trip starting today or tomorrow SHALL say so.
+3. ONE header row SHALL hold search, a menu of options (sort, show archived),
+   and a menu to add (trip, folder, import, link a folder).
+4. SELECTING a trip SHALL select it and load it on the map, and the
+   companion SHALL show it as Requirement 4.2 describes. The list SHALL stay
+   as it is: selecting never replaces it with the trip page. The arrow keys
+   SHALL move the selection between trips the same way. *(Amended 13 November
+   2026 from "selecting a trip opens it", at the owner's request: the jump to
+   the trip page broke the flow of looking through trips. The flow is drawn
+   in `docs/design/library-panel/trip-list-flow/`.)*
+5. CREATING, renaming, duplicating, archiving, deleting and moving trips and
+   folders SHALL remain possible, by context menu and by drag.
+6. A trip SHALL open in place under its chevron, or with → and ←, showing
+   what is in it. Selecting something inside SHALL show it on the map and in
+   the companion, with the list still in view.
+7. OPENING a trip's page SHALL be its own step: a double-click, Return, the
+   selected row's arrow, or Open in the companion. ‹ Trips SHALL return to the
+   list with that trip selected, the same rows open and the same scroll
+   position.
+
+#### Requirement 3: The trip page {#req-phase-14-library-day-companion-3}
+**User story:** As a user, I want one trip's plan, contents and photos in one
+place, with nothing nested more than a level deep.
+
+1. THE trip page SHALL show the trip's name, dates and length, a row of
+   actions (link a folder, import, export, more), and three tabs: Plan,
+   Objects and Photos, with counts.
+2. FOR a dated trip, Plan SHALL show one card per day with its stops and
+   drives and their times, and each day's driving and photo count. Items not
+   in the plan SHALL follow.
+3. FOR an undated trip, Plan SHALL say there is no plan yet and list the
+   trip's objects.
+4. OBJECTS SHALL list the trip's routes, tracks and waypoints, with
+   multi-selection, rename, the context menus, and the batch actions of
+   Phase 5.
+5. PHOTOS SHALL show the trip's photos grouped by the day they were taken,
+   and its linked folders with their state.
+6. AN object SHALL be highlighted once, in the place it was clicked.
+
+#### Requirement 4: The companion {#req-phase-14-library-day-companion-4}
+**User story:** As a user, I want to see when the thing I selected happens and
+what is around it.
+
+1. WITH no trip open, the companion SHALL show the year with each trip's days
+   marked, and what is planned for today and tomorrow.
+2. WITH a trip selected, open or not, and nothing in it selected, it SHALL
+   show the trip's details: when it leaves, whether each day fits the daily
+   driving limit and whether the fuel lasts, the driving rules, and the
+   actions Places along the trip and Save to a calendar. It SHALL NOT repeat
+   the name, dates, days or stops the left panel shows. *(Amended 13 November
+   2026 from "every day side by side by the hour": the owner's rule of key
+   items on the left and details on the right, Requirement 11.)*
+3. WITH a day selected, it SHALL show that day by the hour in Plan and
+   Recorded lanes, with photo times, its photos, and controls to step to the
+   previous and next day.
+4. WITH a stop selected, it SHALL show how long the stay is, as a field, what
+   a change to it would move, the stop's notes, photos taken within a
+   kilometre, and nearby places from the offline data. *(Amended 13 November
+   2026, Requirement 11.)*
+5. WITH a drive selected, it SHALL show how it is travelled (following a
+   route, by road, or other transport) as a field, its distance, height and
+   road mix, and places along the way that can be added as stops. *(Amended
+   13 November 2026, Requirement 11.)*
+6. WITH a photo selected, it SHALL show its moment on its day and what it was
+   taken during. The preview box SHALL stay in the map's bottom-left corner
+   (Phase 11 Requirement 6).
+7. WITH a recorded track selected, it SHALL show its times and statistics in
+   the Recorded lane of its day. A track with no timestamps SHALL say it
+   cannot be placed on a day.
+8. FOR an undated trip, it SHALL offer a start date and time and say what
+   they will give. Nothing SHALL be timed without a date.
+9. THE hour scale SHALL span from an hour before the day's first event to an
+   hour after its last. Missing times SHALL stay missing: an untimed drive is
+   drawn as not timed, never as zero.
+
+#### Requirement 5: Editing {#req-phase-14-library-day-companion-5}
+**User story:** As a user, I want to change what I selected without losing
+any of today's editing tools.
+
+*(Amended 13 November 2026: a trip, a stop and a drive are edited where their
+details are shown, with no separate editor. See Requirement 11.)*
+
+1. A route's, track's, waypoint's or folder's companion card SHALL have an
+   edit control that opens its editor in the right panel: today's properties,
+   with everything they do now.
+2. A trip's, stop's and drive's details SHALL be fields in the companion,
+   editable where they are shown. They SHALL have no edit control and no
+   separate editor.
+3. BEFORE a stay is changed, the stop's details SHALL show what the change
+   would move on the following stops and days. Each change SHALL be one undo
+   step.
+
+#### Requirement 6: Retiring the calendar drawer {#req-phase-14-library-day-companion-6}
+1. THE calendar drawer of Phase 10 SHALL be removed once the companion's trip
+   view shows everything it showed, including export to a calendar file.
+2. THE drawer below the map SHALL keep the profile, the point table, places
+   along the way and the photo list.
+
+#### Requirement 7: The Photos section {#req-phase-14-library-day-companion-7}
+1. THE Photos section SHALL show photos across every trip as a grid, grouped
+   by trip, with Trip and Year filters (Phase 11 Requirement 4.6).
+2. SELECTING the section SHALL put the map in all-trips mode (Phase 11
+   Requirement 5.6). Selecting a photo SHALL show its trip and day in the
+   companion, with a control to open the trip at that day.
+3. THE grid SHALL stay responsive with 40,000 photos: it is virtualised, and
+   thumbnails are made only for what is on screen (Phase 11 Requirement 9.3).
+
+#### Requirement 8: Testing {#req-phase-14-library-day-companion-8}
+1. THE hour scale's layout, the trip grouping and the day assignment SHALL be
+   pure functions with unit tests.
+2. END-TO-END tests SHALL drive the new panels. The shared helpers change
+   first, so each spec changes as little as possible.
+3. EVERY behaviour the replaced tree had SHALL be covered again or recorded
+   as removed with a reason.
+
+#### Requirement 9: Items outside a trip {#req-phase-14-library-day-companion-9}
+Added 13 November 2026 from the owner's feedback on tasks 4 and 5: "You
+should be able to use the left panel when working with individual
+routes/waypoints/images that are not connected to a trip."
+
+**User story:** As a user, I want to keep a route, a waypoint, a recorded
+track or a folder of photos on its own, and work with it from its section,
+without first making a trip for it.
+
+1. ROUTES, tracks, waypoints and linked photo folders SHALL be able to exist
+   outside any trip.
+2. THE Routes, Tracks, Waypoints and Photos sections SHALL offer, with no trip
+   open, what makes sense there: a new route, a new waypoint, importing files,
+   and linking a folder. What they make is outside any trip.
+3. SELECTING an item outside a trip SHALL show it on the map, with the other
+   items outside a trip, and its card in the companion with its editor behind
+   the pencil. No trip page opens and the section stays where it was.
+4. A row in a section SHALL name its trip, or say "Not in a trip". Items
+   outside a trip SHALL be listed first.
+5. AN item SHALL move into a trip, and out of one to "Not in a trip", by its
+   context menu and by the batch Move. Each move SHALL be one undo step.
+   *(Drag was dropped as built: a section and a trip are never both in the
+   left panel, so there is nothing to drag between. Dragging onto a day of a
+   trip's plan is Requirement 12.7.)*
+6. IMPORTING SHALL put files where the user is: in a trip on its page,
+   outside any trip in a section, and in a new trip named after the file from
+   the trip list, as now.
+7. ITEMS outside a trip SHALL NOT be shown as a trip: not in the trip list,
+   the year view, trip search, the Move to Trip list's trips, or a trip
+   export. A backup SHALL keep them.
+
+#### Requirement 10: As drawn {#req-phase-14-library-day-companion-10}
+Added 13 November 2026, from the same feedback: the build follows the chosen
+mock-ups (`docs/design/library-panel/option-e/`), not an approximation of
+them.
+
+1. ROWS SHALL use the line icons of the mock-ups (route, track, waypoint,
+   folder, photo), never emoji.
+2. A dated trip's Plan SHALL draw each day as a card: the date and its
+   driving, distance and photos as the card's heading, and its stops and
+   drives as rows with their times on the right.
+3. THE Trips header SHALL be the section's name and count with the options
+   and add buttons, and the search field beneath it, as in view 1.
+4. EACH companion view SHALL match its mock-up's content and order. A
+   difference forced by the code SHALL be recorded in the design.
+
+#### Requirement 11: One place for each fact {#req-phase-14-library-day-companion-11}
+Added 13 November 2026 from the owner's feedback on the trip editor: "we're
+duplicating information between the left and right. Key items should be
+left, details right." Drawn in `docs/design/trip-editor/round-2/`.
+
+**User story:** As a user, I want each thing shown once, in the place I
+change it.
+
+1. THE left panel SHALL hold what a trip contains and its order, and the
+   changes to that structure: adding, removing, reordering and renaming.
+2. THE right panel SHALL hold the details of the one selected thing. Nothing
+   SHALL appear in both panels except the selection's name, as the right's
+   heading.
+3. THE trip's name SHALL be renamed in place in the trip page's header.
+4. EACH day card SHALL have Add. It SHALL open a search in place over the
+   trip's waypoints and routes, items outside a trip, routes, tracks and
+   waypoints in other trips, offline places and postcodes, and points of
+   interest along the route. The companion SHALL show what adding the
+   highlighted result would do before it is added.
+5. A stop SHALL be reordered by drag, within its day and between days, and
+   removed from the plan by ×. A removed stop's waypoint SHALL stay in the
+   trip, under Not in the plan.
+6. A trip's description and notes SHALL NOT be shown in the panels. They
+   SHALL be kept in the trip's data and its exports, and reached from the
+   trip's ⋯ menu, which also holds Remove the plan and Delete trip.
+7. COUNTS, status and the created date SHALL NOT be repeated in the right
+   panel. Import, export and linking a folder SHALL stay in the trip page's
+   header only.
+
+#### Requirement 12: Things made outside a plan {#req-phase-14-library-day-companion-12}
+Added 13 November 2026 from the owner's feedback: "a route/tracks/waypoints
+should be able to be defined outside a plan, and then included into a plan."
+Drawn in `docs/design/trip-editor/round-3/`.
+
+**User story:** As a user, I want to make a route, a track or a waypoint on
+its own, and put it into a trip's plan when I am ready.
+
+1. AN item SHALL be in one of three places: outside any trip (Requirement 9),
+   in a trip but not in its plan, or in the plan. It SHALL move inward and
+   back out one step at a time. Adding it to a day SHALL also put it in that
+   day's trip.
+2. A waypoint in the plan SHALL be a stop.
+3. A route in the plan SHALL be the drive between two stops, followed exactly
+   and linked, not copied: editing the route SHALL change the drive. If both
+   its ends are within 1 km of the stops either side, it SHALL replace the
+   drive planned by road. If not, TrailRT SHALL say so and offer to add its
+   ends as stops, each joined by road to the stop beside it. Nothing SHALL be
+   joined without asking. *(The drawing offered "join it by road" as a second
+   choice. A leg runs between two stops, so a route whose ends are not stops
+   cannot be joined any other way; the choice is recorded in design §5.5.)*
+   *(Superseded 14 November 2026 by Requirement 13.4: a route is no longer
+   refused or questioned for its ends.)*
+4. A track SHALL be placed on the day and at the hour it was recorded, from
+   its own times. A track with no times SHALL say it cannot be placed on a
+   day (Requirement 4.7); TrailRT SHALL NOT invent a time for it.
+5. A route's details SHALL offer Put it in a plan: a trip, a day, and the
+   stop it follows, with what adding it would do.
+6. AN item in another trip SHALL be added by moving or copying it, chosen by
+   the user each time, with copying as the default.
+7. WHAT is in a trip but not in its plan SHALL be listed at the foot of the
+   Plan tab, and SHALL be dragged onto a day to add it there.
+8. TAKING a route out of the plan SHALL return its drive to by road and leave
+   the route in the trip.
+
+#### Requirement 13: Less strict, and quicker to start {#req-phase-14-library-day-companion-13}
+Added 14 November 2026 from the owner's feedback on tasks 8 to 11: "Right
+click on Routes says New Trip, not New Route. Right click on the map should
+have a pop up, with Add Waypoint, Start new Route. Don't be so strict on
+Trips, you shouldn't need a Waypoint to start/end. You should be able to drop
+in routes into a trip, and then if selecting two routes, waypoints you can
+then link with creating a new route."
+
+**User story:** As a user, I want to start from wherever I am, build a trip
+from the routes I already have, and join them up without ceremony.
+
+1. A right-click in a list's empty space SHALL offer what that list makes: a
+   route in Routes, a waypoint in Waypoints, an import in Tracks and
+   Imported, a linked folder in Photos, a route or waypoint on a trip's page,
+   and a trip or folder in the trip list.
+2. A right-click on the map's ground SHALL offer Add a Waypoint Here and
+   Start a New Route Here, made where the user is (Requirement 9.2). Routes,
+   tracks and waypoints on the map keep their own menus.
+3. A stop SHALL NOT need a waypoint. A stop may be a point where a route
+   starts or ends; it is shown in the plan but is not a waypoint in the trip.
+   A plan SHALL be able to begin and end with a route. *(Superseded the same
+   day by Requirement 14: a route is an entry of its own, so no point is made
+   for its ends. Points made before then still show.)*
+4. A route added to a plan SHALL go in whatever its ends: an end within 1 km
+   of the stop beside it joins that stop; otherwise a point stop is made at
+   that end and joined by road. *(Amends 12.3. Superseded by Requirement 14.2:
+   no point is made; the gap is a drive by road.)*
+5. WITH two routes or waypoints selected, Join with a New Route SHALL make a
+   route from the first one's end to the second one's start, by road when
+   routing is available, and Join with a Straight Line SHALL do the same with
+   a straight line. Each SHALL be one undo step.
+6. FILES dropped on the window while a trip's page is open SHALL be imported
+   into that trip by default (Requirement 9.6).
+
+#### Requirement 14: Routes and waypoints in any order {#req-phase-14-library-day-companion-14}
+Added 14 November 2026 from the owner's feedback on task 13: "Trips don't
+need a start / end point, you should just be able to drag/drop routes and
+waypoints into it, organise the order freely."
+
+**User story:** As a user, I want a trip's plan to be the routes and
+waypoints I put in it, in the order I choose.
+
+1. A plan SHALL be an ordered list of entries, each a waypoint or a route.
+   Routes and waypoints SHALL be dragged into it, from Not in the plan or onto
+   any day, including an empty one, and every entry SHALL be dragged to any
+   position. A plan SHALL need no stop to start or end it.
+2. A route in the plan SHALL be one entry: reached at its start, driven, and
+   left at its end. No stop or point SHALL be made for its ends.
+3. WHERE an entry starts within 1 km of where the one before it ends, nothing
+   SHALL join them. Otherwise the gap SHALL be a drive by road, planned as the
+   drive between two stops is, or shown as not planned.
+4. A route entry's driving SHALL count on the day it starts, towards the
+   daily limit and the day's totals.
+5. TAKING a route entry out of the plan SHALL leave the route in the trip,
+   and undo SHALL bring the entry back where it was.
+
+#### Requirement 15: Adding and removing days {#req-phase-14-library-day-companion-15}
+Added 14 November 2026 from the owner's feedback on task 15: "On the trip
+section, we need to be able to add a day easily and remove a day, on removing
+a day the objects should move to not in the plan."
+
+**User story:** As a user, I want to add a day to a trip, or take one away,
+in one step.
+
+1. EACH day card SHALL offer Add a Day After, and the plan SHALL end with
+   Add a Day. A new day SHALL start empty, at the plan's usual leaving time,
+   and the days after it SHALL move on by one.
+2. EACH day card SHALL offer Remove This Day. Its routes and waypoints SHALL
+   leave the plan and stay in the trip, under Not in the plan. Removing the
+   first day SHALL start the plan on the next day, keeping that day's date.
+   Each SHALL be one undo step.
+3. AN entry whose time is not known yet SHALL be shown on the day it follows
+   in the plan, in plan order, rather than apart from the days.
+
+#### Requirement 16: Right-click in the plan, and reordering within a day {#req-phase-14-library-day-companion-16}
+Added 14 November 2026 from the owner's feedback on task 16: "Not in the
+plan items need a right click to allow remove from plan, and delete.
+Allowing re-ordering also within a trip day with drag drop."
+
+1. AN entry of the plan SHALL have a menu with Take Out of the Plan, and
+   Delete Waypoint or Delete Route.
+2. DELETING a route or waypoint from the plan SHALL also remove every entry
+   of the plan that uses it, and unlink a drive that followed it, as one undo
+   step, so nothing in the plan points at something deleted.
+3. AN item under Not in the plan SHALL have a menu with Add to the End of
+   the Plan, Move Out of the Trip, and Delete (a track through the
+   confirmation that it cannot be undone).
+4. AN entry dropped on another entry SHALL take its place, in either
+   direction, so two entries in a day swap in one drag.
+
+#### Requirement 17: Region builds that can be tried again {#req-phase-14-library-day-companion-17}
+Added 14 November 2026 from the owner's report: "Downloading new regions,
+the download worked, but when building the new combined the system
+reported a SIGTERM message, we need to work out why, perhaps split the
+download & build to two processes, as we don't need to re-download every
+time." Amends Phase 7 Requirement 1.11.
+
+1. DOWNLOADING and building SHALL be separate steps. A region downloaded in
+   the last 30 days SHALL be reused rather than downloaded again, so a build
+   that fails is tried again without downloading, and the progress SHALL say
+   when a download is reused. A download SHALL be kept only once complete.
+2. EACH build SHALL keep its whole log, with when it started, the machine's
+   memory at its start and end, its stage, and how it ended, and a failure
+   SHALL say where the log is.
+3. A tool stopped by a signal TrailRT did not send SHALL say so, and that the
+   downloads are kept for another try.
+4. THE graph-building tools that development and the tests run SHALL be
+   signed as the app signs them, with the entitlement LuaJIT needs, and a
+   test SHALL fail if they are not. *(The cause of the report: macOS's own
+   crash report shows the tile builder killed with "Code Signature Invalid /
+   Invalid Page" inside LuaJIT while reading roads.)*
+
+#### Requirement 18: Routes that look movable, and photos as waypoints {#req-phase-14-library-day-companion-18}
+Added 14 November 2026 from the owner's feedback: "when working with the map
+& routes, when the cursor goes over a route that it could move, it should
+change to a hand perhaps. As it's difficult to change an existing route.
+Additionally, photographs could be used as waypoints."
+
+1. OVER the line of a route that can be shaped by dragging, the pointer SHALL
+   be an open hand, and the part of the line that would be taken SHALL be
+   shown faintly. WHILE it is being dragged the pointer SHALL be a closed
+   hand, wherever it is on the map.
+2. OVER any point that can be dragged (a route's points, a shaping point, a
+   waypoint) the pointer SHALL be an open hand, and a closed hand while it is
+   dragged. A route that is not selected keeps the pointing hand, because a
+   click selects it rather than moving it.
+3. A PHOTO with a location SHALL be usable as a waypoint, from the preview
+   box and by right-clicking it on the map. The waypoint SHALL be at the
+   photo's location, named from its file, with the photo's altitude when it
+   has one and none when it does not, the photo symbol, and its source
+   recorded as a photo. It SHALL go in the open trip, or else the photo's own
+   trip (outside any trip for a folder linked outside one), and be one undo
+   step. A photo with no location SHALL say why it cannot be used.
+4. A LOCATED photo SHALL be addable to the open trip's plan as a stop from
+   the same two places, in one undo step: on the day it was taken when the
+   plan has that day, and at the end of the plan otherwise.
+5. USING the same photo again in the same trip SHALL reuse the waypoint it
+   already made rather than make another at the same place.
+
+#### Changes to earlier phases
+
+- **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its
+  placeholder branches, persisted expansion) are replaced by Requirements 1
+  and 2 here. ADR 0021.
+- **Phase 10 Requirement 14** (a dated trip summarised in the tree) moves to
+  the trip list and the day cards. **Its calendar drawer** is replaced by the
+  companion (Requirement 6).
+- **Phase 11 §8** (the Linked folders group and the Photos view in the tree)
+  moves to the trip page's Photos tab and the Photos section.
+- **Phase 2 and 3: every route, track and waypoint belongs to a trip.**
+  Requirement 9 lets them stand outside one. ADR 0022.
+- **Phase 11 Requirement 1: a folder is linked to a trip.** A folder can now
+  be linked outside any trip too (Requirement 9.2).
+
+#### Out of scope
+
+- A ⌘K command palette (the review's eighth direction).
+- Pinned-trip tiles in the rail (Option F); possible later.
+- Recently Used, which stays "later".
+
+
+### Design {#design-phase-14-library-day-companion}
+
+
+Written 12 November 2026 against the code at commit `3c30338` (Phase 11
+tasks 1 to 11). Amended 13 November 2026 with the owner's feedback on tasks 4
+and 5: items outside a trip (§5.4) and building to the drawings (§4.6); and
+the same day with the trip list flow (§4.7); and later that day with one
+place for each fact (§4.8, §4.9) and things made outside a plan (§5.5),
+drawn in `docs/design/trip-editor/round-2/` and `round-3/`. The mock-ups are `docs/design/library-panel/option-e/`; this
+document says how they are built on what exists.
+
+#### 0. The shape
+
+```
+ rail │ left panel: structure │      map: place       │ right panel: time
+──────┼───────────────────────┼───────────────────────┼────────────────────
+ Trips│ trip list ⇄ trip page │ the open trip, or all │ companion (reading)
+ Rts  │   Plan · Objects ·    │ trips' photos in the  │   ⇄ editor (pencil):
+ Trks │   Photos tabs         │ Photos section        │   today's properties
+ Wpts │ flat lists for the    │                       │
+ Phot │ cross-trip sections   │                       │
+```
+
+Two choices keep this from being a rewrite:
+
+- **The right panel's editors are today's properties panel.** Route snapping,
+  road data, the profile, track editing and the trip and folder fields are
+  rich and tested. The companion is a reading view in front of them; its
+  pencil opens them unchanged.
+- **The hour scale is the Phase 10 calendar's layout.**
+  `renderer/features/itinerary/calendarLayout.ts` already places a day's
+  blocks with zones, overlaps and the 45-minute minimum, and snaps dragged
+  stays. It moves to `shared/itinerary/` and gains the Recorded lane and photo
+  times. The calendar drawer's day, week and month views move into the
+  companion rather than being redrawn.
+
+#### 1. What this collides with
+
+| Existing | Collision | Resolution |
+| --- | --- | --- |
+| Phase 1 Requirement 4: a tree rooted at My Collection, placeholder branches, persisted expansion | The tree is replaced | Amended by ADR 0021. Expansion state gives way to the section, open trip and tab, persisted as settings (§3.3). |
+| ADR 0004: top-level Routes, Tracks… are views, not containers | They leave the tree | They stay views, now sections of the rail fed by the same queries (`libraryService.tree`'s view branches). |
+| Phase 5: multi-selection, keyboard model, batch move and delete, drag | Lived in `LibraryPanel` with `treeSelection.ts` | `treeSelection.ts` is generic over ordered rows and is reused by every list. Batch actions and dialogs are unchanged. Drag between trips: onto a trip row in the list, or onto "‹ Trips" which opens the list. |
+| `selectionStore`: one anchor, its trip loaded on the map | A selected **day** is not an object | Selecting a day selects its trip and sets `companionStore.day`. The trip stays the anchor, so the map's one-trip rule holds. |
+| `select(null)` clears the map | Selecting the Photos section clears the selection | Unchanged: the Photos section is all-trips mode (Phase 11 §9), which shows no single trip. |
+| Phase 10 calendar drawer | The companion shows the same hours | The drawer's three views move into the companion (§5.2); `planDrawer: calendar` goes. Places along the way stays a drawer. |
+| Phase 10 Requirement 14: a dated trip summarised in the tree | No tree | The trip list's second line uses `tripSummary`; the day cards use `itineraryTreeChildren`'s grouping logic, extracted (§3.1). |
+| Phase 11 §8: Linked folders row, Photos view and its filters in the tree | No tree | The trip page's Photos tab and the rail's Photos section. `libraryService`'s photo filter is reused for the section's folder groups. |
+| Phase 11 photo selection lives in `photoStore`, apart from `selectionStore` | The companion must know which was chosen last | `companionStore.focus` records the last of: object, day, photo (§4.3). |
+| End-to-end tests: about 100 references to tree rows across 11 specs | Every spec that creates a trip goes through the tree | `tests/e2e/helpers.ts` gains the new verbs first (`createTrip`, `openTrip`, `openSection`, `rowFor`), and specs move to them task by task (§7). |
+
+#### 2. Accessibility and roles
+
+The tree's `role="tree"` was right for a tree. The new panels are lists:
+
+- the rail is a `tablist` of `tab`s controlling the left panel (`tabpanel`);
+- the trip list, section lists and Objects tab are `listbox`es with
+  `aria-multiselectable` where batch actions apply, rows are `option`s;
+- the trip page's tabs are a `tablist`;
+- day cards are `group`s labelled with the date; their rows are `option`s.
+
+The roving tab stop and arrow keys of Phase 5 carry over through
+`treeSelection.ts`, which needs only an ordered list of rows.
+
+As built (task 4): the lists keep `role="tree"` and `treeitem`. A trip's
+page holds day groups and linked folders that expand, which is a tree, and
+one component draws every list (§4.2), so they share one role. The rail is a
+`tablist` of `tab`s as planned. End-to-end tests that find rows by name kept
+working because of this.
+
+#### 3. Data
+
+##### 3.1 Pure modules (shared, unit tested)
+
+- `shared/itinerary/calendarLayout.ts` — moved from the renderer unchanged; the
+  renderer path re-exports it until its last importer moves.
+- `shared/itinerary/dayScale.ts` — a day's scale: the range (an hour before
+  the first event to an hour after the last, on whole hours, within the day),
+  the Plan lane (`placeDay`), the Recorded lane (tracks by `startedAt` and
+  `endedAt`, clipped to the day, lanes when they overlap), and photo times
+  (`takenLocal` with its offset; without one, read in the day's zone and
+  marked camera time). Untimed legs are returned as untimed, never zero.
+- `shared/library/tripGroups.ts` — trips into Coming up, Ideas and past
+  years, with "Today" and "Tomorrow" labels, from overview rows and today's
+  date.
+- `shared/itinerary/dayCards.ts` — the day-by-day rows of a dated trip, from
+  `itineraryTreeChildren`'s logic, as data rather than tree nodes. The tree
+  function is deleted with the tree.
+
+##### 3.2 New channels
+
+| Channel | Returns | Why |
+| --- | --- | --- |
+| `trips:overview { includeArchived }` | `TripOverview[]`: id, name, folder, status, start and end date, days, distance, counts of routes, tracks, waypoints, photos and linked folders, updated | One call for the trip list and the year view. Built in `libraryService` beside the tree it replaces, reusing `itineraryService.listAll`. |
+| `photos:forTrip { tripId }` | `Photo[]` of every linked folder of the trip, taken order | Day cards' photo counts, the Photos tab, the hour scale's photo times. |
+
+Both are zod-validated, preload by name, and added to the bridge's exact
+namespace test.
+
+##### 3.3 Settings
+
+`librarySection` (`'trips' | 'routes' | 'tracks' | 'waypoints' | 'photos' |
+'imported'`), `openTripId` (`string | null`, ignored when the trip is gone),
+`tripTab` (`'plan' | 'objects' | 'photos'`). `expandedNodeIds` stays in the
+schema for one release so an older build can still read it, and is no longer
+written.
+
+#### 4. Renderer
+
+##### 4.1 Stores
+
+- `navStore` — section, open trip, trip tab; open and back; persisted
+  through `settings:set`. Opening a trip selects it.
+- `companionStore` — `day: string | null`, `editing: boolean`, `focus:
+  'object' | 'day' | 'photo'`. Cleared when the open trip changes.
+- `photoStore` gains `tripPhotos` from `photos:forTrip`.
+
+##### 4.2 Left panel — `features/library/`
+
+| Component | From the mock-up |
+| --- | --- |
+| `SectionRail.tsx` | the rail |
+| `LeftPanel.tsx` | switches on the section |
+| `TripList.tsx` | view 1, left |
+| `TripPage.tsx`, `PlanTab.tsx`, `DayCard.tsx`, `ObjectsTab.tsx`, `PhotosTab.tsx` | views 2 to 9, left |
+| `SectionList.tsx` | Routes, Tracks, Waypoints, Imported |
+| `PhotosSection.tsx` | view 10, left |
+| `libraryMenus.ts` | the context menus, extracted from `LibraryPanel.tsx` so every list builds them the same way |
+
+As built (task 4):
+
+- `LibraryPanel.tsx` became `LibraryList.tsx` (`git mv`): the same selection,
+  keyboard, drag, rename and context menus, drawn from a root it is given.
+  `libraryRoots.ts` builds the roots: the trip list (grouped by
+  `tripGroups`, folders after), a trip's contents, and each cross-trip view.
+  The context menus stayed in `LibraryList` rather than moving to
+  `libraryMenus.ts`: with one component drawing every list, they are already
+  built the same way everywhere.
+- `TreeRow.tsx` stays, with two-line trip rows and group headings. The main
+  process still builds the tree; the renderer picks the part each list shows,
+  so `library:tree` is unchanged and the My Collection root is simply not
+  drawn.
+- The header is one row: search, Import, Library options (sort, objects sort,
+  Archived) and More (new trip or folder, import, export, link a folder). A new
+  trip or folder is asked for through `navStore.ask`, which the mounted list
+  takes once and names in place.
+- A trip's page header has Back, the name (click to select the trip, double
+  click to rename), its dates, and its actions; More adds New Route, New
+  Straight-Line Route and New Waypoint, which empty space on the page offers
+  too. Dragging onto Back opens the list for a drop onto another trip.
+- Group headings accept a dropped trip or folder as "move to the top level".
+- Context menus are drawn into the document body above the map: a menu opened
+  near the panel's edge extends over the map, whose panes covered it.
+- Expansion of headings, folders and days still uses the persisted
+  `expandedNodeIds`; it is not removed as §3.3 first said.
+
+##### 4.3 Right panel — `features/companion/`
+
+`CompanionPanel.tsx` chooses what to show:
+
+| Focus | Shows | View |
+| --- | --- | --- |
+| no trip open | `YearView` | 1 |
+| trip, nothing narrower | `TripView` (the calendar's week, and month as a toggle) | 2 |
+| day | `DayView` (`HourScale`) | 3 |
+| object: stop waypoint | `StopCard` + `DayView` + photos here + nearby | 4 |
+| object: route that is a leg | `DriveCard` + `DayView` + along the way | 6 |
+| object: route not in the plan, waypoint, folder | its card, and its day when it has one | — |
+| object: track | `TrackCard` + its day's Recorded lane, or "no timestamps" | 8 |
+| photo | `PhotoMoment` + `DayView` | 7, 10 |
+| undated trip | `UndatedPrompt` | 9 |
+
+With `editing`, the panel shows the editor instead: `RouteProperties`,
+`TrackProperties`, `WaypointProperties`, the trip and folder fields, or the
+stop editor (§5.3). Back returns to the card.
+
+As built (task 6):
+
+- `companionView.ts` chooses the view from the selection, the open trip, the
+  editing flag and whether the itinerary store has answered for the trip. A
+  trip whose plan has not answered shows "Loading…" rather than guessing
+  dated or undated. (A trip still selected after Back gave way to the year;
+  task 7 replaced that rule, see §4.7.)
+- `companionStore.editing` stays on while the selection moves between
+  objects, so editing several in turn takes one press of the pencil. It goes
+  off when nothing is selected or another trip opens.
+- `YearView` marks each trip from its start to its end, or only its start
+  when the end is unknown (`shared/library/yearMarks.ts`). Its today and
+  tomorrow cards read the first stop and leaving time from the overview,
+  which gained `startPlace`, `startTime` and `driveSeconds` for it.
+- `TripView` draws the days on one window of hours (`tripHours`, the widest
+  of the days' own ranges), with drives, stays, the Recorded lane as a thin
+  bar and photo times as dots. Days and Month are a toggle. Places along the
+  trip opens the drawer below the map; Save to a calendar writes the `.ics`
+  file as the editor's button does.
+- The drawer's week grid, day list, Earlier and Later, and Go to start are
+  not carried over: a trip's days are all shown at once, which is what the
+  week was used for. The drawer's day view becomes the day view of task 19.
+- `UndatedPrompt` is built here rather than in task 19, because Plan by date
+  left the trip properties with it.
+
+##### 4.4 The map
+
+Unchanged, except: the open trip is what `geometryStore` shows (opening a trip
+selects it, so this already holds), and the selected day draws its drives in
+the selection colour.
+
+##### 4.5 The trip page, as built (task 5)
+
+- `TripPage.tsx` holds the header (moved from `LeftPanel`) and the Plan,
+  Objects and Photos tabs. Plan and Objects are `LibraryList`s over roots
+  from `planRoot` and `objectsRoot`, so selection, multi-selection, keyboard,
+  drag and menus are the shared ones.
+- `planRoot` reads the itinerary view, the trip's geometry and its photos in
+  the renderer and builds the days with `dayCards`, so recorded tracks land on
+  their day and each day says its driving and its photos. An undated trip's
+  Plan lists its objects flat under a "No plan yet" note whose button selects
+  the trip, where the start date is set.
+- The trip's geometry now reloads on every library change (it fed only the
+  map before), because the tabs read the objects' names from it.
+- The Photos tab lists the linked folders (from the tree's trip node), then
+  the trip's photos by the wall-clock day they were taken, fetched with
+  `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
+  view. The tab is not virtualised: a trip's photos are hundreds, not the
+  library's tens of thousands, which is the Photos section's case (task 21).
+- Linking a folder opens its trip on the Photos tab, where the new folder is.
+
+##### 4.6 As drawn (Requirement 10)
+
+The tree rows of tasks 4 and 5 are close to the mock-ups in structure but not
+in look: emoji glyphs, day groups drawn as expandable rows rather than cards,
+and the search field where the section's title should be. Task 20 closes the
+gap: `TreeRow` takes a lucide icon per kind (the `Route`, `Activity`,
+`MapPin`, `Folder` and `Camera` line icons the mock-ups use), a day group
+draws as a card with its heading on a band, and the Trips header becomes the
+title, count, options and add, with search beneath. The companion is built to
+the mock-ups from the start (tasks 6, 9, 10 and 19).
+
+##### 4.7 The trip list flow (Requirement 2.4, 2.6, 2.7)
+
+Owner feedback on 13 November 2026: a click on a trip brought up its routes,
+which was right, but swapped the list for the trip page, which ruined the
+flow of looking through trips. Drawn in
+`docs/design/library-panel/trip-list-flow/` and approved before building.
+
+- **Selecting is not opening.** `LibraryList` no longer calls
+  `navStore.openTrip` on a click. The click selects the trip, and selection
+  already loads it on the map (`selectionStore.ensureGeometry`) and its plan
+  in `itineraryStore`.
+- **The companion follows the selection.** `companionView` lost its `section`
+  input and the rule that showed the year with something still selected back
+  at the list. A selected trip shows by the hour whether or not it is open;
+  with nothing selected, the open trip shows; with neither, the year.
+  `OpenTripButton` sits beside the pencil in `TripView` and `UndatedPrompt`
+  while the trip is only selected.
+- **Trips open in place.** `tripListRoot` keeps each trip's children, the
+  same nodes the trip used to have in the Phase 1 tree, so the chevron, → and
+  ← open it, and what is inside selects, drags and has its context menu as it
+  does anywhere else.
+- **Opening is its own step.** `TreeRow` takes an optional `onOpen`; given,
+  a double-click opens rather than expands, and the selected row shows an
+  arrow, labelled "Open {trip}". Return on a trip row opens it.
+- **Back is where you were.** `navStore.backToList` closes the page and
+  selects the trip that was open. Expanded rows were already kept in
+  `libraryStore.expanded`; `LibraryList` now records its scroll position per
+  root on scroll and restores it on mount, because the list unmounts while a
+  trip page is open. `closeTrip` stays for the cases that should not select,
+  a deleted trip and a new one being named.
+- **The year is one gesture away.** Since Back leaves a trip selected,
+  Escape on a single selection now clears it (a batch still collapses to its
+  anchor), and a click on the list's empty space does the same. Either brings
+  the year back on the right.
+
+##### 4.8 Details on the right (Requirement 4.2, 4.4, 4.5, 5, 11)
+
+The companion stops repeating the left panel. What it shows is decided by
+`companionView` as before; three of its views change.
+
+- **A trip** (`TripDetails`, replacing the hour grid of `TripView`): when it
+  leaves (`itinerary.update` start date and time), one line saying whether
+  every day fits the daily limit and whether the fuel lasts (from the
+  timeline's day totals and `rangeCheck`), the driving rules as fields (limit,
+  vehicle, range, reserve, later days' leaving time), and Places along the
+  trip and Save to a calendar. The heading is "This trip", not its name. ⋯
+  holds Description and notes (a small dialog over the trip's two text
+  fields), Remove the plan and Delete trip. An undated trip keeps
+  `UndatedPrompt`.
+- **A stop** (`StopDetails`): shown when the selection is a waypoint that is a
+  stop in the plan of the trip it belongs to. The stay is the field (hours
+  and minutes, or days and the leaving time for a day-stay). While it is
+  being changed, a line says what would move: the next stop's arrival and
+  whether later days change, from `computeTimeline` run in the renderer on
+  the edited stops. Notes for the stop, photos taken within a kilometre (the
+  trip's photos already in `photoStore`), and nearby places. ⋯ holds Edit the
+  place, which opens today's waypoint editor.
+- **A drive** (`DriveDetails`): shown when the selection is the route of a
+  leg. How is a field: follow a route (`linkLeg`), by road or other transport
+  (`setLegMode`). Distance, height and road mix come from the route as the
+  route card has them; places on the way open the drawer's POI panel for the
+  leg. ⋯ holds Edit the route.
+- **No pencil for these three.** Their fields save on change, one undo step
+  each, through the commands the itinerary editor already uses. Routes,
+  tracks, waypoints and folders outside a plan keep the pencil and today's
+  editors (Requirement 5.1).
+
+As built (task 9):
+
+- The consequence line is not a second run of `computeTimeline`. The zone
+  resolver is the main process's, so the renderer works from the timeline it
+  already has: a longer stay pushes later times back until a night's stay,
+  whose leaving time is fixed, takes it up on the same date
+  (`shared/itinerary/consequence.ts`).
+- The trip's check line covers the daily driving limit. Whether the fuel
+  lasts needs the fuel stations along the way, which Places along the trip
+  already finds; it is not repeated here.
+- Nearby places for a stop are task 19's, with the day cards that place
+  them. The stop shows how many photos were taken within a kilometre.
+- Until task 10 puts the plan's structure on the left, the trip's ⋯ keeps
+  Edit the Plan, which opens the itinerary editor. An undated trip's prompt
+  keeps its pencil for the same reason.
+
+##### 4.9 Structure on the left (Requirement 11)
+
+The Plan tab of a dated trip stops being a tree. `PlanCards` draws the days
+as the drawings do, from `dayCards`:
+
+- Rows are buttons that select their object. A stop row is draggable
+  (`application/x-trailrt-stop`) and has × to remove it from the plan
+  (`removeStop`); a drop between rows or on a card moves it (`moveStop` to
+  the index the drop names). Alt-↑ and Alt-↓ move a selected stop by one, so
+  reordering does not need a pointer.
+- Each card ends in Add. It opens `AddSearch` in place, which queries the
+  trip's waypoints and routes, items outside a trip, other trips' routes,
+  tracks and waypoints, offline places and postcodes (`search:query`), and
+  points of interest along the leg it would interrupt. The highlighted result
+  is the candidate; `addStore` holds it, and the companion shows
+  `CandidateDetails`: for a place or waypoint, how far it is from the stops
+  either side; for a route, whether its ends match, and its distance and
+  time at the planning speed. Distances are straight-line until the leg is
+  planned, and labelled so.
+- Not in the plan lists the trip's routes, tracks and waypoints that are on
+  no day; its rows drag onto a card.
+- The trip's name in the page header is renamed in place by double-click or
+  Return.
+- The tree's context menus stay on the Objects tab, which keeps the tree.
+
+As built (task 10):
+
+- A new stop goes after the selected stop when it is that day's, otherwise
+  at the end of the day (`shared/itinerary/planEdit.ts`). A plan with no
+  stops shows its first day to add to.
+- Add's search covers the trip's waypoints and the offline places and
+  postcodes. Items outside a trip and in other trips join it in task 11,
+  with moving or copying. Points of interest along the way are added from
+  Places along the trip, which already lists them with their detours, rather
+  than repeated in the search.
+- A drive with no route has nothing to select. Clicking it selects its trip,
+  so the plan stays loaded on the map, and focuses the drive in `planStore`;
+  the companion shows the focused drive first.
+- The itinerary editor is no longer reached from the trip. Everything it did
+  is in place: the leaving time and driving rules in the trip's details;
+  adding, reordering and removing stops on the left; the stay, arrive by,
+  leave at and notes in a stop's details; how a leg is travelled in a
+  drive's; Plan the drives by road in the trip's details.
+
+#### 5. Behaviour
+
+##### 5.1 Selection everywhere
+
+A click in the left panel, on the map, in the hour scale or in the photo grid
+selects the same thing everywhere: one highlight in the place it was clicked,
+the ring on the map, the companion's focus.
+
+##### 5.2 Retiring the calendar drawer
+
+| Drawer feature | Moves to |
+| --- | --- |
+| Week time grid | `TripView` |
+| Day view | `DayView` |
+| Month grid | `TripView`, as a toggle |
+| Drag to change a stay (`snapDuration`) | `DayView` and `TripView` |
+| Unknown-time list | under the scale, as now |
+| Export to a calendar file | `TripView` action |
+
+`uiStore.planDrawer`'s `calendar` kind and `CalendarPanel.tsx` are deleted when
+every row above is done and tested.
+
+##### 5.3 The stop editor
+
+One form for a stop: the itinerary stop's arrive by, stay, leave and notes,
+and its waypoint's name, position and symbol. A timing change is previewed by
+running `computeTimeline` on the edited stop list in the renderer (it is pure)
+and drawing the next stops as they would be. Done sends the itinerary update
+and the waypoint update as one batch, one undo step (`compose.batch`, as
+Phase 10's `withPlanning` does).
+
+##### 5.4 Items outside a trip (Requirement 9, ADR 0022)
+
+- **Data.** `trips.role` (`'trip' | 'loose'`), one holder at most, made on
+  first use by `tripService.looseTripId(db)`. `listTrips`, `searchTrips`, the
+  overview and the tree's Trips view skip it. The tree's view branches name a
+  row's trip "Not in a trip" when it is the holder, and sort those rows first.
+- **Sections.** Each section's header gains its own add menu: New Route and
+  Import in Routes, Import in Tracks, New Waypoint and Import in Waypoints,
+  Link a folder in Photos. Each targets the holder. `actions.startDrawingRoute`
+  and `startPlacingWaypoint` take the trip to draw into, rather than reading
+  the selection, so the section can name the holder.
+- **Selection.** Selecting an item outside a trip selects it as now; its
+  trip, the holder, loads on the map. `navStore.openTrip` is never called for
+  the holder, so the section stays where it was.
+- **Moving.** The Move to Trip lists gain "Not in a trip" first; moving to it
+  moves to the holder with the existing commands.
+- **Import.** `importService` takes the destination it is given. The left
+  panel passes the open trip on a trip page, the holder in a section, and
+  nothing from the trip list (a new trip named after the file, as now).
+- **Guards.** `trips:update`, `trips:delete`, `trips:duplicate`, archiving and
+  the itinerary channels refuse the holder with `VALIDATION`, so no route to
+  it exists even through a stale id.
+
+As built (task 8):
+
+- Migration 0007 adds `trips.role` with a check and a partial unique index.
+  `tripRepo.insertTrip` writes the column only for the holder, so the
+  column's default covers every other trip and the upgrade tests can still
+  write a pre-0007 trip. Those tests now insert their old rows with plain SQL,
+  as an old build would.
+- `tripService.looseTripId` makes the holder on first use; `trips:loose` hands
+  its id to the renderer, which keeps it in `libraryStore.looseTripId` to
+  name rows and the companion card "Not in a trip". Guards refuse renaming,
+  deleting, duplicating, archiving, foldering and planning it.
+- New routes and waypoints go where the user is (`actions.destinationTripId`):
+  the open trip, or the selected item's trip, in the Trips section; outside
+  any trip in a cross-trip section. The header's add menu offers New Route,
+  New Waypoint or Link a Folder by section. Import defaults its Destination
+  the same way, with "Not in a trip" as a choice.
+- An item moves in or out from its own menu's Move to list, through the
+  batch move, so each move is one undo step. Drag between a section and a
+  trip is not built (Requirement 9.5).
+- A full export and a JSON collection include the holder's items. The
+  collection carries the holder as a trip named "Not in a trip", so
+  importing it back makes an ordinary trip of that name: recorded rather
+  than changing the collection format.
+
+##### 5.5 Things made outside a plan (Requirement 12)
+
+- **Three places.** Outside any trip is ADR 0022's holder (task 8). In a trip
+  but not in its plan is `dayCards`' `notInPlan`. In the plan is a stop, a
+  leg's route, or a track placed by its own times.
+- **One undo step per addition.** Two new commands, each a single undo entry:
+  `itinerary:addPlaceStop` (a waypoint made from a place or postcode, then a
+  stop) and `itinerary:addRouteLeg` (a route brought into the trip by moving
+  or copying it if it is elsewhere, then linked as the leg, or with its ends
+  added as stops). Adding a waypoint uses `addStop`, after moving or copying
+  it into the trip in the same command.
+- **Matching.** A route's ends match when each is within 1 km of the stop
+  beside it (`shared/itinerary/routeFit.ts`, pure, with the 1 km as a named
+  constant). The leg already records `fits` for a linked route; the same
+  function decides it.
+- **Ends that do not match.** The drawing offered "join it by road" as a
+  second choice. A leg runs between two stops, so there is nothing to join a
+  route to except new stops at its ends. TrailRT therefore offers one thing:
+  add its ends as stops, named from the nearest offline place or "Start of"
+  and "End of" the route, each joined by road to the stop beside it.
+- **Tracks** are never stops. A track in the trip with times is placed by
+  `dayCards` already; adding one from elsewhere moves or copies it into the
+  trip. One with no times says it cannot be placed on a day, and nothing is
+  invented for it. The drawing's "say how long it took" is not built.
+- **Move or copy.** From another trip, a dialog asks, with Copy first.
+- **Out of the plan.** Taking a route out sets its leg back to by road; the
+  route stays in the trip.
+
+As built (task 11):
+
+- The 1 km rule is `ROUTE_FIT_M` in `shared/itinerary/routeFit.ts`, and the
+  itinerary's own check of a linked leg uses the same function, so a route
+  offered as joining two stops is never then refused for timing.
+- Ends added as stops are named "Start of" and "End of" the route. Naming
+  them from the nearest offline place would need the place search in the
+  service; it is left as a later refinement.
+- A track from another trip is moved, not copied: copying a recorded track's
+  points and times is not built, and the panel says so.
+- `trips:loose`, `routes.listAll`, `waypoints.listAll` and `tracks.listAll`
+  feed Add's search; a route's ends are fetched only when it is highlighted.
+
+##### 5.6 Less strict, and quicker to start (Requirement 13)
+
+- **Right-click.** `LibraryList`'s menu for its own space switches on the
+  list's root: each section offers what it makes, a trip's page a route or
+  waypoint, the trip list a trip or folder. The map listens for
+  `contextmenu` on its ground; a click that lands on a route, track or
+  waypoint (`.leaflet-interactive`, a marker) belongs to that layer's menu.
+  Nothing is offered while a drawing tool is active.
+- **A stop without a waypoint.** `itinerary_stops.waypoint_id` becomes
+  nullable, with `point_lat`, `point_lon` and `point_name` for a stop that is
+  only a point (migration 0008 rebuilds the table, as SQLite cannot drop
+  `NOT NULL` in place; a check keeps one of the two). `StopView.place` is
+  read from whichever is set, so the timeline, planning, day cards and the
+  companion need no second path; places that list waypoints skip a point.
+  A point stop is selected through `planStore`'s focus, as a drive without
+  a route is, since it has no object of its own.
+- **Any route goes in.** `addRouteLeg` with `ends: 'auto'` (now the default)
+  joins each end to the stop beside it when within `ROUTE_FIT_M`, and
+  otherwise makes a point stop at that end, named "Start of" or "End of" the
+  route, joined by road to its neighbour. An empty plan takes a route as its
+  first item.
+- **Join two.** `routes:join` takes two references, a route or a waypoint
+  each. The new route runs from the first's end (a route's last point, a
+  waypoint's place) to the second's start, in the trip they share, or the
+  first one's. By road it is routed and saved as `planLeg` does; without
+  routing it is refused with the reason, and Join with a Straight Line makes
+  a two-point line instead.
+- **Dropping files.** Import's default destination is already the open trip
+  (task 8), so files dropped while a trip's page is open go into it.
+
+##### 5.7 Routes and waypoints in any order (Requirement 14)
+
+- **An entry is a stop or a route.** Migration 0009 rebuilds
+  `itinerary_stops` again, adding `entry_kind` (`stop`, `route`) and
+  `entry_route_id`, with one check covering both kinds. A route entry has no
+  waypoint and no point. The table keeps its name; "stop" in the code now
+  means an entry.
+- **Where an entry is.** `stopPlace` is where it is reached (a route's
+  start) and `stopPlaceOut` where it is left (a route's end). Legs, planning
+  and the companion read the previous entry's place out and this entry's
+  place in, so a gap after a route is measured from its end.
+- **Joined.** An entry within `ROUTE_FIT_M` of where the one before ends is
+  `joined`: no leg, no plan issue, and a zero-time leg in the timeline
+  (`TimelineLeg.joined`). Anything else is a by-road gap, planned by
+  `autoPlanService` as between two stops.
+- **The timeline.** `TimelineStopInput.drive` makes an entry a drive:
+  reached at the arrival the leg gives, left after the route's driving time,
+  with no stay. A plan that begins with a route sets off along it at the
+  start time. `buildDays` counts a drive's time and length on the day it
+  starts, so the daily limit sees it.
+- **Day cards.** A route entry is one row of kind `drive`, its times start
+  to end, selecting the route; its details say what joins it either side and
+  offer Take Out of the Plan. A day card accepts a drop anywhere on it, at
+  the end of the day, so an empty plan can be filled by dragging.
+- **Points.** Point stops from task 13 are no longer made. Those already
+  made still read and show, and can be taken out.
+
+##### 5.8 Adding and removing days (Requirement 15)
+
+- **A day break is an entry.** Migration 0010 widens `entry_kind` to `day`
+  (a rebuild, as the CHECK changes). It has no place and takes no time; the
+  timeline starts the next calendar day there, after the day the entry
+  before it is left, at its own `depart_time` or the plan's usual one. Legs,
+  joins and planning skip it to the entry before.
+- **Which day an entry is on** is `entryDays` (`shared/itinerary/planEdit.ts`):
+  its own date when its time is known, otherwise the day it follows in the
+  plan. Without it, an entry after a drive not yet planned would sit apart
+  under Unknown times and could not be removed with its day. The day cards
+  use the same rule, so what a card shows is what removing it takes.
+- **Add a Day** puts a break after the day's last entry, or at the end;
+  what followed moves on a day. **Remove This Day** removes the day's
+  entries and its break as one batch; removing the first day also moves the
+  plan's start date and time to the next day's, so later days keep their
+  dates. A day that only a night's stay runs into has no break of its own;
+  removing it removes its entries.
+
+##### 5.9 Right-click in the plan, and reordering within a day (Requirement 16)
+
+- **Deleting from the plan** is `poiTripService.deleteItem`: the entries that
+  use the route or waypoint are removed, a leg that used the route is
+  unlinked, and the item deleted, in one batch. Deleting it elsewhere, from a
+  section, still leaves a plan entry showing it as deleted, as Phase 10 did;
+  the plan's own menu is the way to delete both.
+- **Menus.** A plan entry offers Take Out of the Plan and Delete; an item
+  under Not in the plan offers Add to the End of the Plan, Move Out of the
+  Trip (to Not in a trip, through the batch move) and Delete. A track's
+  delete goes through the same confirmation as the lists', since it cannot
+  be undone.
+- **Dropping on an entry takes its place.** A drag's data cannot be read
+  until the drop, so the dragged entry's index is kept while it moves; a
+  drop on an entry below lands after it, on one above lands before it. Other
+  drops keep the upper and lower halves.
+
+##### 5.10 Region builds that can be tried again (Requirement 17)
+
+- **What happened.** A three-county build from the development checkout was
+  killed partway through reading roads. macOS's crash reports (type 309,
+  `~/Library/Logs/DiagnosticReports/valhalla_build_tiles-*.ips`) say SIGKILL,
+  "Code Signature Invalid", namespace CODESIGNING, "Invalid Page", in
+  `lua_pcall` under `PBFGraphParser::ParseWays`. LuaJIT writes machine code
+  into ordinary pages; under the hardened runtime that needs
+  `allow-unsigned-executable-memory` (ADR 0013). The packaged app signs the
+  tools with it; the copy in `resources/valhalla/bin` had been re-signed with
+  the hardened runtime and without it. A small region can finish before
+  LuaJIT compiles a trace, which is why single counties had built.
+- **The fix.** `bundle-valhalla.sh` signs the two tools exactly as
+  `build/sign-mac.cjs` does, and `toolSigning.test.ts` reads their
+  entitlements on every `npm test`, as `verify:package` already does for
+  the app.
+- **Downloading and building apart.** Downloads go to `.part` and are
+  renamed only when whole, so a file under its final name is complete.
+  `cachedExtract` reuses one for 30 days; `pruneDownloads` removes older
+  ones and leftover `.part` files when a job starts. The merged file is
+  still removed after each build, as it is remade in seconds. The picker's
+  progress says "Using the downloaded …" for a reused file.
+- **The log.** `build.log`, beside the graph, holds the builder's whole
+  output, its command, the time, the machine's free memory at start and
+  end, the last stage reached and how it ended. A failure's message names
+  it. A SIGTERM, which TrailRT never sends to a build that was not
+  cancelled, is said to have come from outside.
+
+##### 5.11 Routes that look movable, and photos as waypoints (Requirement 18)
+
+- **Why shaping was hard to find.** Leaflet gives every interactive layer the
+  same pointing hand, so the selected route's shaping line
+  (`useRouteShaping`'s 16 px hit area), its handles and an unselected route
+  all looked alike, and nothing said the line could be dragged. The hit line
+  is SVG in its own pane (`interactivePane`), so it can take a class and
+  CSS: `.trailrt-shaping-hit` has `cursor: grab` and, on hover, a faint
+  stroke in the route's colour. A line drag adds `trailrt-shaping-drag` to
+  the map container until release or Escape, which makes the pointer
+  `grabbing` everywhere, since the pointer leaves the line as it drags.
+  Draggable markers carry Leaflet's `leaflet-marker-draggable`, which takes
+  `grab`; Leaflet already gives `grabbing` to a marker being dragged. The
+  routes themselves are drawn on canvas and keep the pointing hand: a click
+  there selects.
+- **A photo's waypoint.** `photoWaypointFields(photo)` in
+  `shared/photos/photoWaypoint.ts` is pure: null without a location;
+  otherwise the file's name without its extension, the location, the
+  altitude or null, the `photo` symbol, and a description naming the file
+  and when it was taken. The photo's link is not kept in the waypoint's
+  `metadata`, because that column is imported passenger data the Garmin
+  phase writes back out.
+- **Where it goes, and once.** `waypoints:fromPhoto { photoId, tripId? }`:
+  the renderer passes the open trip; without one the photo's folder's trip is
+  used, which is the holder for a folder outside a trip. A waypoint in that
+  trip with source `photo`, the same name and the same coordinates is the
+  one this photo made, and is returned with no new undo step.
+- **Into the plan.** Not by dragging: the Photos and Plan tabs of the trip
+  page are never on screen together, so there is nothing to drop on. Add to
+  the Plan sits beside Use as a Waypoint when a trip with a dated plan is
+  open. `photoStopIndex` in `shared/itinerary/planEdit.ts` puts it after the
+  last entry of the day it was taken, by `entryDays`, or at the end when the
+  plan has no such day or the photo no date. `itinerary:addPhotoStop
+  { tripId, photoId, index }` makes or reuses the waypoint and adds the stop
+  in one batch, then plans the legs.
+
+#### 6. Risks
+
+- **Scope.** The largest UI change since Phase 1. Mitigated by the order of
+  tasks: data and pure layout first, then the left panel, then the companion,
+  each verified before the next.
+- **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
+  checklist (task 23).
+- **Performance.** The Photos section and tab are virtualised; thumbnails are
+  made only for visible cells.
+
+#### 7. Tests
+
+- Unit: `dayScale`, `tripGroups`, `dayCards`, the moved `calendarLayout`
+  (its existing tests move with it), the two channels.
+- End-to-end: helpers first; then every spec that touched the tree; a new
+  `library.spec.ts` for the rail, the trip list, the trip page and the
+  companion's views; `photos.spec.ts` moves to the Photos tab and section.
+
+
+### Tasks {#tasks-phase-14-library-day-companion}
+
+
+Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
+after task 23 here, against the new panels.
+
+- [x] 1. Spec, ADR 0021 and the out-of-order build
+  - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
+    decision index in `.kiro/specs/README.md`; Phase 14 on the progress mindmap
+  - Done: written 12 November 2026 from the owner's choice of Option E in the
+    design review (`docs/design/library-panel/`)
+  - _Requirements: all, as the plan_
+
+- [x] 2. Pure layout: the day scale, trip groups and day cards
+  - Move `calendarLayout.ts` and its tests to `shared/itinerary/`, with a
+    re-export at the old path
+  - `shared/itinerary/dayScale.ts`: range, Plan lane, Recorded lane, photo
+    times (design §3.1)
+  - `shared/library/tripGroups.ts` and `shared/itinerary/dayCards.ts`
+  - Unit tests: the range is an hour either side on whole hours, within the
+    day; an overnight stay runs to the end; an untimed leg is untimed, never
+    zero; overlapping tracks take two lanes; a track with no timestamps is not
+    placed; a photo with no zone is camera time in the day's zone; trips group
+    as Coming up, Ideas and past years, with Today and Tomorrow; day cards
+    match the tree's current grouping for the Phase 10 fixtures
+  - Done: `calendarLayout.ts` and its tests moved with `git mv` (only the
+    calendar drawer imported it, so no re-export was needed);
+    `dayScale.test.ts` (11), `dayCards.test.ts` (7, including a check that the
+    days group exactly as the tree did), `tripGroups.test.ts` (7); the example
+    weekend is shared in `testViews.ts`. A day spent wholly in one place shows
+    08:00–18:00 rather than all 24 hours. `npm run verify` passes (1,958 unit,
+    154 end-to-end)
+  - _Requirements: [4.3](#req-phase-14-library-day-companion-4), [4.7](#req-phase-14-library-day-companion-4), [4.9](#req-phase-14-library-day-companion-4), [2.1](#req-phase-14-library-day-companion-2), [2.2](#req-phase-14-library-day-companion-2), [3.2](#req-phase-14-library-day-companion-3), [8.1](#req-phase-14-library-day-companion-8)_
+
+- [x] 3. Data: trip overview, a trip's photos, navigation settings
+  - `trips:overview` and `photos:forTrip` (design §3.2), schemas, preload,
+    bridge namespace test
+  - Settings `librarySection`, `openTripId`, `tripTab` with schema and defaults
+  - Unit tests: counts and dates for dated, undated, archived and empty trips;
+    photos of every folder of a trip in taken order; malformed payloads refused
+  - Done: `libraryOverview.test.ts` (5) against a real database, including a
+    half-planned trip whose end and length stay missing, never zero; the
+    trips channel joins the malformed-payload handler test; settings schema
+    tests for the three keys. The tree's plan building is shared with the
+    overview (`allPlans`). `npm run verify` passes (1,967 unit, 154
+    end-to-end)
+  - _Requirements: [1.2](#req-phase-14-library-day-companion-1), [2.1](#req-phase-14-library-day-companion-2), [2.2](#req-phase-14-library-day-companion-2), [3.5](#req-phase-14-library-day-companion-3), [4.1](#req-phase-14-library-day-companion-4)_
+
+- [x] 4. The rail and the left panel's lists
+  - `navStore`, `SectionRail`, `LeftPanel`, `TripList`, `SectionList`,
+    `libraryMenus.ts`; one header row with search, options and add menus
+  - Context menus, rename, drag and the Phase 5 multi-selection and keyboard
+    model on every list; the tree and its view branches removed
+  - End-to-end helpers first, then the specs that used the tree
+  - Unit tests: section and open trip persist; menus built the same for every
+    list
+  - Done: the rail, the one-row header and the trip list are in; a trip opens
+    into a page listing its contents (task 5 adds the tabs). `LibraryPanel`
+    became `LibraryList`, drawn from roots built in `libraryRoots.ts`, so
+    selection, keyboard, drag, rename and menus are shared by every list.
+    `libraryRoots.test.ts` (6) and `navStore.test.ts` (5). The end-to-end
+    helpers gained `showTripList`, `openTrip` and `tripAction`; eleven specs
+    moved to them, and `app.spec` tests the rail instead of My Collection.
+    Found on the way: menus opened near the panel's edge were covered by the
+    map, so menus now draw above it. `npm run verify` passes (1,978 unit, 155
+    end-to-end). Recorded in design §2 and §4.2
+  - _Requirements: [1.1–1.5](#req-phase-14-library-day-companion-1), [2.1–2.5](#req-phase-14-library-day-companion-2), [3.6](#req-phase-14-library-day-companion-3), [8.2](#req-phase-14-library-day-companion-8)_
+
+- [x] 5. The trip page
+  - Header, actions and tabs; Plan with day cards and Not in the plan; the
+    undated state; Objects with multi-selection and batch actions; Photos by
+    day with linked folders; drag onto "‹ Trips" to move
+  - Unit tests: tab counts; day cards for one-day, multi-day and undated
+    trips
+  - Done: `TripPage.tsx` with the header and the Plan, Objects and Photos
+    tabs; `planRoot`, `objectsRoot`, `linkedFoldersRoot` and `photosByDay` in
+    `libraryRoots.ts`, five more tests there (11 in all). Linking a folder now
+    opens its trip on the Photos tab. The undated trip's note says "Choose
+    dates…", not a second "Plan by date". `npm run verify` passes (1,983 unit,
+    155 end-to-end). Recorded in design §4.5
+  - _Requirements: [3.1–3.6](#req-phase-14-library-day-companion-3)_
+
+- [x] 6. The companion, its editors, and the trip's hours
+  - `companionStore`, `CompanionPanel` with the pencil to today's editors;
+    `YearView`; `TripView` with the days side by side, the month as a toggle,
+    Places along the trip and Save to a calendar; `UndatedPrompt`; the
+    calendar drawer retired (design §5.2)
+  - Unit tests: which view shows for each focus (design §4.3); the year's
+    marked days; the trip's hour range
+  - Done: `features/companion/` with `CompanionPanel`, `YearView`,
+    `TripView`, `UndatedPrompt` and `ObjectCard`; `companionView.test.ts`
+    (6), `yearMarks.test.ts` (3), two `tripHours` tests. The overview gained
+    the first stop, leaving time and driving for the year's cards. Blocks are
+    drawn at their real times (`exactTop`, `exactHeight`), not the drawer's
+    45-minute minimum, so a day reads as the mock-up does. The calendar
+    drawer and `CalendarPanel.tsx` are gone; its end-to-end tests now drive
+    the right panel, and a new one opens a trip from the year. Back at the
+    trip list the year shows even with an object still selected (superseded
+    by task 7: the companion now follows the selection). Ten specs
+    reach the editors through the pencil (`editSelection`) or the trip
+    page's More menu. `npm run verify` passes (1,994 unit, 156 end-to-end).
+    Recorded in design §4.3
+  - _Requirements: [4.1](#req-phase-14-library-day-companion-4), [4.2](#req-phase-14-library-day-companion-4), [4.8](#req-phase-14-library-day-companion-4), [5.1](#req-phase-14-library-day-companion-5), [6.1](#req-phase-14-library-day-companion-6), [6.2](#req-phase-14-library-day-companion-6), [10.4](#req-phase-14-library-day-companion-10)_
+
+- [x] 7. The trip list flow
+  - Owner feedback, 13 November 2026: the jump from the list to the trip
+    page on every click ruined the flow. Drawn first, in
+    `docs/design/library-panel/trip-list-flow/`, and approved
+  - Selecting a trip in the list selects it; the list stays. Trips keep their
+    contents in the list and open in place. Double-click, Return, the
+    selected row's arrow and Open in the companion open the trip page;
+    ‹ Trips comes back with the trip selected and the list scrolled where it
+    was (design §4.7)
+  - Unit tests: the companion follows the selection, not the left panel's
+    page; trip rows keep their contents; Back leaves the trip selected
+  - Done: `companionView` lost its `section` input and the rule that showed
+    the year with something selected; `OpenTripButton` in `TripView` and
+    `UndatedPrompt`; `TreeRow` takes `onOpen`; `LibraryList` handles Return
+    and remembers its scroll by root; `navStore.backToList`. The end-to-end
+    `openTrip` helper double-clicks, and `trip-list.spec.ts` drives the whole
+    flow. With Back leaving the trip selected, Escape on a single selection
+    and a click on the list's empty space clear it, so the year can be
+    reached again. Three older specs clicked a trip to open it and now
+    double-click or expect the list to stay. `npm run verify` passes (1,996
+    unit, 159 end-to-end)
+  - _Requirements: [2.4](#req-phase-14-library-day-companion-2), [2.6](#req-phase-14-library-day-companion-2), [2.7](#req-phase-14-library-day-companion-2), [4.2](#req-phase-14-library-day-companion-4)_
+
+- [x] 8. Items outside a trip
+  - The holder trip, its migration and guards; sections name "Not in a
+    trip" and list those first; each section's add menu; Move to; import
+    where the user is (design §5.4, ADR 0022)
+  - Unit tests: the holder is made once and never listed as a trip; guards
+    refuse it; moving out and back is one undo step each; import from a
+    section lands outside any trip
+  - Done: migration 0007 (`trips.role`, one holder by partial unique index);
+    `tripService.looseTripId`, `isLoose` and guards on update, move, archive,
+    duplicate, delete and planning; `trips:loose`; the sections list holder
+    items first as "Not in a trip"; new routes and waypoints go where the
+    user is; Move to on each item's menu; Import defaults by section; a full
+    export includes the holder's items. `looseTrip.test.ts` (5) and
+    `loose.spec.ts` (3). Drag between a section and a trip was dropped:
+    the two are never in the left panel together (Requirement 9.5 amended).
+    Three upgrade tests now write their old trips with plain SQL. `npm run
+    verify` passes (2,001 unit, 162 end-to-end). Recorded in design §5.4
+  - _Requirements: [9.1–9.7](#req-phase-14-library-day-companion-9)_
+
+- [x] 9. Details on the right
+  - `TripDetails` replaces the hour grid; `StopDetails` and `DriveDetails`
+    for a stop and a leg's route; no pencil for the three; ⋯ menus with
+    Description and notes, Remove the plan, Delete trip, Edit the place and
+    Edit the route (design §4.8, `docs/design/trip-editor/round-2/`)
+  - Unit tests: which view shows for a stop and a leg's route; the day-limit
+    and fuel line; the stay consequence from `computeTimeline`
+  - Absorbs the old stop editor task
+  - Done: `TripDetails`, `StopDetails` and `DriveDetails`, each with an
+    options ⋯; `TripView` and its hour grid removed. `companionView` gained
+    the stop and drive views and `editingRef`, so an editor opened for one
+    thing does not cover another's details. `shared/itinerary/consequence.ts`
+    works out what a stay change moves from the computed timeline (5 tests).
+    The itinerary editor's leg, stay, notes and settings controls are reused,
+    so nothing they did is lost. Until task 10 moves the plan's structure
+    left, the trip's ⋯ keeps Edit the Plan. Not built here: the fuel line
+    (the range check needs the places along the way, which Places along the
+    trip already finds) and nearby places for a stop (task 19's day cards).
+    `editSelection` reaches an editor through ⋯ where there is no pencil.
+    `npm run verify` passes (2,008 unit, 163 end-to-end). Recorded in design
+    §4.8
+  - _Requirements: [4.2](#req-phase-14-library-day-companion-4), [4.4](#req-phase-14-library-day-companion-4), [4.5](#req-phase-14-library-day-companion-4), [5.1](#req-phase-14-library-day-companion-5), [5.2](#req-phase-14-library-day-companion-5), [5.3](#req-phase-14-library-day-companion-5), [11.2](#req-phase-14-library-day-companion-11), [11.6](#req-phase-14-library-day-companion-11), [11.7](#req-phase-14-library-day-companion-11)_
+
+- [x] 10. Structure on the left
+  - `PlanCards` for a dated trip's Plan tab: rows that select, drag to
+    reorder, ×, Alt-↑/↓; Add in each card with `AddSearch` and the
+    companion's `CandidateDetails`; Not in the plan; rename the trip in the
+    header (design §4.9)
+  - `itinerary:addPlaceStop` as one undo step
+  - Unit tests: the drop index for a drag; the search's grouping; adding a
+    place is one undo step
+  - Done: `PlanCards` draws a dated trip's Plan tab as day cards (an
+    undated trip keeps its list); rows select, stops drag to reorder or move
+    with Alt and an arrow, and × takes one out of the plan. Add opens
+    `AddSearch` in the card, over the trip's waypoints and the offline places
+    and postcodes, and the companion's `CandidateDetails` shows what adding
+    the highlighted result would do. `itinerary:addPlaceStop` (one undo).
+    A drive with no route is focused through `planStore`, with its trip kept
+    selected so the plan stays loaded. Not in the plan's waypoints drag onto
+    a day. The trip's ⋯ no longer opens the itinerary editor; Plan the
+    drives by road moved to the trip's details. `planEdit.ts` (5 tests),
+    `addPlaceStop` (1), two companion rules; the roadtrip specs build and
+    reorder the plan from the left. `npm run verify` passes (2,015 unit, 164
+    end-to-end). Recorded in design §4.9
+  - _Requirements: [10.2](#req-phase-14-library-day-companion-10), [11.1](#req-phase-14-library-day-companion-11), [11.3](#req-phase-14-library-day-companion-11), [11.4](#req-phase-14-library-day-companion-11), [11.5](#req-phase-14-library-day-companion-11)_
+
+- [x] 11. Things made outside a plan
+  - `routeFit` (pure); `itinerary:addRouteLeg` with move or copy and ends as
+    stops; the route's Put it in a plan; drag from Not in the plan; Move or
+    copy dialog; taking a route out of the plan (design §5.5,
+    `docs/design/trip-editor/round-3/`)
+  - Unit tests: matching at 1 km; a route from another trip copied and
+    linked in one undo step; ends added as stops; a track is never a stop
+  - Done: `shared/itinerary/routeFit.ts` (the itinerary's own leg check now
+    uses it); `itinerary:addRouteLeg` and `itinerary:addWaypointStop`, each
+    one undo step, moving out of Not in a trip and asking move or copy from
+    another trip. Add searches this trip, Not in a trip and other trips, and
+    the companion says whether a route joins the stops, with Use it as this
+    drive or Add its ends as stops; Return never joins a route that does not
+    fit. A route's card has Put it in a plan. Routes drag from Not in the
+    plan onto a day; tracks do not, and say why. A track from elsewhere is
+    moved, not copied. `routeFit.test.ts` (2), four service tests, two
+    end-to-end tests in `loose.spec.ts`. The launch helper also waits for
+    day cards, since a dated trip can now reopen without a list on screen.
+    `npm run verify` passes (2,021 unit, 166 end-to-end). Recorded in
+    design §5.5
+  - _Requirements: [12.1–12.8](#req-phase-14-library-day-companion-12)_
+
+- [x] 12. Right-click where you are
+  - Each list's empty space offers what it makes; the map's ground offers
+    Add a Waypoint Here and Start a New Route Here (design §5.6)
+  - End-to-end: the Routes section's menu offers New Route; the map's menu
+    adds a waypoint where it was opened
+  - Done: `LibraryList`'s own-space menu switches on its root, a trip's
+    lists included; `MapView` listens for `contextmenu` on the ground and
+    leaves layers their menus; `actions.addWaypointAt`. `rightclick.spec.ts`
+    (2). `npm run verify` passes (2,021 unit, 168 end-to-end)
+  - _Requirements: [13.1](#req-phase-14-library-day-companion-13), [13.2](#req-phase-14-library-day-companion-13)_
+
+- [x] 13. A plan without waypoints
+  - Migration 0008: a stop's waypoint becomes optional, with a point (where,
+    and a name) instead; the timeline, planning, day cards, export and undo
+    read a stop's place from either. `addRouteLeg` puts any route in: an end
+    near the stop beside it joins it, otherwise a point stop is made there
+    (design §5.6)
+  - Unit tests: a plan that is one route; an end that does not match gets a
+    point stop, joined by road; undo restores; an upgrade keeps every stop
+  - Done: migration 0008 rebuilds `itinerary_stops` with an optional
+    waypoint and a point, a check keeping one; `itineraryService.stopPlace`
+    reads either, and planning, the timeline, the day cards, the tree summary
+    and undo use it. `addStop` takes a point; `addRouteLeg` defaults to
+    `auto`, joining an end to its neighbour within 1 km and otherwise making
+    a point stop "Start of" or "End of" the route; `match` still refuses. Point
+    rows have their own kind and are selected through `planStore`'s focus;
+    their details offer no place to edit. Return and drag no longer refuse a
+    route. Three service tests, the 0008 upgrade test, and a plan of one
+    route end to end. `npm run verify` passes (2,024 unit, 169 end-to-end)
+  - _Requirements: [13.3](#req-phase-14-library-day-companion-13), [13.4](#req-phase-14-library-day-companion-13)_
+
+- [x] 14. Join two with a new route
+  - `routes:join` from the first's end to the second's start, by road or as a
+    straight line, one undo step; Join with a New Route and Join with a
+    Straight Line on a selection of two (design §5.6)
+  - Unit tests: ends taken from a route's last and first points or a
+    waypoint; refused without routing unless straight
+  - Done: `poiTripService.joinWithRoute` and `routes:join`; Join with a New
+    Route and Join with a Straight Line on any list's selection of two
+    routes or waypoints, in list order; the new route is named "A → B",
+    selected, and one undo step. Without routing, by road says why and points
+    to the straight line. Dropped files go to the open trip by Import's
+    default (task 8); dropping itself is not driven end to end. Three service
+    tests, one end-to-end. `npm run verify` passes (2,027 unit, 170
+    end-to-end)
+  - _Requirements: [13.5](#req-phase-14-library-day-companion-13), [13.6](#req-phase-14-library-day-companion-13)_
+
+- [x] 15. Routes and waypoints in any order
+  - Migration 0009: an entry is a stop or a route (`entry_kind`,
+    `entry_route_id`); the timeline drives a route entry from its start to
+    its end and counts it on its day; an entry that starts where the one
+    before ends is joined, otherwise the gap is by road. `addRouteLeg` adds a
+    route as an entry and makes no points. Day cards show a route entry once;
+    drops land on rows or a day card, empty or not (design §5.7)
+  - Unit tests: a plan of one route is timed and counts its driving; a joined
+    entry has no drive between; taking an entry out and undoing restores it;
+    a route entry is one day card row
+  - Done: migration 0009; `stopPlaceOut`, `joined` and `StopView.drive`;
+    `TimelineStopInput.drive` and `TimelineLeg.joined`; `addRouteLeg` adds a
+    route entry; `dayCards` and the tree summary show it once; the drive
+    details for a route entry say what joins it and offer Take Out of the
+    Plan; day cards take drops anywhere. Five service tests, a day card test,
+    and `loose.spec.ts` builds a plan of one route, drags a waypoint in and
+    reorders. `npm run verify` passes (2,029 unit, 170 end-to-end)
+  - _Requirements: [14.1–14.5](#req-phase-14-library-day-companion-14)_
+
+- [x] 16. Adding and removing days
+  - Migration 0010: an entry may be a day break (`entry_kind = 'day'`); the
+    timeline starts the next day there; `addDay` and `removeDay`, one undo
+    step each; `entryDays` places every entry on its day, by its time or by
+    plan order; Add a Day After, Remove This Day and Add a Day in the day
+    cards (design §5.8)
+  - Unit tests: an empty day added at the end; a day removed, its entries in
+    the trip and back with undo; the first day removed keeps the next one's
+    date; a day added between two
+  - Done: migration 0010; `TimelineStopInput.dayBreak`; `itineraryService`
+    `addDay` and `removeDay` with `itinerary:addDay` and `:removeDay`;
+    `entryDays` and `dayEntries`; `DayCard.breakId`; day cards with Add a Day
+    After and Remove This Day, and Add a Day at the end. An entry whose time
+    is unknown now sits on its day in plan order, so the Unknown times group
+    is rarely seen. Four service tests, the day card test updated, and
+    `loose.spec.ts` adds a day, drags into it, removes it and undoes.
+    `npm run verify` passes (2,033 unit, 171 end-to-end)
+  - _Requirements: [15.1–15.3](#req-phase-14-library-day-companion-15)_
+
+- [x] 17. Right-click in the plan, and reordering within a day
+  - `poiTripService.deleteItem` and `itinerary:deleteItem`; menus on plan
+    entries and on Not in the plan; an entry dropped on another takes its
+    place (design §5.9)
+  - Unit tests: a waypoint deleted with its stop and back with undo; a route
+    entry deleted with its route
+  - Done: as above, with Move Out of the Trip through the batch move and a
+    track's delete through the existing confirmation. `PlanCards` notes the
+    dragged entry's index so a drop knows its direction. Two service tests;
+    `loose.spec.ts` swaps two entries both ways and uses both menus, with
+    undo. `npm run verify` passes (2,035 unit, 172 end-to-end)
+  - _Requirements: [16.1–16.4](#req-phase-14-library-day-companion-16)_
+
+- [x] 18. Region builds that can be tried again
+  - Downloads written to `.part` and renamed when whole; `cachedExtract` and
+    `pruneDownloads` (30 days); the merged file still removed after each
+    build; `build.log` beside the graph with the machine's memory; a SIGTERM
+    explained in the message (design §5.10)
+  - Unit tests: a failed build keeps the downloads and the next builds from
+    them with nothing downloaded; a stale download and a half-written one are
+    replaced; the SIGTERM wording
+  - Done: as above. The cause, from macOS's crash reports for the build at
+    19:14 and two more: the tile builder was killed with "Code Signature
+    Invalid / Invalid Page" inside LuaJIT while reading roads. The tools in
+    `resources/valhalla/bin` had been signed with the hardened runtime but
+    without `allow-unsigned-executable-memory`; the app is signed correctly
+    by `build/sign-mac.cjs`, and `verify:package` checks that, but nothing
+    checked the copy `npm run dev` runs. Re-signed; `bundle-valhalla.sh` now
+    signs the two tools with their entitlements; `toolSigning.test.ts` fails
+    if they lack it. `npm run verify:regions` builds Derbyshire, Cheshire and
+    Staffordshire in 45 s, where it failed before. Unit tests: reuse, stale
+    and half-written downloads, the SIGTERM wording. `npm run verify` passes
+    (2,039 unit, 172 end-to-end)
+  - _Requirements: [17.1–17.4](#req-phase-14-library-day-companion-17)_
+
+- [x] 19. Routes that look movable, and photos as waypoints
+  - `index.css`: `grab` over `.trailrt-shaping-hit` with a faint stroke on
+    hover, `grabbing` under `.trailrt-shaping-drag`, `grab` on draggable
+    markers; `useRouteShaping` sets the drag class from press to release or
+    Escape (design §5.11)
+  - `shared/photos/photoWaypoint.ts`; `photoStopIndex` in `planEdit.ts`;
+    `waypoints:fromPhoto` and `itinerary:addPhotoStop`, reusing a waypoint
+    the photo already made; Use as a Waypoint and Add to the Plan in the
+    preview box and on a photo's right-click menu on the map
+  - Unit tests: the fields from a photo, with no altitude invented and no
+    waypoint without a location; the stop lands on the day it was taken;
+    the second use reuses the waypoint; one undo removes waypoint and stop
+  - End-to-end: the pointer over the selected route's line is a grab hand;
+    a photo becomes a waypoint from the preview box
+  - Done: as above. A photo goes into the plan by Add to the Plan rather
+    than by dragging, because the trip page's Photos and Plan tabs are never
+    on screen together (design §5.11). `photoWaypoint.test.ts` (shared and
+    main) and `planEdit.test.ts` cover the fields, the refusal, the trip
+    chosen, the reuse, the day and the one undo; `shaping.spec.ts` checks
+    `grab` over the line and `grabbing` while held; `photos.spec.ts` makes a
+    waypoint from the preview twice and undoes it. `npm run verify` passes
+    (2,056 unit, 174 end-to-end)
+  - _Requirements: [18.1–18.5](#req-phase-14-library-day-companion-18)_
+
+- [ ] 20. The day and what is in it
+  - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
+    `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
+    the way
+  - Unit tests: the selected item is highlighted on the scale; a track
+    without times says so
+  - _Requirements: [4.3–4.7](#req-phase-14-library-day-companion-4), [4.9](#req-phase-14-library-day-companion-4), [10.4](#req-phase-14-library-day-companion-10)_
+
+- [ ] 21. The left panel as drawn
+  - Line icons for every row; day cards; the Trips header as in view 1
+    (design §4.6)
+  - Unit tests: every row kind has an icon; no emoji in any root
+  - _Requirements: [10.1–10.3](#req-phase-14-library-day-companion-10)_
+
+- [ ] 22. The Photos section
+  - Virtualised grid by trip with Trip and Year filters; all-trips mode;
+    `PhotoMoment` with Open the trip at that day; photos outside a trip
+  - Unit tests: the grid draws only visible rows; filters narrow the groups
+  - _Requirements: [7.1–7.3](#req-phase-14-library-day-companion-7), [9.2](#req-phase-14-library-day-companion-9)_
+
+- [ ] 23. End-to-end and verification pass
+  - `library.spec.ts`; every spec on the new panels; the old tree's
+    behaviours checked off or recorded as removed (Requirement 8.3)
+  - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then
+    Phase 11 tasks 12 and 13 resume
+  - _Requirements: [8.2](#req-phase-14-library-day-companion-8), [8.3](#req-phase-14-library-day-companion-8)_
 
 
 
@@ -8940,7 +11281,8 @@ applied only when it is labelled as assumed.
     places outside the UK.
 11. THE picker SHALL say that a new selection replaces the loaded graph, and
     that every selected region is downloaded again, because extracts are not
-    kept after a build.
+    kept after a build. *(Amended 14 November 2026 by Phase 14 Requirement 17:
+    extracts are now kept for 30 days and reused, and the picker says so.)*
 12. Offline, or without the index, the existing fallback (import a `.osm.pbf`)
     SHALL remain.
 
@@ -10293,6 +12635,40 @@ Requirement → Design → Task → Code/Test, derived from spec cross reference
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:R9 | [Req 9](#req-phase-11-geotagged-photos-9) | [design](#design-phase-11-geotagged-photos) | [1](#tasks-phase-11-geotagged-photos), [4](#tasks-phase-11-geotagged-photos), [7](#tasks-phase-11-geotagged-photos), [8](#tasks-phase-11-geotagged-photos), [13](#tasks-phase-11-geotagged-photos) | see tasks |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:R10 | [Req 10](#req-phase-11-geotagged-photos-10) | [design](#design-phase-11-geotagged-photos) | [5](#tasks-phase-11-geotagged-photos), [12](#tasks-phase-11-geotagged-photos) | see tasks |
 | SPEC-PHASE-11-GEOTAGGED-PHOTOS:R11 | [Req 11](#req-phase-11-geotagged-photos-11) | [design](#design-phase-11-geotagged-photos) | [2](#tasks-phase-11-geotagged-photos), [3](#tasks-phase-11-geotagged-photos), [4](#tasks-phase-11-geotagged-photos), [13](#tasks-phase-11-geotagged-photos) | see tasks |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R1 | [Req 1](#req-phase-12-folder-gpx-sync-1) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R2 | [Req 2](#req-phase-12-folder-gpx-sync-2) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R3 | [Req 3](#req-phase-12-folder-gpx-sync-3) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R4 | [Req 4](#req-phase-12-folder-gpx-sync-4) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R5 | [Req 5](#req-phase-12-folder-gpx-sync-5) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R6 | [Req 6](#req-phase-12-folder-gpx-sync-6) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R7 | [Req 7](#req-phase-12-folder-gpx-sync-7) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R8 | [Req 8](#req-phase-12-folder-gpx-sync-8) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R9 | [Req 9](#req-phase-12-folder-gpx-sync-9) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R10 | [Req 10](#req-phase-12-folder-gpx-sync-10) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R11 | [Req 11](#req-phase-12-folder-gpx-sync-11) | — | — | — |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC:R12 | [Req 12](#req-phase-12-folder-gpx-sync-12) | — | — | — |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R1 | [Req 1](#req-phase-13-media-flythroughs-sharing-1) | — | — | — |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R2 | [Req 2](#req-phase-13-media-flythroughs-sharing-2) | — | — | — |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R3 | [Req 3](#req-phase-13-media-flythroughs-sharing-3) | — | — | — |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING:R4 | [Req 4](#req-phase-13-media-flythroughs-sharing-4) | — | — | — |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R1 | [Req 1](#req-phase-14-library-day-companion-1) | [design](#design-phase-14-library-day-companion) | [3](#tasks-phase-14-library-day-companion), [4](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R2 | [Req 2](#req-phase-14-library-day-companion-2) | [design](#design-phase-14-library-day-companion) | [2](#tasks-phase-14-library-day-companion), [3](#tasks-phase-14-library-day-companion), [4](#tasks-phase-14-library-day-companion), [7](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R3 | [Req 3](#req-phase-14-library-day-companion-3) | [design](#design-phase-14-library-day-companion) | [2](#tasks-phase-14-library-day-companion), [3](#tasks-phase-14-library-day-companion), [4](#tasks-phase-14-library-day-companion), [5](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R4 | [Req 4](#req-phase-14-library-day-companion-4) | [design](#design-phase-14-library-day-companion) | [2](#tasks-phase-14-library-day-companion), [3](#tasks-phase-14-library-day-companion), [6](#tasks-phase-14-library-day-companion), [7](#tasks-phase-14-library-day-companion), [9](#tasks-phase-14-library-day-companion), [20](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R5 | [Req 5](#req-phase-14-library-day-companion-5) | [design](#design-phase-14-library-day-companion) | [6](#tasks-phase-14-library-day-companion), [9](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R6 | [Req 6](#req-phase-14-library-day-companion-6) | [design](#design-phase-14-library-day-companion) | [6](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R7 | [Req 7](#req-phase-14-library-day-companion-7) | [design](#design-phase-14-library-day-companion) | [22](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R8 | [Req 8](#req-phase-14-library-day-companion-8) | [design](#design-phase-14-library-day-companion) | [2](#tasks-phase-14-library-day-companion), [4](#tasks-phase-14-library-day-companion), [23](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R9 | [Req 9](#req-phase-14-library-day-companion-9) | [design](#design-phase-14-library-day-companion) | [8](#tasks-phase-14-library-day-companion), [22](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R10 | [Req 10](#req-phase-14-library-day-companion-10) | [design](#design-phase-14-library-day-companion) | [6](#tasks-phase-14-library-day-companion), [10](#tasks-phase-14-library-day-companion), [20](#tasks-phase-14-library-day-companion), [21](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R11 | [Req 11](#req-phase-14-library-day-companion-11) | [design](#design-phase-14-library-day-companion) | [9](#tasks-phase-14-library-day-companion), [10](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R12 | [Req 12](#req-phase-14-library-day-companion-12) | [design](#design-phase-14-library-day-companion) | [11](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R13 | [Req 13](#req-phase-14-library-day-companion-13) | [design](#design-phase-14-library-day-companion) | [12](#tasks-phase-14-library-day-companion), [13](#tasks-phase-14-library-day-companion), [14](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R14 | [Req 14](#req-phase-14-library-day-companion-14) | [design](#design-phase-14-library-day-companion) | [15](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R15 | [Req 15](#req-phase-14-library-day-companion-15) | [design](#design-phase-14-library-day-companion) | [16](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R16 | [Req 16](#req-phase-14-library-day-companion-16) | [design](#design-phase-14-library-day-companion) | [17](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R17 | [Req 17](#req-phase-14-library-day-companion-17) | [design](#design-phase-14-library-day-companion) | [18](#tasks-phase-14-library-day-companion) | see tasks |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION:R18 | [Req 18](#req-phase-14-library-day-companion-18) | [design](#design-phase-14-library-day-companion) | [19](#tasks-phase-14-library-day-companion) | see tasks |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:R1 | [Req 1](#req-phase-2-routes-waypoints-1) | [design](#design-phase-2-routes-waypoints) | [3](#tasks-phase-2-routes-waypoints), [9](#tasks-phase-2-routes-waypoints), [15](#tasks-phase-2-routes-waypoints) | see tasks |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:R2 | [Req 2](#req-phase-2-routes-waypoints-2) | [design](#design-phase-2-routes-waypoints) | [3](#tasks-phase-2-routes-waypoints), [10](#tasks-phase-2-routes-waypoints), [15](#tasks-phase-2-routes-waypoints) | see tasks |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS:R3 | [Req 3](#req-phase-2-routes-waypoints-3) | [design](#design-phase-2-routes-waypoints) | [1](#tasks-phase-2-routes-waypoints), [4](#tasks-phase-2-routes-waypoints), [6](#tasks-phase-2-routes-waypoints), [7](#tasks-phase-2-routes-waypoints), [11](#tasks-phase-2-routes-waypoints), [15](#tasks-phase-2-routes-waypoints) | see tasks |
@@ -10367,6 +12743,8 @@ Commits touching `.kiro/specs` (most recent first).
 
 | Commit | Date | Author | Subject |
 | --- | --- | --- | --- |
+| 5387bf4 | 2026-11-13 | Andrew Kentigern-Fox | feat: Phase 14 library and day companion (tasks 1–6) |
+| 3c30338 | 2026-11-12 | Andrew Kentigern-Fox | feat: Phase 11 linked folders and geotagged photos (tasks 1–11) |
 | 3b5e32d | 2026-11-11 | Andrew Kentigern-Fox | feat: Phase 10 road trip planning, owner feedback, and Phase 11 spec |
 | e96452c | 2026-11-09 | Andrew Kentigern-Fox | feat: Phases 5–7 — objects and points, route shaping, UK regions and profile |
 | 41fabd6 | 2026-11-07 | Andrew Kentigern-Fox | feat: Phase4 Road Snap and Road Speed Analysis |
@@ -10398,18 +12776,21 @@ per token (Claude Opus 4.8 ≈ 3.5 chars/token; Claude Haiku ≈ 3.5 chars/token
 
 | Spec ID | Title | Chars | Words | Claude Opus 4.8 | Claude Haiku | GPT-4o (o200k) |
 | :---------------------------------- | :---------------- | --------: | --------: | ------------: | ------------: | ------------: |
+| SPEC-PHASE-11-GEOTAGGED-PHOTOS | Phase 11: Geotagged Photos from a Linked Folder — Requirements | 107,829 | 17,447 | 30,023 | 30,023 | 26,271 |
 | SPEC-PHASE-10-ROAD-TRIP-PLANNING | Phase 10: Road Trip Planning — Requirements | 96,202 | 15,116 | 26,703 | 26,703 | 23,365 |
-| SPEC-PHASE-11-GEOTAGGED-PHOTOS | Phase 11: Geotagged Photos from a Linked Folder — Requirements | 92,449 | 14,983 | 25,742 | 25,742 | 22,525 |
+| SPEC-PHASE-14-LIBRARY-DAY-COMPANION | Phase 14: The library and the day companion — requirements | 87,158 | 14,757 | 24,157 | 24,157 | 21,137 |
 | SPEC-PHASE-6-ROUTE-ALTERNATIVES-SHAPING | Phase 6: Route alternatives and shaping — Requirements | 53,387 | 8,371 | 14,774 | 14,774 | 12,927 |
-| SPEC-PHASE-7-REGIONS-PROFILE | Phase 7: UK regions, road-following by default, and a fuller profile — Requirements | 47,519 | 7,451 | 13,227 | 13,227 | 11,573 |
+| SPEC-PHASE-7-REGIONS-PROFILE | Phase 7: UK regions, road-following by default, and a fuller profile — Requirements | 47,650 | 7,474 | 13,263 | 13,263 | 11,605 |
 | SPEC-PHASE-8-WINDY-ROADS-ROUTING | Phase 8: Intelligent Windy Roads Routing — Requirements | 43,305 | 6,157 | 11,851 | 11,851 | 10,369 |
 | SPEC-PHASE-1-FOUNDATION | Phase 1: Application Foundation — Requirements | 45,674 | 6,273 | 11,822 | 11,822 | 10,344 |
 | SPEC-PHASE-4-ADVANCED-MAPPING | Phase 4: Advanced Mapping — Requirements | 37,940 | 5,727 | 10,455 | 10,455 | 9,149 |
 | SPEC-PHASE-5-OBJECT-POINT-MANAGEMENT | Phase 5: Object and point management — Requirements | 33,529 | 5,194 | 9,357 | 9,357 | 8,188 |
 | SPEC-PHASE-3-TRACKS-IMPORT-EXPORT | Phase 3: Tracks and Import/Export — Requirements | 23,840 | 3,623 | 6,550 | 6,550 | 5,732 |
 | SPEC-PHASE-2-ROUTES-WAYPOINTS | Phase 2: Routes and Waypoints — Requirements | 21,436 | 3,320 | 5,922 | 5,922 | 5,182 |
+| SPEC-PHASE-12-FOLDER-GPX-SYNC | Phase 12: GPX Kept in Step with a Linked Folder — Requirements | 20,073 | 3,505 | 5,578 | 5,578 | 4,881 |
+| SPEC-PHASE-13-MEDIA-FLYTHROUGHS-SHARING | Phase 13: Video, Flythroughs and Sharing — Requirements | 6,817 | 1,119 | 1,902 | 1,902 | 1,664 |
 | SPEC-PHASE-9-GARMIN-COMPATIBILITY | Phase 9: Garmin Compatibility — Requirements | 4,262 | 621 | 1,187 | 1,187 | 1,039 |
-| **Total** | | **499,543** | **76,836** | **137,590** | **137,590** | **120,393** |
+| **Total** | | **629,102** | **98,704** | **173,544** | **173,544** | **151,853** |
 
 \endgroup
 

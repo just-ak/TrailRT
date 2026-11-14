@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { A515_TRACE } from '@fixtures/places';
-import { cleanup, close, closeEditor, createTripViaUi, editSelection, launch, makeUserDataDir, type Harness, openTrip, showTripList } from './helpers';
+import { cleanup, close, closeEditor, createTripViaUi, launch, makeUserDataDir, type Harness, openTrip, showTripList } from './helpers';
 
 /**
  * Phase 10 in the running app: road trip planning, places along the route,
@@ -141,61 +141,61 @@ test('plans a trip by date, with a timed leg', async () => {
 
   await page.getByRole('textbox', { name: 'Start date' }).fill('2026-10-23');
   await page.getByRole('button', { name: 'Plan by date' }).click();
-  // The trip now has dates, so the right panel shows it by the hour; its
-  // plan is edited behind the pencil.
-  await expect(page.getByTestId('trip-view')).toBeVisible();
-  await editSelection(page);
-  const itinerary = page.getByTestId('itinerary');
-  await expect(itinerary).toBeVisible();
-
+  // The trip now has dates, so the right panel shows its details, and its
+  // stops are added in the day card on the left (Phase 14 task 10).
+  await expect(page.getByTestId('trip-details')).toBeVisible();
+  const cards = page.getByTestId('plan-cards');
   for (const name of ['SK17 6AA', 'South of Buxton']) {
-    await itinerary.getByRole('combobox', { name: 'Waypoint to add' }).selectOption({ label: name });
-    await itinerary.getByRole('button', { name: 'Add stop' }).click();
+    await cards.getByRole('button', { name: /^Add a stop to/ }).last().click();
+    const find = cards.getByRole('textbox', { name: 'Find a stop' });
+    await find.fill(name);
+    // What adding it would do is shown before it is added.
+    await expect(page.getByTestId('candidate-details')).toContainText(name);
+    await find.press('Enter');
+    await expect(cards.getByRole('button', { name, exact: true })).toBeVisible();
   }
-  await expect(itinerary.getByTestId('stop')).toHaveCount(2);
-  await expect(itinerary.getByTestId('stop').nth(1)).toContainText('Arrive —');
+  await expect(cards.getByTestId('plan-stop')).toHaveCount(2);
   // The drive is planned by road automatically. This app has no map regions,
   // so it says why it could not be, and draws no straight line instead.
-  await expect(itinerary.getByTestId('plan-issue')).toContainText('no map data yet');
+  await cards.getByTestId('plan-leg').filter({ hasText: 'not planned' }).click();
+  const drive = page.getByTestId('drive-details');
+  await expect(drive.getByTestId('plan-issue')).toContainText('no map data yet');
 
-  await itinerary.getByRole('combobox', { name: 'How you travel to South of Buxton' }).selectOption({ label: 'A route I choose' });
-  await itinerary.getByRole('combobox', { name: 'Route to South of Buxton' }).selectOption({ label: 'A515 south' });
-  await expect(itinerary.getByTestId('plan-issue')).toHaveCount(0);
-  await expect(itinerary.getByTestId('stop').nth(1)).toContainText('Arrive Fri 23 Oct, 09:');
-  await expect(itinerary.getByTestId('itinerary-dates')).toHaveText('23 Oct 2026');
+  await drive.getByRole('combobox', { name: 'How you travel to South of Buxton' }).selectOption({ label: 'A route I choose' });
+  await drive.getByRole('combobox', { name: 'Route to South of Buxton' }).selectOption({ label: 'A515 south' });
+  await expect(cards.getByRole('button', { name: 'South of Buxton', exact: true })).toContainText('arrive 09:');
   // Phase 14: the trip's page header gives its dates.
   await expect(page.getByTestId('trip-header')).toContainText('Fri 23 Oct');
 });
 
 test('the library summarises a dated trip by day', async () => {
   const { page } = harness;
-  const day = page.getByRole('treeitem', { name: /Fri 23 Oct/ });
+  const day = page.getByTestId('day-card').filter({ hasText: /Fri 23 Oct/i });
   await expect(day).toBeVisible();
-  // The day opens by itself, holding the stops and the drive in order.
-  const rows = page.getByRole('treeitem').filter({ hasText: /SK17 6AA|A515 south|South of Buxton/ });
+  // The day's card holds the stops and the drive in order, with their times.
+  const rows = day.getByRole('button').filter({ hasText: /SK17 6AA|A515 south|South of Buxton/ });
   await expect(rows).toHaveText([/SK17 6AA.*leave/, /A515 south/, /South of Buxton.*arrive/]);
 });
 
-test('shows the trip by the hour in the right panel, and selecting a drive selects its route', async () => {
+test('shows the trip’s details on the right, and a drive’s when its route is selected', async () => {
   const { page } = harness;
-  // Phase 14: the calendar drawer is retired; the right panel shows the trip.
+  // Phase 14 Requirement 4.2 and 4.5: only what the left panel does not show.
   await openTrip(page, new RegExp(TRIP));
   await closeEditor(page);
-  const trip = page.getByTestId('trip-view');
+  const trip = page.getByTestId('trip-details');
   await expect(trip).toBeVisible();
-  await expect(trip.locator('[data-date="2026-10-23"]').first()).toBeVisible();
-  await expect(trip.getByTestId('block-leg')).toHaveCount(1);
-  await trip.getByRole('button', { name: 'Month' }).click();
-  await expect(trip.getByTestId('month-label')).toHaveText('October 2026');
-  await trip.getByRole('button', { name: 'Days' }).click();
-  await trip.getByTestId('block-leg').click();
-  await expect(page.getByRole('treeitem', { name: /A515 south/ })).toHaveAttribute('aria-selected', 'true');
-  await expect(page.getByTestId('object-card')).toContainText('A515 south');
+  await expect(trip.getByLabel('Leave on')).toHaveValue('2026-10-23');
+  await expect(trip).not.toContainText(TRIP);
+  await page.getByTestId('plan-cards').getByRole('button', { name: 'A515 south', exact: true }).click();
+  await expect(page.getByTestId('drive-details')).toContainText('SK17 6AA → South of Buxton');
+  await expect(page.getByTestId('drive-details').getByRole('combobox', { name: 'How you travel to South of Buxton' })).toHaveValue('route');
 });
 
 test('with no trip open, the right panel shows the year with the trip’s day marked', async () => {
   const { page } = harness;
   await showTripList(page);
+  // Back leaves the trip selected, which the right panel shows; Escape clears it.
+  await page.locator('[role="tree"]').press('Escape');
   const year = page.getByTestId('year-view');
   await expect(year).toBeVisible();
   await year.getByRole('button', { name: 'The year before' }).click();
@@ -206,14 +206,14 @@ test('with no trip open, the right panel shows the year with the trip’s day ma
   // Selecting a marked day opens its trip.
   await day.click();
   await expect(page.getByTestId('trip-header')).toContainText(TRIP);
-  await expect(page.getByTestId('trip-view')).toBeVisible();
+  await expect(page.getByTestId('trip-details')).toBeVisible();
 });
 
 test('finds fuel and a hotel along the way, and adds the hotel as a stop', async () => {
   const { page } = harness;
   await openTrip(page, new RegExp(TRIP));
-  await editSelection(page);
-  await page.getByTestId('itinerary').getByRole('button', { name: 'Find places along the way' }).click();
+  await closeEditor(page);
+  await page.getByTestId('trip-details').getByRole('button', { name: 'Places along the trip' }).click();
   const panel = page.getByTestId('poi-panel');
   await expect(panel.getByTestId('poi-row').first()).toBeVisible();
   // Within the default 2 km, in the order they are reached: Essar Rockbay at
@@ -233,27 +233,59 @@ test('finds fuel and a hotel along the way, and adds the hotel as a stop', async
   await expect(palace).toBeVisible();
   await palace.getByRole('button', { name: 'Add as a stop' }).click();
   await expect(palace).toContainText('Added as a stop');
-  await expect(page.getByTestId('itinerary').getByTestId('stop')).toHaveCount(3);
+  await expect(page.getByTestId('plan-cards').getByTestId('plan-stop')).toHaveCount(3);
   await panel.getByRole('button', { name: 'Close' }).click();
+});
+
+test('a stop’s details set its stay and say what a change would move', async () => {
+  const { page } = harness;
+  await openTrip(page, new RegExp(TRIP));
+  await closeEditor(page);
+  await page.getByTestId('plan-cards').getByRole('button', { name: 'Palace Hotel', exact: true }).click();
+  const stop = page.getByTestId('stop-details');
+  await expect(stop).toBeVisible();
+  await expect(stop).toContainText('Stop 2');
+  // A hotel is a night's stay: its stay is in days. Typing shows what the
+  // change would move before anything is saved; putting it back saves nothing.
+  const days = stop.getByRole('textbox', { name: 'Days' });
+  const was = await days.inputValue();
+  await days.fill(String(Number(was) + 1));
+  await expect(stop.getByTestId('consequence')).toBeVisible();
+  await days.fill(was);
+  await days.press('Tab');
+  await expect(stop.getByTestId('consequence')).toHaveCount(0);
+});
+
+test('stops are reordered on the left, by drag and by Alt and an arrow key', async () => {
+  const { page } = harness;
+  await openTrip(page, new RegExp(TRIP));
+  const cards = page.getByTestId('plan-cards');
+  const order = () => cards.getByTestId('plan-stop');
+  await expect(order()).toHaveText([/SK17 6AA/, /Palace Hotel/, /South of Buxton/]);
+  // Dropped on the upper half of Palace Hotel's row: before it.
+  await cards.getByRole('button', { name: 'South of Buxton', exact: true }).dragTo(cards.getByRole('button', { name: 'Palace Hotel', exact: true }));
+  await expect(order()).toHaveText([/SK17 6AA/, /South of Buxton/, /Palace Hotel/]);
+  // And back without a pointer.
+  await cards.getByRole('button', { name: 'South of Buxton', exact: true }).focus();
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect(order()).toHaveText([/SK17 6AA/, /Palace Hotel/, /South of Buxton/]);
 });
 
 test('a leg marked as other transport is not planned by road', async () => {
   const { page } = harness;
   await openTrip(page, new RegExp(TRIP));
-  await editSelection(page);
-  const itinerary = page.getByTestId('itinerary');
-  const issues = itinerary.getByTestId('plan-issue');
-  const before = await issues.count();
+  await closeEditor(page);
+  const cards = page.getByTestId('plan-cards');
+  const unplanned = cards.getByTestId('plan-leg').filter({ hasText: 'not planned' });
+  const before = await unplanned.count();
   expect(before).toBeGreaterThan(0);
-  // Pin the leg by position: the plan issue it is found by goes away.
-  const legs = itinerary.getByTestId('leg');
-  let index = 0;
-  while ((await legs.nth(index).getByTestId('plan-issue').count()) === 0) index += 1;
-  const leg = legs.nth(index);
-  await leg.getByRole('combobox', { name: /How you travel to/ }).selectOption({ label: 'Other transport' });
-  await leg.getByRole('combobox', { name: 'Kind of transport' }).selectOption({ label: 'Train' });
-  await expect(issues).toHaveCount(before - 1);
-  await expect(page.getByRole('treeitem', { name: /Train/ })).toBeVisible();
+  // A drive with no route has nothing to select; the right panel shows it anyway.
+  await unplanned.first().click();
+  const drive = page.getByTestId('drive-details');
+  await drive.getByRole('combobox', { name: /How you travel to/ }).selectOption({ label: 'Other transport' });
+  await drive.getByRole('combobox', { name: 'Kind of transport' }).selectOption({ label: 'Train' });
+  await expect(unplanned).toHaveCount(before - 1);
+  await expect(cards.getByRole('button', { name: /Train/ })).toBeVisible();
 });
 
 test('icon buttons say what they do, on hover and on focus', async () => {
@@ -272,7 +304,7 @@ test('icon buttons say what they do, on hover and on focus', async () => {
 
 test('the library, properties and the panel below the map can be hidden and shown', async () => {
   const { page } = harness;
-  const tree = page.getByRole('tree');
+  const tree = page.getByTestId('left-panel');
   await page.getByRole('button', { name: 'Hide the library' }).click();
   await expect(tree).toBeHidden();
   await page.getByRole('button', { name: 'Show the library' }).click();
@@ -301,11 +333,9 @@ test('everything is still there after a restart', async () => {
   await start();
   const { page } = harness;
   await openTrip(page, new RegExp(TRIP));
-  await editSelection(page);
-  const itinerary = page.getByTestId('itinerary');
-  await expect(itinerary.getByTestId('stop')).toHaveCount(3);
-  await expect(itinerary).toContainText('Palace Hotel');
-  await expect(page.getByRole('treeitem', { name: /Palace Hotel/ })).toBeVisible();
+  const cards = page.getByTestId('plan-cards');
+  await expect(cards.getByTestId('plan-stop')).toHaveCount(3);
+  await expect(cards.getByRole('button', { name: 'Palace Hotel', exact: true })).toBeVisible();
   await search(page, 'SK17 6AA');
   await expect(results(page).first()).toContainText('SK17 6AA');
 });

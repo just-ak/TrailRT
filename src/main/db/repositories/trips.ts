@@ -51,6 +51,8 @@ function orderFor(key: TripSortKey, direction: SortDirection) {
 
 export interface ListTripsOptions {
   folderId?: string | null | undefined;
+  /** ADR 0022: the holder of items outside a trip is left out unless asked for. */
+  includeLoose?: boolean | undefined;
   includeArchived: boolean;
   sortKey: TripSortKey;
   sortDirection: SortDirection;
@@ -58,6 +60,7 @@ export interface ListTripsOptions {
 
 export function listTrips(db: Db, options: ListTripsOptions): TripWithCounts[] {
   const filters = [];
+  if (options.includeLoose !== true) filters.push(eq(trips.role, 'trip'));
   if (!options.includeArchived) filters.push(eq(trips.status, 'active'));
   if (options.folderId !== undefined) {
     filters.push(
@@ -112,7 +115,7 @@ export function searchTrips(db: Db, query: string): TripWithCounts[] {
   const rows = db
     .select({ trip: trips, ...countsSelect })
     .from(trips)
-    .where(sql`lower(${trips.name}) LIKE ${pattern} ESCAPE '\\'`)
+    .where(and(eq(trips.role, 'trip'), sql`lower(${trips.name}) LIKE ${pattern} ESCAPE '\\'`))
     .orderBy(asc(trips.name))
     .all();
   return rows.map((r) => ({
@@ -123,7 +126,15 @@ export function searchTrips(db: Db, query: string): TripWithCounts[] {
   }));
 }
 
+/** ADR 0022: the id of the holder of items outside a trip, or null before it is first needed. */
+export function findLooseTripId(db: Db): string | null {
+  const row = db.select({ id: trips.id }).from(trips).where(eq(trips.role, 'loose')).get();
+  return row?.id ?? null;
+}
+
 export interface InsertTripValues {
+  /** ADR 0022. Defaults to an ordinary trip. */
+  role?: 'trip' | 'loose' | undefined;
   id: string;
   folderId: string | null;
   name: string;
@@ -144,6 +155,9 @@ export function insertTrip(db: Db, values: InsertTripValues): Trip {
       description: values.description,
       notes: values.notes,
       status: values.status ?? 'active',
+      // Written only for the holder, so the column's default does the rest and
+      // an upgrade test on a pre-0007 database can still insert a trip.
+      ...(values.role === undefined ? {} : { role: values.role }),
       metadata: encodeMetadata(values.metadata),
       createdAt: values.now,
       updatedAt: values.now,

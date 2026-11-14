@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -24,10 +25,11 @@ import {
 import { useUiStore } from "../../stores/uiStore";
 import { TreeRow, type ClickModifiers } from "./TreeRow";
 import { useNavStore } from "../../stores/navStore";
-import { TRIP_LIST_ROOT, TRIP_PAGE_ROOT } from "./libraryRoots";
+import { OBJECTS_ROOT, PLAN_ROOT, TRIP_LIST_ROOT, TRIP_PAGE_ROOT } from "./libraryRoots";
 import {
   askToUnlink,
   linkFolderToTrip,
+  linkLooseFolder,
   relink as relinkFolder,
   rescan as rescanFolder,
   showPhotos,
@@ -56,6 +58,20 @@ import {
  */
 
 const MIME = "application/x-trailrt-node";
+
+/** Where an item can be moved: outside any trip first (ADR 0022), then each trip. */
+function moveDestinations(
+  overview: readonly { id: string; name: string }[],
+  looseTripId: string | null,
+): { id: string; name: string }[] {
+  return [...(looseTripId === null ? [] : [{ id: looseTripId, name: "Not in a trip" }]), ...overview];
+}
+
+/**
+ * Where each list was scrolled to, by root. The trip list unmounts while a
+ * trip page is open, and ‹ Trips should find it where it was left.
+ */
+const scrollMemory = new Map<string, number>();
 
 /**
  * Which kinds can be dragged, and what they can be dropped onto.
@@ -115,7 +131,11 @@ function readDragged(event: React.DragEvent): ObjectRef[] {
  * rename and the context menus behave the same everywhere (Phase 5). The
  * root itself is not drawn.
  *
- * In the trip list, selecting a trip opens it (Requirement 2.4).
+ * In the trip list, selecting a trip only selects it: the map and the right
+ * panel follow, and the list stays where it is. Double-click, Return or the
+ * row's arrow opens it (Requirement 2.4, as amended by the trip list flow).
+ * The list's scroll position outlives it, so coming back from a trip page
+ * finds the list as it was left.
  */
 export function LibraryList({
   root,
@@ -128,6 +148,7 @@ export function LibraryList({
 }): ReactNode {
   const { tree, loading, error, refresh, toggleExpanded, setExpanded } = useLibraryStore();
   const overview = useLibraryStore((s) => s.overview);
+  const looseTripId = useLibraryStore((s) => s.looseTripId);
   const isTripList = root.id === TRIP_LIST_ROOT;
 
   const expanded = useLibraryStore((s) => s.expanded);
@@ -153,6 +174,10 @@ export function LibraryList({
   /** Which row holds the roving tab stop. A path, not a selection key. */
   const [focusPath, setFocusPath] = useState<string | null>(null);
   const treeRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const remembered = scrollMemory.get(root.id);
+    if (remembered !== undefined && treeRef.current !== null) treeRef.current.scrollTop = remembered;
+  }, [root.id]);
 
   const selectedKey = useMemo(
     () => (selected === null ? null : refKey(selected)),
@@ -215,12 +240,6 @@ export function LibraryList({
 
       setFocusPath(node.id);
 
-      // Phase 14: in the trip list, selecting a trip opens it.
-      if (isTripList && ref.kind === "trip") {
-        useNavStore.getState().openTrip(ref.id);
-        return;
-      }
-
       // Trips and folders never join a multi-selection, so a modifier on one
       // behaves as a plain click rather than doing nothing — silently ignoring
       // the click would look broken.
@@ -251,7 +270,7 @@ export function LibraryList({
 
       void select(ref);
     },
-    [anchorKey, isTripList, rows, select, selectMany, toggle],
+    [anchorKey, rows, select, selectMany, toggle],
   );
 
   // ---------------------------------------------------------- mutations
@@ -370,7 +389,9 @@ export function LibraryList({
         // One reload afterwards, not one per member (Requirement 2.8).
         await useSelectionStore.getState().reload();
         showToast(
-          `Moved ${outcome.applied} object${outcome.applied === 1 ? "" : "s"} to that trip.`,
+          tripId === useLibraryStore.getState().looseTripId
+            ? `Moved ${outcome.applied} object${outcome.applied === 1 ? "" : "s"} out of the trip.`
+            : `Moved ${outcome.applied} object${outcome.applied === 1 ? "" : "s"} to that trip.`,
         );
       } catch (cause) {
         showToast(describeError(cause), "error");
@@ -535,8 +556,22 @@ export function LibraryList({
 
   // -------------------------------------------------------- context menu
 
+  // Phase 14 Requirement 9.5: one item moves in or out of a trip from its
+  // own menu, through the batch path so it is one undo step.
+  const moveTo = (member: BatchMember): MenuItem[] => {
+    const destinations = moveDestinations(overview, looseTripId);
+    return [
+      { label: "Move to", separatorBefore: true, disabled: true },
+      ...destinations.slice(0, 9).map<MenuItem>((trip) => ({
+        label: `   → ${trip.name}`,
+        onSelect: () => void moveBatchToTrip([member], trip.id),
+      })),
+    ];
+  };
+
   const menuItems = (node: TreeNode, batch: BatchMember[]): MenuItem[] => {
     const ref = node.ref;
+
 
     /*
      * Batch actions replace the per-object ones when the click landed inside a
@@ -545,10 +580,34 @@ export function LibraryList({
      * multi-object property editing is explicitly out of scope for this phase.
      */
     if (batch.length > 1) {
-      // Every visible trip, from the overview: on a trip page no trip rows are drawn.
-      const trips = overview.map((trip) => ({ node: { name: trip.name, ref: { kind: "trip" as const, id: trip.id } } }));
+      // Every visible trip, from the overview: on a trip page no trip rows are
+      // drawn. ADR 0022: "Not in a trip" comes first.
+      const trips = moveDestinations(overview, looseTripId).map((trip) => ({ node: { name: trip.name, ref: { kind: "trip" as const, id: trip.id } } }));
+      // Requirement 13.5: two routes or waypoints can be joined by a new route,
+      // from the first one's end to the second one's start, in list order.
+      const [joinFrom, joinTo] = batch;
+      const joinable =
+        batch.length === 2 &&
+        joinFrom !== undefined &&
+        joinTo !== undefined &&
+        (joinFrom.kind === "route" || joinFrom.kind === "waypoint") &&
+        (joinTo.kind === "route" || joinTo.kind === "waypoint");
+      const join: MenuItem[] = joinable
+        ? [
+            {
+              label: "Join with a New Route",
+              separatorBefore: true,
+              onSelect: () => void actions.joinWithRoute({ kind: joinFrom.kind as "route" | "waypoint", id: joinFrom.id }, { kind: joinTo.kind as "route" | "waypoint", id: joinTo.id }, false),
+            },
+            {
+              label: "Join with a Straight Line",
+              onSelect: () => void actions.joinWithRoute({ kind: joinFrom.kind as "route" | "waypoint", id: joinFrom.id }, { kind: joinTo.kind as "route" | "waypoint", id: joinTo.id }, true),
+            },
+          ]
+        : [];
       return [
         { label: describeSelection(batch), disabled: true },
+        ...join,
         {
           label: "Move to Trip",
           separatorBefore: true,
@@ -581,8 +640,8 @@ export function LibraryList({
     if (node.id === TRIP_PAGE_ROOT) {
       return [
         { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
-        { label: "New Straight-Line Route", onSelect: () => actions.startStraightLineRoute() },
-        { label: "New Waypoint", onSelect: () => actions.startPlacingWaypoint() },
+        { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+        { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
       ];
     }
 
@@ -637,11 +696,11 @@ export function LibraryList({
         { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
         {
           label: "New Straight-Line Route",
-          onSelect: () => actions.startStraightLineRoute(),
+          onSelect: () => void actions.startStraightLineRoute(),
         },
         {
           label: "New Waypoint",
-          onSelect: () => actions.startPlacingWaypoint(),
+          onSelect: () => void actions.startPlacingWaypoint(),
         },
         {
           // Phase 11. Named for the folder, not photos (design §4.1).
@@ -711,6 +770,7 @@ export function LibraryList({
             actions.openPointTable("route", ref.id);
           },
         },
+        ...moveTo({ kind: "route", id: ref.id }),
         {
           label: "Delete Route",
           danger: true,
@@ -755,6 +815,7 @@ export function LibraryList({
           onSelect: () =>
             void confirmBatchDelete([{ kind: "track", id: ref.id }]),
         },
+        ...moveTo({ kind: "track", id: ref.id }),
       ];
     }
 
@@ -780,6 +841,7 @@ export function LibraryList({
           separatorBefore: true,
           onSelect: () => void actions.duplicateWaypoint(ref.id),
         },
+        ...moveTo({ kind: "waypoint", id: ref.id }),
         {
           label: "Delete Waypoint",
           danger: true,
@@ -789,7 +851,40 @@ export function LibraryList({
       ];
     }
 
-    return [{ label: "New Trip", onSelect: () => void createTrip(null) }];
+    // The list's own space: what makes sense in this section (owner
+    // feedback, 14 Nov 2026: the Routes section offered only New Trip).
+    switch (root.id) {
+      case "section:routes":
+        return [
+          { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
+          { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+          { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+        ];
+      case "section:waypoints":
+        return [
+          { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
+          { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+        ];
+      case "section:tracks":
+      case "section:imported":
+        return [{ label: "Import Files…", onSelect: () => void actions.chooseFilesToImport() }];
+      case "section:photos":
+        return [{ label: "Link a Folder…", onSelect: () => void linkLooseFolder() }];
+      case OBJECTS_ROOT:
+      case PLAN_ROOT:
+      case TRIP_PAGE_ROOT:
+        return [
+          { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
+          { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+          { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
+          { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+        ];
+      default:
+        return [
+          { label: "New Trip", onSelect: () => void createTrip(null) },
+          { label: "New Folder", onSelect: () => void createFolder(null) },
+        ];
+    }
   };
 
   // Phase 14: the header's More menu asks for a new trip or folder.
@@ -922,10 +1017,23 @@ export function LibraryList({
           }
           return;
         }
-        case "Escape":
+        case "Escape": {
           event.preventDefault();
-          useSelectionStore.getState().collapseToAnchor();
+          // A batch collapses to its anchor; a single selection clears, which
+          // brings back the year on the right (the trip list flow).
+          const selection = useSelectionStore.getState();
+          if (selection.selectedKeys.size > 1) selection.collapseToAnchor();
+          else void select(null);
           return;
+        }
+        case "Enter": {
+          const row = rows.find((candidate) => candidate.path === current);
+          if (isTripList && row?.ref?.kind === "trip") {
+            event.preventDefault();
+            useNavStore.getState().openTrip(row.ref.id);
+          }
+          return;
+        }
         case "a":
         case "A": {
           if (!event.metaKey) return;
@@ -941,6 +1049,7 @@ export function LibraryList({
     [
       anchorKey,
       focusPath,
+      isTripList,
       renamingId,
       rows,
       select,
@@ -981,6 +1090,9 @@ export function LibraryList({
         dropTarget={dropTargetId === row.path}
         focusable={tabStop === row.path}
         onToggle={() => toggleExpanded(row.path)}
+        {...(isTripList && row.ref?.kind === "trip"
+          ? { onOpen: () => useNavStore.getState().openTrip(row.node.ref?.id ?? "") }
+          : {})}
         onFocusRow={() => setFocusPath(row.path)}
         onSelect={(modifiers) => handleRowClick(row.node, modifiers)}
         onContextMenu={(event) => {
@@ -1024,6 +1136,12 @@ export function LibraryList({
         aria-multiselectable="true"
         tabIndex={-1}
         onKeyDown={onTreeKeyDown}
+        onScroll={(event) => scrollMemory.set(root.id, event.currentTarget.scrollTop)}
+        // A click on the list's empty space clears the selection. Rows stop
+        // their own clicks, so this only sees the space between and below them.
+        onClick={(event) => {
+          if (event.target === event.currentTarget) void select(null);
+        }}
         className="min-h-0 flex-1 overflow-y-auto py-1 outline-none"
         onContextMenu={(event) => {
           event.preventDefault();
@@ -1153,7 +1271,9 @@ export function SearchResults({
           type="button"
           onClick={() => {
             void useLibraryStore.getState().setSearch("");
-            useNavStore.getState().openTrip(waypoint.tripId);
+            // ADR 0022: one outside a trip opens no trip page; it shows in the Waypoints section.
+            if (waypoint.tripId === useLibraryStore.getState().looseTripId) useNavStore.getState().setSection("waypoints");
+            else useNavStore.getState().openTrip(waypoint.tripId);
             void select({ kind: "waypoint", id: waypoint.id });
           }}
           className={`block w-full truncate px-3 py-1 text-left text-[13px] ${

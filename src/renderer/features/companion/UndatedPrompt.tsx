@@ -10,7 +10,7 @@ import { useSelectionStore } from '../../stores/selectionStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { runPlanChange } from '../itinerary/ItinerarySection';
 import { tomorrow } from '../itinerary/viewModel';
-import { KIND_COLOUR, SectionLabel } from './parts';
+import { KIND_COLOUR, OpenTripButton, SectionLabel } from './parts';
 
 /**
  * A trip with no dates (Requirement 4.8, view 9). It asks when the trip is
@@ -33,6 +33,7 @@ export function UndatedPrompt({ tripId, onEdit }: { tripId: string; onEdit: () =
     <div data-testid="undated-prompt">
       <div className="flex items-start gap-2">
         <h2 className="flex-1 text-[18px] font-semibold text-[var(--color-text-primary)]">When is it?</h2>
+        <OpenTripButton tripId={tripId} />
         <IconButton variant="ghost" hint="Edit the trip" onClick={onEdit}>
           <Pencil size={15} aria-hidden="true" />
         </IconButton>

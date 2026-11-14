@@ -1,14 +1,18 @@
 import { ChevronLeft } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { IconButton } from '../../components/IconButton';
 import { useCompanionStore } from '../../stores/companionStore';
 import { useItineraryStore } from '../../stores/itineraryStore';
 import { useNavStore } from '../../stores/navStore';
 import { useSelectionStore } from '../../stores/selectionStore';
 import { PropertiesPanel } from '../properties/PropertiesPanel';
-import { companionView } from './companionView';
+import { usePlanStore } from '../../stores/planStore';
+import { CandidateDetails } from './CandidateDetails';
+import { companionView, type PlanIndex } from './companionView';
+import { DriveDetails } from './DriveDetails';
 import { ObjectCard } from './ObjectCard';
-import { TripView } from './TripView';
+import { StopDetails } from './StopDetails';
+import { TripDetails } from './TripDetails';
 import { UndatedPrompt } from './UndatedPrompt';
 import { YearView } from './YearView';
 
@@ -26,17 +30,22 @@ function edit(): void {
 export function CompanionPanel(): ReactNode {
   const selected = useSelectionStore((s) => s.selected);
   const openTripId = useNavStore((s) => s.openTripId);
-  const section = useNavStore((s) => s.section);
   const editing = useCompanionStore((s) => s.editing);
+  const editingRef = useCompanionStore((s) => s.editingRef);
+  const planView = useItineraryStore((s) => s.view);
+  const candidate = usePlanStore((s) => s.candidate !== null && s.adding !== null);
+  const focusedLeg = usePlanStore((s) => s.focusedLeg);
+  const focusedStop = usePlanStore((s) => s.focusedStop);
+  const plan = useMemo<PlanIndex | null>(() => (planView === null ? null : { stops: planView.stops }), [planView]);
   const itineraryTrip = useItineraryStore((s) => s.tripId);
   const answered = useItineraryStore((s) => s.answered);
   const dated = useItineraryStore((s) => s.view !== null);
 
-  const view = companionView({ selected, section, openTripId, editing, itinerary: { tripId: itineraryTrip, answered, dated } });
+  const view = companionView({ selected, openTripId, editing, editingRef, plan, candidate, focusedLeg, focusedStop, itinerary: { tripId: itineraryTrip, answered, dated } });
 
   const editTrip = (tripId: string): void => {
     if (selected?.kind !== 'trip' || selected.id !== tripId) void useSelectionStore.getState().select({ kind: 'trip', id: tripId });
-    edit();
+    useCompanionStore.getState().edit({ kind: 'trip', id: tripId });
   };
 
   if (view.kind === 'edit') {
@@ -59,7 +68,10 @@ export function CompanionPanel(): ReactNode {
     <div className="h-full overflow-y-auto p-4" data-testid="companion" data-view={view.kind}>
       {view.kind === 'year' && <YearView />}
       {view.kind === 'loading' && <p className="text-[12px] text-[var(--color-text-muted)]">Loading…</p>}
-      {view.kind === 'trip' && <TripView tripId={view.tripId} onEdit={() => editTrip(view.tripId)} />}
+      {view.kind === 'trip' && <TripDetails tripId={view.tripId} />}
+      {view.kind === 'stop' && <StopDetails stopId={view.stopId} />}
+      {view.kind === 'drive' && <DriveDetails stopId={view.stopId} />}
+      {view.kind === 'candidate' && <CandidateDetails />}
       {view.kind === 'undated' && <UndatedPrompt tripId={view.tripId} onEdit={() => editTrip(view.tripId)} />}
       {view.kind === 'object' && <ObjectCard refTo={view.ref} onEdit={edit} />}
     </div>

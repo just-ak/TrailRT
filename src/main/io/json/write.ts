@@ -178,6 +178,8 @@ export function buildCollection(
     tripRepo
       .listTrips(db, {
         includeArchived,
+        // ADR 0022: everything means items outside a trip too.
+        includeLoose: true,
         sortKey: 'createdAt',
         sortDirection: 'asc',
       })

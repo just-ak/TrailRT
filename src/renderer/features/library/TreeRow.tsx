@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import type { TreeNode } from "@shared/domain/types";
 
@@ -25,6 +26,11 @@ interface Props {
   /** Phase 14: a trip in the trip list, with its dates and size on a second line. */
   twoLine?: boolean;
   onToggle: () => void;
+  /**
+   * The trip list flow: opening a trip is its own step. Given, a double-click
+   * opens rather than expands, and the selected row shows an arrow that opens.
+   */
+  onOpen?: () => void;
   onSelect: (modifiers: ClickModifiers) => void;
   onContextMenu: (event: React.MouseEvent) => void;
   onRenameCommit: (name: string) => void;
@@ -95,6 +101,7 @@ export function TreeRow({
   focusable,
   twoLine = false,
   onToggle,
+  onOpen,
   onSelect,
   onContextMenu,
   onRenameCommit,
@@ -161,7 +168,8 @@ export function TreeRow({
         onSelect({ metaKey: event.metaKey, shiftKey: event.shiftKey });
       }}
       onDoubleClick={() => {
-        if (hasChildren) onToggle();
+        if (onOpen !== undefined) onOpen();
+        else if (hasChildren) onToggle();
       }}
       title={node.hint}
       style={{ paddingLeft: depth * INDENT + 6 }}
@@ -247,6 +255,22 @@ export function TreeRow({
             </span>
           )}
         </span>
+      )}
+      {onOpen !== undefined && selected && !renaming && (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={`Open ${node.name}`}
+          title="Open the trip"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+          onDoubleClick={(event) => event.stopPropagation()}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--color-surface)] text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)]"
+        >
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
       )}
     </div>
   );

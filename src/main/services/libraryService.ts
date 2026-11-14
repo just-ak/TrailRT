@@ -13,6 +13,7 @@ import type { Db } from '../db/client';
 import * as linkedFolderRepo from '../db/repositories/linkedFolders';
 import * as photoRepo from '../db/repositories/photoMetadata';
 import * as routeRepo from '../db/repositories/routes';
+import * as tripRepo from '../db/repositories/trips';
 import * as trackRepo from '../db/repositories/tracks';
 import * as waypointRepo from '../db/repositories/waypoints';
 import { itineraryTreeChildren, tripSummary, type PhotoDays } from '@shared/itinerary/treeSummary';
@@ -398,6 +399,12 @@ export function tree(
   });
 
   const visibleTripIds = new Set(trips.map((t) => t.id));
+  // ADR 0022: items outside a trip are listed in the sections, first, under
+  // the holder's stored name, "Not in a trip". The holder is never a trip row.
+  const looseId = tripRepo.findLooseTripId(db);
+  if (looseId !== null) visibleTripIds.add(looseId);
+  const looseFirst = (a: { tripId: string }, b: { tripId: string }): number =>
+    (a.tripId === looseId ? 0 : 1) - (b.tripId === looseId ? 0 : 1);
 
   const viewNodes: TreeNode[] = VIEWS.map((view) => {
     const node: TreeNode = {
@@ -419,9 +426,10 @@ export function tree(
       node.children = allRoutes
         .filter((route) => visibleTripIds.has(route.tripId))
         .toSorted((a, b) =>
-          sortKey === 'distance'
+          looseFirst(a, b) ||
+          (sortKey === 'distance'
             ? byDistance(a.distanceM, b.distanceM, 1)
-            : a.name.localeCompare(b.name),
+            : a.name.localeCompare(b.name)),
         )
         .map((route) => ({
           ...routeNode(route, 'view:routes'),
@@ -431,9 +439,10 @@ export function tree(
       node.children = allTracks
         .filter((track) => visibleTripIds.has(track.tripId))
         .toSorted((a, b) =>
-          sortKey === 'distance'
+          looseFirst(a, b) ||
+          (sortKey === 'distance'
             ? byDistance(a.distanceM, b.distanceM, 1)
-            : a.name.localeCompare(b.name),
+            : a.name.localeCompare(b.name)),
         )
         .map((track) => ({
           ...trackNode(track, 'view:tracks'),
@@ -442,6 +451,7 @@ export function tree(
     } else if (view.id === 'waypoints') {
       node.children = allWaypoints
         .filter((waypoint) => visibleTripIds.has(waypoint.tripId))
+        .toSorted(looseFirst)
         .map((waypoint) => ({
           ...waypointNode(waypoint, 'view:waypoints'),
           detail: waypoint.tripName,
@@ -452,6 +462,7 @@ export function tree(
       const filter = options.photos ?? {};
       const inYear = filter.year === undefined ? null : photoRepo.foldersWithYear(db, filter.year);
       const tripNames = new Map(trips.map((t) => [t.id, t.name]));
+      if (looseId !== null) tripNames.set(looseId, tripService.LOOSE_TRIP_NAME);
       node.children = linkedFolders
         .filter(
           (folder) =>
@@ -461,7 +472,9 @@ export function tree(
         )
         .toSorted(
           (a, b) =>
-            (tripNames.get(a.tripId) ?? '').localeCompare(tripNames.get(b.tripId) ?? '') || a.name.localeCompare(b.name),
+            looseFirst(a, b) ||
+            (tripNames.get(a.tripId) ?? '').localeCompare(tripNames.get(b.tripId) ?? '') ||
+            a.name.localeCompare(b.name),
         )
         .map((folder) => {
           const row = linkedFolderNode(folder, 'view:photos', folderRows);

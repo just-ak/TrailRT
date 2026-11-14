@@ -221,6 +221,32 @@ export function MapView(): ReactNode {
 
   const map = useMapInstance();
 
+  // Owner feedback, 14 Nov 2026: a right-click on the map itself offers to put
+  // something there. Routes, tracks and waypoints keep their own menus, so a
+  // click that landed on one of them is theirs.
+  useEffect(() => {
+    if (map === null) return undefined;
+    const onMenu = (event: L.LeafletMouseEvent): void => {
+      const target = event.originalEvent.target as Element | null;
+      if (target?.closest(".leaflet-interactive, .leaflet-marker-icon") != null) return;
+      if (useEditorStore.getState().mode !== "idle") return;
+      event.originalEvent.preventDefault();
+      const at = { lat: event.latlng.lat, lon: event.latlng.lng };
+      setMenu({
+        x: event.originalEvent.clientX,
+        y: event.originalEvent.clientY,
+        items: [
+          { label: "Add a Waypoint Here", onSelect: () => void actions.addWaypointAt(at) },
+          { label: "Start a New Route Here", onSelect: () => void actions.startRouteAt(at) },
+        ],
+      });
+    };
+    map.on("contextmenu", onMenu);
+    return () => {
+      map.off("contextmenu", onMenu);
+    };
+  }, [map]);
+
   /*
    * Layer visibility, Requirement 4.3.
    *
@@ -475,6 +501,17 @@ export function MapView(): ReactNode {
     anchorId: photoAnchor,
     anchorDirection,
     onSelect: selectPhotosFromMap,
+    onContextMenu: (id, x, y) =>
+      setMenu({
+        x,
+        y,
+        items: [
+          { label: "Use as a Waypoint", onSelect: () => void actions.photoToWaypoint(id) },
+          ...(actions.photoPlanTripId() === null
+            ? []
+            : [{ label: "Add to the Plan", onSelect: () => void actions.photoToPlan(id) }]),
+        ],
+      }),
   });
 
   useWaypointLayers(
@@ -792,10 +829,10 @@ export function MapView(): ReactNode {
           void actions.startDrawingRoute();
           break;
         case "route:newStraight":
-          actions.startStraightLineRoute();
+          void actions.startStraightLineRoute();
           break;
         case "waypoint:new":
-          actions.startPlacingWaypoint();
+          void actions.startPlacingWaypoint();
           break;
         default:
           break;

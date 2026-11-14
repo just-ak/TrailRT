@@ -48,6 +48,7 @@ export function progressLine(job: RegionJobProgress | null): string | null {
             ? ""
             : ` ${job.regionName}`;
       const received = formatBytes(job.receivedBytes);
+      if (job.cached === true) return `Using the downloaded${which}, ${received}`;
       return job.totalBytes === null
         ? `Downloading${which}… ${received}`
         : `Downloading${which}… ${received} of ${formatBytes(job.totalBytes)}`;
@@ -291,9 +292,9 @@ export function RegionPickerDialog({
 
                 {/* Requirement 1.11: what pressing the button actually does. */}
                 <p className="mb-1 text-[11px] text-[var(--color-text-secondary)]">
-                  The selection replaces the map that is loaded now. Every
-                  selected region is downloaded again, because downloads are not
-                  kept once the map is built.
+                  The selection replaces the map that is loaded now. A region
+                  downloaded in the last 30 days is used again rather than
+                  downloaded, so trying again after a failed build is quick.
                 </p>
                 <p className="text-[11px] text-[var(--color-text-secondary)]">
                   Terrain heights for route profiles are downloaded with it. After

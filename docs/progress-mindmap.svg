@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="3920" viewBox="0 0 1840 3920" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" width="1840" height="4250" viewBox="0 0 1840 4250" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
   <title>TrailRT implementation progress</title>
   <desc>Mindmap tracking implementation status across fourteen phases. Leaf nodes carry data-status attributes: done, in-progress, todo, investigation, blocked. Leaves correspond one-to-one with the task lists in .kiro/specs.</desc>
 
@@ -15,20 +15,20 @@
     .pct       { font-size: 13px; font-weight: 600; fill: #475569; }
   </style>
 
-  <rect width="1840" height="3920" fill="#f8fafc"/>
+  <rect width="1840" height="4250" fill="#f8fafc"/>
 
   <!-- ============ header band ============ -->
   <text class="hdr" x="48" y="46">TrailRT — Implementation Progress</text>
-  <text class="sub" x="48" y="72">Garmin BaseCamp replacement · macOS · Electron + React · GPL-3.0 · 14 phases · 214 tracked tasks</text>
+  <text class="sub" x="48" y="72">Garmin BaseCamp replacement · macOS · Electron + React · GPL-3.0 · 14 phases · 225 tracked tasks</text>
 
   <rect x="48" y="86" width="420" height="9" rx="4.5" fill="#e2e8f0"/>
-  <rect x="48" y="86" width="351" height="9" rx="4.5" fill="#16a34a"/>
-  <text class="pct" x="482" y="95">179 / 214 verified complete (84%) — Phase 14 in build at the owner’s request; Phase 11 at 11 / 13</text>
+  <rect x="48" y="86" width="358" height="9" rx="4.5" fill="#16a34a"/>
+  <text class="pct" x="482" y="95">192 / 225 verified complete (85%) — Phase 14 in build at the owner’s request; Phase 11 at 11 / 13</text>
 
   <g class="legend">
-    <circle cx="1012" cy="54" r="5" fill="#16a34a"/><text x="1026" y="59">Done (179)</text>
+    <circle cx="1012" cy="54" r="5" fill="#16a34a"/><text x="1026" y="59">Done (192)</text>
     <circle cx="1130" cy="54" r="5" fill="#f59e0b"/><text x="1144" y="59">In progress (0)</text>
-    <circle cx="1280" cy="54" r="5" fill="#94a3b8"/><text x="1294" y="59">Not started (29)</text>
+    <circle cx="1280" cy="54" r="5" fill="#94a3b8"/><text x="1294" y="59">Not started (27)</text>
     <circle cx="1440" cy="54" r="5" fill="#8b5cf6"/><text x="1454" y="59">Investigation (6)</text>
     <circle cx="1604" cy="54" r="5" fill="#dc2626"/><text x="1618" y="59">Blocked (0)</text>
   </g>
@@ -57,7 +57,7 @@
     <path class="link" stroke="#b45309" d="M1040 860 C1082 860, 1082 2920, 1125 2920"/>
     <path class="link" stroke="#c026d3" d="M800 860 C758 860, 758 3125, 715 3125"/>
     <path class="link" stroke="#0284c7" d="M1040 860 C1082 860, 1082 3290, 1125 3290"/>
-    <path class="link" stroke="#4f46e5" d="M1040 860 C1082 860, 1082 3575, 1125 3575"/>
+    <path class="link" stroke="#4f46e5" d="M1040 860 C1082 860, 1082 3770, 1125 3770"/>
 
     <!-- ============ PHASE 1 — Foundation (right, complete) ============ -->
     <rect x="1125" y="249" width="210" height="52" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.5"/>
@@ -564,22 +564,33 @@
 
 
     <!-- ============ Phase 14 · Library & day companion (right) ============ -->
-    <rect x="1125" y="3579" width="210" height="52" rx="10" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
-    <text class="phase" x="1230" y="3602" fill="#4f46e5">Phase 14 · Library</text>
-    <text class="count" x="1230" y="3621">6 / 12 tasks</text>
+    <rect x="1125" y="3744" width="210" height="52" rx="10" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>
+    <text class="phase" x="1230" y="3767" fill="#4f46e5">Phase 14 · Library</text>
+    <text class="count" x="1230" y="3786">19 / 23 tasks</text>
 
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3440, 1400 3440"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3470, 1400 3470"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3500, 1400 3500"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3530, 1400 3530"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3560, 1400 3560"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3590, 1400 3590"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3620, 1400 3620"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3650, 1400 3650"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3680, 1400 3680"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3710, 1400 3710"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3740, 1400 3740"/>
-    <path class="link" stroke="#4f46e5" d="M1335 3605 C1367 3605, 1367 3770, 1400 3770"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3440, 1400 3440"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3470, 1400 3470"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3500, 1400 3500"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3530, 1400 3530"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3560, 1400 3560"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3590, 1400 3590"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3620, 1400 3620"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3650, 1400 3650"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3680, 1400 3680"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3710, 1400 3710"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3740, 1400 3740"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3770, 1400 3770"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3800, 1400 3800"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3830, 1400 3830"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3860, 1400 3860"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3890, 1400 3890"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3920, 1400 3920"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3950, 1400 3950"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 3980, 1400 3980"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 4010, 1400 4010"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 4040, 1400 4040"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 4070, 1400 4070"/>
+    <path class="link" stroke="#4f46e5" d="M1335 3770 C1367 3770, 1367 4100, 1400 4100"/>
 
     <circle data-status="done" cx="1400" cy="3440" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3440" dy="0.35em">Spec, ADR 0021 &amp; out-of-order build</text>
     <circle data-status="done" cx="1400" cy="3470" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3470" dy="0.35em">Day scale, trip groups, day cards</text>
@@ -587,12 +598,22 @@
     <circle data-status="done" cx="1400" cy="3530" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3530" dy="0.35em">Rail &amp; left-panel lists</text>
     <circle data-status="done" cx="1400" cy="3560" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3560" dy="0.35em">Trip page: Plan, Objects, Photos</text>
     <circle data-status="done" cx="1400" cy="3590" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3590" dy="0.35em">Companion, editors &amp; trip hours</text>
-    <circle data-status="todo" cx="1400" cy="3620" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3620" dy="0.35em">Items outside a trip (ADR 0022)</text>
-    <circle data-status="todo" cx="1400" cy="3650" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3650" dy="0.35em">Day view &amp; focused cards</text>
-    <circle data-status="todo" cx="1400" cy="3680" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3680" dy="0.35em">Stop editor with consequences</text>
-    <circle data-status="todo" cx="1400" cy="3710" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3710" dy="0.35em">Left panel as drawn</text>
-    <circle data-status="todo" cx="1400" cy="3740" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3740" dy="0.35em">Photos section grid</text>
-    <circle data-status="todo" cx="1400" cy="3770" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3770" dy="0.35em">E2E &amp; verification</text>
-
+    <circle data-status="done" cx="1400" cy="3620" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3620" dy="0.35em">Trip list flow: select, then open</text>
+    <circle data-status="done" cx="1400" cy="3650" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3650" dy="0.35em">Items outside a trip (ADR 0022)</text>
+    <circle data-status="done" cx="1400" cy="3680" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3680" dy="0.35em">Details on the right</text>
+    <circle data-status="done" cx="1400" cy="3710" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3710" dy="0.35em">Structure on the left</text>
+    <circle data-status="done" cx="1400" cy="3740" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3740" dy="0.35em">Things made outside a plan</text>
+    <circle data-status="done" cx="1400" cy="3770" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3770" dy="0.35em">Right-click where you are</text>
+    <circle data-status="done" cx="1400" cy="3800" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3800" dy="0.35em">A plan without waypoints</text>
+    <circle data-status="done" cx="1400" cy="3830" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3830" dy="0.35em">Join two with a new route</text>
+    <circle data-status="done" cx="1400" cy="3860" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3860" dy="0.35em">Routes &amp; waypoints in any order</text>
+    <circle data-status="done" cx="1400" cy="3890" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3890" dy="0.35em">Add &amp; remove days</text>
+    <circle data-status="done" cx="1400" cy="3920" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3920" dy="0.35em">Plan menus &amp; reorder in a day</text>
+    <circle data-status="done" cx="1400" cy="3950" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3950" dy="0.35em">Region builds tried again</text>
+    <circle data-status="done" cx="1400" cy="3980" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="3980" dy="0.35em">Grab hand on routes; photo waypoints</text>
+    <circle data-status="todo" cx="1400" cy="4010" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="4010" dy="0.35em">Day view &amp; focused cards</text>
+    <circle data-status="todo" cx="1400" cy="4040" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="4040" dy="0.35em">Left panel as drawn</text>
+    <circle data-status="todo" cx="1400" cy="4070" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="4070" dy="0.35em">Photos section grid</text>
+    <circle data-status="todo" cx="1400" cy="4100" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="4100" dy="0.35em">E2E &amp; verification</text>
   </g>
 </svg>

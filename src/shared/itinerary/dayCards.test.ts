@@ -57,16 +57,17 @@ describe('dayCards', () => {
     ]);
   });
 
-  it('shows a drive with no route as not planned, and lists what has no time', () => {
+  it('shows a drive with no route as not planned, and keeps what has no time on its day, in plan order', () => {
     const unplanned = viewOf([stop('a', 'Buxton', BUXTON, {}, null), stop('b', 'Leek', LEEK, {}, null)]);
     const plan = dayCards(unplanned, { routes: [], tracks: [], waypoints: [] });
-    // The drive leaves at a known time, so it sits on that day, marked not planned;
-    // the arrival has no time, so it waits under Unknown times. As the tree did.
+    // Phase 14 Requirement 15: the arrival has no time, but it follows Buxton
+    // in the plan, so it is on Buxton's day rather than set apart.
     expect(plan.days[0]?.rows.map((r) => [r.kind, r.name, r.time])).toEqual([
       ['stop', 'Buxton', 'leave 16:00'],
       ['unplanned', 'Drive to Leek', 'not planned'],
+      ['stop', 'Leek', 'arrive —'],
     ]);
-    expect(plan.unknown.map((r) => [r.kind, r.name, r.time])).toEqual([['stop', 'Leek', 'arrive —']]);
+    expect(plan.unknown).toEqual([]);
   });
 
   it('puts a recorded track on the day it was recorded, and one without times outside the plan', () => {
@@ -97,5 +98,25 @@ describe('dayCards', () => {
 
   it('words a duration', () => {
     expect([durationText(35 * 60), durationText(3600), durationText(5400)]).toEqual(['35 min', '1 h', '1 h 30 min']);
+  });
+});
+
+describe('a route placed in the plan (Phase 14 task 15)', () => {
+  it('is one drive row with its own times, and needs no drive row where it joins its neighbours', () => {
+    const route = {
+      ...stop('r', 'Wincle back roads', BUXTON, { kind: 'route', entryRouteId: 'r1', waypointId: null }, null),
+      placeOut: { id: 'end', name: 'Wincle back roads', lat: LEEK.lat, lon: LEEK.lon, symbol: null },
+      drive: { routeId: 'r1', name: 'Wincle back roads', distanceM: 33_000, mode: 'auto' as const },
+      joined: true,
+    };
+    const view = viewOf([stop('a', 'Buxton', BUXTON, {}, null), route, { ...stop('b', 'Leek', LEEK, {}, null), joined: true }]);
+    const rows = dayCards(view, { routes: [{ id: 'r1', name: 'Wincle back roads', distanceM: 33_000 }], tracks: [], waypoints: [] }).days[0]?.rows ?? [];
+    expect(rows.map((r) => [r.kind, r.name])).toEqual([
+      ['stop', 'Buxton'],
+      ['drive', 'Wincle back roads'],
+      ['stop', 'Leek'],
+    ]);
+    expect(rows[1]?.time).toMatch(/^16:00–16:\d\d$/);
+    expect(rows[1]?.ref).toEqual({ kind: 'route', id: 'r1' });
   });
 });

@@ -73,6 +73,28 @@ textarea {
  * line or marker is swallowed by that layer's own handler and no point is
  * placed — which looks exactly like the map ignoring the user.
  */
+/*
+ * What can be dragged looks it (Phase 14 Requirement 18.1, 18.2). Leaflet
+ * gives every interactive layer the same pointing hand. The selected route's
+ * shaping line takes an open hand and shows faintly where it would be taken;
+ * a line drag makes the hand close over the whole map, since the pointer
+ * leaves the line as it moves. Draggable points take an open hand too;
+ * Leaflet already closes it while one is dragged.
+ */
+.trailrt-shaping-hit {
+  cursor: grab;
+}
+.trailrt-shaping-hit:hover {
+  stroke-opacity: 0.25;
+}
+.leaflet-marker-icon.leaflet-marker-draggable {
+  cursor: grab;
+}
+.trailrt-shaping-drag,
+.trailrt-shaping-drag * {
+  cursor: grabbing !important;
+}
+
 .trailrt-map-capture .leaflet-overlay-pane,
 .trailrt-map-capture .leaflet-marker-pane {
   pointer-events: none;

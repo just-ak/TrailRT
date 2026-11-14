@@ -147,6 +147,27 @@ test.describe('route alternatives and shaping', () => {
     expect(saved?.control.every((c) => c.shapeIndex !== null)).toBe(true);
   });
 
+  test('the line looks movable: an open hand over it, a closed hand while held (Phase 14 task 19)', async () => {
+    const { page } = harness;
+    const before = await routeState(page);
+    if (before === null) throw new Error('no route');
+    const hit = page.locator('path.trailrt-shaping-hit').first();
+    await expect(hit).toHaveCSS('cursor', 'grab');
+    const container = page.locator('.leaflet-container');
+
+    const grab = before.points[Math.floor(before.points.length / 3)] as [number, number];
+    const from = await pixelOf(page, { lat: grab[0], lon: grab[1] });
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await expect(container).toHaveClass(/trailrt-shaping-drag/);
+    await expect(container).toHaveCSS('cursor', 'grabbing');
+    // Escape lets go without an edit, and the hand opens again.
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    await expect(container).not.toHaveClass(/trailrt-shaping-drag/);
+    expect((await routeState(page))?.control).toEqual(before.control);
+  });
+
   test('dragging the line adds a shaping point, and undo puts the route back', async () => {
     const { page } = harness;
     const before = await routeState(page);

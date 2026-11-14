@@ -21,6 +21,7 @@ beforeEach(() => {
         },
       },
       trips: { get: none },
+      routes: { get: none },
       geometry: { forTrip: none },
     },
   });
@@ -51,6 +52,14 @@ describe('navigation', () => {
     useNavStore.getState().setSection('waypoints');
     useNavStore.getState().openTrip(TRIP);
     expect(useNavStore.getState().section).toBe('trips');
+    expect(useSelectionStore.getState().selected).toEqual({ kind: 'trip', id: TRIP });
+  });
+
+  it('going back to the list leaves the trip that was open selected, so the list shows where you were', () => {
+    useNavStore.getState().openTrip(TRIP);
+    void useSelectionStore.getState().select({ kind: 'route', id: 'r1' });
+    useNavStore.getState().backToList();
+    expect(useNavStore.getState().openTripId).toBeNull();
     expect(useSelectionStore.getState().selected).toEqual({ kind: 'trip', id: TRIP });
   });
 

@@ -131,6 +131,8 @@ export interface TrailRtApi {
     ): Promise<Result<TripWithCounts[]>>;
     /** Phase 14: every visible trip with its dates, length and counts. */
     overview(req: Req<typeof S.tripsOverviewRequest>): Promise<Result<TripOverview[]>>;
+    /** ADR 0022: the holder of items outside a trip. */
+    loose(): Promise<Result<{ id: string }>>;
   };
   folders: {
     list(): Promise<Result<Folder[]>>;
@@ -156,6 +158,7 @@ export interface TrailRtApi {
     listForTrip(
       req: Req<typeof S.routeListForTripRequest>,
     ): Promise<Result<Route[]>>;
+    join(req: Req<typeof S.routeJoinRequest>): Promise<Result<Route>>;
     listAll(): Promise<Result<RouteWithTrip[]>>;
     get(req: Req<typeof S.routeGetRequest>): Promise<Result<RouteWithPoints>>;
     create(req: Req<typeof S.routeCreateRequest>): Promise<Result<Route>>;
@@ -233,6 +236,15 @@ export interface TrailRtApi {
     linkLeg(req: Req<typeof S.itineraryLinkLegRequest>): Promise<Result<ItineraryStop>>;
     setLegMode(req: Req<typeof S.itinerarySetLegModeRequest>): Promise<Result<ItineraryStop>>;
     planAll(req: Req<typeof S.itineraryGetRequest>): Promise<Result<null>>;
+    addPlaceStop(
+      req: Req<typeof S.itineraryAddPlaceStopRequest>,
+    ): Promise<Result<{ waypoint: Waypoint; stop: ItineraryStop }>>;
+    addWaypointStop(req: Req<typeof S.itineraryAddWaypointStopRequest>): Promise<Result<{ waypointId: string; stop: ItineraryStop }>>;
+    addPhotoStop(req: Req<typeof S.itineraryAddPhotoStopRequest>): Promise<Result<{ waypoint: Waypoint; stop: ItineraryStop }>>;
+    addRouteLeg(req: Req<typeof S.itineraryAddRouteLegRequest>): Promise<Result<{ routeId: string; stopId: string }>>;
+    addDay(req: Req<typeof S.itineraryAddDayRequest>): Promise<Result<ItineraryStop>>;
+    deleteItem(req: Req<typeof S.itineraryDeleteItemRequest>): Promise<Result<{ id: string; entries: number }>>;
+    removeDay(req: Req<typeof S.itineraryRemoveDayRequest>): Promise<Result<{ removed: number }>>;
     addPoiStop(
       req: Req<typeof S.itineraryAddPoiStopRequest>,
     ): Promise<Result<{ waypoint: Waypoint; stop: ItineraryStop }>>;
@@ -267,6 +279,7 @@ export interface TrailRtApi {
     createGroup(
       req: Req<typeof S.waypointCreateGroupRequest>,
     ): Promise<Result<WaypointGroup>>;
+    fromPhoto(req: Req<typeof S.waypointFromPhotoRequest>): Promise<Result<Waypoint>>;
   };
   tracks: {
     listForTrip(

@@ -1,6 +1,7 @@
 import type { ItineraryView, OtherTransport } from '../domain/itinerary';
-import { daysBetween, utcToWallClock } from '../time/zoned';
+import { addDays, daysBetween, utcToWallClock } from '../time/zoned';
 import { shortDay } from '../library/tripGroups';
+import { entryDays, rowStopId } from './planEdit';
 
 /**
  * A dated trip's Plan tab, day by day. Phase 14, design §3.1.
@@ -13,7 +14,8 @@ import { shortDay } from '../library/tripGroups';
  * is left out.
  */
 
-export type DayRowKind = 'stop' | 'leg' | 'other' | 'unplanned' | 'missing' | 'track';
+/** `point`: a stop that is only a point, where a route starts or ends (Phase 14 Requirement 13.3). */
+export type DayRowKind = 'stop' | 'point' | 'drive' | 'leg' | 'other' | 'unplanned' | 'missing' | 'track';
 
 export interface DayRow {
   key: string;
@@ -34,6 +36,8 @@ export interface DayCard {
   distanceM: number;
   otherSeconds: number;
   rows: DayRow[];
+  /** Phase 14 Requirement 15: the day break that starts this day, or null for the first day or one a stay runs into. */
+  breakId: string | null;
 }
 
 export interface PlanCards {
@@ -66,13 +70,26 @@ export function dayCards(view: ItineraryView, contents: PlanContents): PlanCards
   const waypointsById = new Map(contents.waypoints.map((w) => [w.id, w]));
 
   const rows: DayRow[] = [];
+  // Day breaks are not rows: they start a day. First and last are among the
+  // entries that are places or routes.
+  const breaks = new Map<string, string>();
+  const real = stops.filter((s) => s.kind !== 'day');
+  const structural = entryDays(view, (instant, inZone) => utcToWallClock(instant, inZone).date, (date) => addDays(date, 1));
   for (const [index, stop] of stops.entries()) {
     const timed = timeline.stops[index];
-    const isFirst = index === 0;
-    const isLast = index === stops.length - 1;
-    const name = stop.place?.name ?? waypointsById.get(stop.waypointId)?.name ?? 'Place deleted';
+    if (stop.kind === 'day') {
+      // The day it starts, known or not (Requirement 15).
+      const starts = structural[index] ?? null;
+      if (starts !== null) breaks.set(starts, stop.id);
+      continue;
+    }
+    const isFirst = stop === real[0];
+    const isLast = stop === real.at(-1);
+    const name = stop.place?.name ?? (stop.waypointId === null ? null : waypointsById.get(stop.waypointId)?.name) ?? 'Place deleted';
 
-    if (!isFirst) {
+    // Requirement 14.3: an entry that starts where the one before ends has
+    // nothing joining them, so no drive row.
+    if (!isFirst && !stop.joined) {
       const leaves = timeline.stops[index - 1]?.departure ?? null;
       const leaveTime = local(leaves)?.time ?? null;
       const seconds = timed?.legDriveSeconds ?? null;
@@ -102,6 +119,27 @@ export function dayCards(view: ItineraryView, contents: PlanContents): PlanCards
       }
     }
 
+    // Phase 14 Requirement 14: a route in the plan is a drive of its own, from
+    // its start to its end, shown once.
+    if (stop.kind === 'route') {
+      const from = local(timed?.arrival ?? null);
+      const to = local(timed?.departure ?? null);
+      rows.push({
+        key: `stop:${stop.id}`,
+        kind: 'drive',
+        ref: stop.entryRouteId === null ? null : { kind: 'route', id: stop.entryRouteId },
+        name: stop.drive?.name ?? stop.place?.name ?? 'Route deleted',
+        time:
+          from === null
+            ? 'time unknown'
+            : to === null
+              ? `${from.time} · not timed`
+              : `${from.time}–${to.time}`,
+        at: timed?.arrival ?? null,
+      });
+      continue;
+    }
+
     const arrive = local(timed?.arrival ?? null);
     const leave = local(timed?.departure ?? null);
     let time: string;
@@ -115,8 +153,9 @@ export function dayCards(view: ItineraryView, contents: PlanContents): PlanCards
     }
     rows.push({
       key: `stop:${stop.id}`,
-      kind: stop.place === null ? 'missing' : 'stop',
-      ref: stop.place === null ? null : { kind: 'waypoint', id: stop.place.id },
+      kind: stop.point !== null ? 'point' : stop.place === null ? 'missing' : 'stop',
+      // A point has no object of its own to select.
+      ref: stop.place === null || stop.point !== null ? null : { kind: 'waypoint', id: stop.place.id },
       name,
       time,
       at: isFirst ? (timed?.departure ?? null) : (timed?.arrival ?? null),
@@ -140,12 +179,30 @@ export function dayCards(view: ItineraryView, contents: PlanContents): PlanCards
     placedTracks.add(track.id);
   }
 
+  // Phase 14 Requirement 15: an entry whose time is not known yet sits on the
+  // day it follows in the plan, in plan order, rather than apart from it.
+  const dayOfEntry = new Map(stops.map((stop, i) => [stop.id, structural[i] ?? null]));
+  const order = new Map(stops.map((stop, i) => [stop.id, i]));
+  const rowDay = (r: DayRow): string | null => {
+    if (r.at !== null) return local(r.at)?.date ?? null;
+    const entry = rowStopId(r.key);
+    return entry === null ? null : (dayOfEntry.get(entry.stopId) ?? null);
+  };
+  const rowOrder = (r: DayRow): number => {
+    const entry = rowStopId(r.key);
+    return entry === null ? Number.MAX_SAFE_INTEGER : (order.get(entry.stopId) ?? 0) * 2 + (entry.kind === 'leg' ? 0 : 1);
+  };
+  const timedDays = new Map(timeline.days.map((d) => [d.date, d]));
+  const dates = [...new Set([...timeline.days.map((d) => d.date), ...structural.filter((d): d is string => d !== null)])].toSorted();
+
   const days: DayCard[] = [];
   const used = new Set<string>();
-  for (const day of timeline.days) {
+  for (const date of dates) {
+    const day = timedDays.get(date) ?? { date, driveSeconds: 0, driveDistanceM: 0, otherSeconds: 0 };
+    // Plan entries in plan order; recorded tracks among them by time.
     const inDay = rows
-      .filter((r) => r.at !== null && local(r.at)?.date === day.date)
-      .toSorted((a, b) => (a.at ?? 0) - (b.at ?? 0));
+      .filter((r) => rowDay(r) === day.date)
+      .toSorted((a, b) => (a.at !== null && b.at !== null ? a.at - b.at : rowOrder(a) - rowOrder(b)));
     for (const r of inDay) used.add(r.key);
     days.push({
       date: day.date,
@@ -154,13 +211,14 @@ export function dayCards(view: ItineraryView, contents: PlanContents): PlanCards
       distanceM: day.driveDistanceM,
       otherSeconds: day.otherSeconds,
       rows: inDay,
+      breakId: breaks.get(day.date) ?? null,
     });
   }
 
   // A track recorded outside the trip's days is not in the plan.
   const unknown = rows.filter((r) => !used.has(r.key) && r.kind !== 'track');
-  const usedRoutes = new Set(stops.map((s) => s.legRouteId).filter((id): id is string => id !== null));
-  const usedWaypoints = new Set(stops.map((s) => s.waypointId));
+  const usedRoutes = new Set(stops.flatMap((s) => [s.legRouteId, s.entryRouteId]).filter((id): id is string => id !== null));
+  const usedWaypoints = new Set(stops.map((s) => s.waypointId).filter((id): id is string => id !== null));
   const notInPlan: DayRow[] = [
     ...contents.routes
       .filter((r) => !usedRoutes.has(r.id))

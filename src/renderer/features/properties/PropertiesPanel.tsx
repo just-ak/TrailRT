@@ -168,7 +168,7 @@ function TripDetails({ trip }: { trip: TripWithCounts }): ReactNode {
           <IconButton hint="New route" onClick={() => void actions.startDrawingRoute()}>
             <Route size={16} aria-hidden="true" />
           </IconButton>
-          <IconButton hint="New waypoint" onClick={() => actions.startPlacingWaypoint()}>
+          <IconButton hint="New waypoint" onClick={() => void actions.startPlacingWaypoint()}>
             <MapPinPlus size={16} aria-hidden="true" />
           </IconButton>
           <IconButton hint="Import GPX, KML or other files" onClick={() => void actions.chooseFilesToImport()}>

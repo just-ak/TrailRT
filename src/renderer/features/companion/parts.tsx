@@ -1,6 +1,8 @@
-import { Pencil } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { ChevronRight, MoreHorizontal, Pencil } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import { ContextMenu, type MenuItem } from '../../components/ContextMenu';
 import { IconButton } from '../../components/IconButton';
+import { useNavStore } from '../../stores/navStore';
 
 /**
  * The companion's building blocks, drawn as the mock-ups draw them
@@ -35,12 +37,15 @@ export function CardTitle({
   lines,
   onEdit,
   editHint = 'Edit',
+  action,
 }: {
   icon: ReactNode;
   title: string;
   lines: readonly (string | null)[];
   onEdit?: () => void;
   editHint?: string;
+  /** A control beside the pencil, such as Open on a trip that is only selected. */
+  action?: ReactNode;
 }): ReactNode {
   const shown = lines.filter((l): l is string => l !== null && l !== '');
   return (
@@ -54,6 +59,7 @@ export function CardTitle({
           </p>
         ))}
       </div>
+      {action}
       {onEdit !== undefined && (
         <IconButton variant="ghost" hint={editHint} onClick={onEdit}>
           <Pencil size={15} aria-hidden="true" />
@@ -78,4 +84,60 @@ export function Chip({ children }: { children: ReactNode }): ReactNode {
 
 export function Note({ children }: { children: ReactNode }): ReactNode {
   return <p className="mt-2 text-[12px] text-[var(--color-text-muted)]">{children}</p>;
+}
+
+/**
+ * Open, for a trip that is selected in the trip list but not open
+ * (`docs/design/library-panel/trip-list-flow/`, step 1). Nothing once it is open.
+ */
+export function OpenTripButton({ tripId }: { tripId: string }): ReactNode {
+  const open = useNavStore((s) => s.openTripId === tripId);
+  if (open) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => useNavStore.getState().openTrip(tripId)}
+      className="flex shrink-0 items-center gap-0.5 rounded-md bg-[var(--color-surface-sunken)] py-1 pr-1.5 pl-2.5 text-[12px] font-semibold text-[var(--color-text-primary)] hover:outline-1 hover:outline-[var(--color-border-subtle)]"
+    >
+      Open
+      <ChevronRight size={14} aria-hidden="true" className="text-[var(--color-accent)]" />
+    </button>
+  );
+}
+
+/**
+ * The ⋯ on a details heading (design §4.8): what is rarely needed, or
+ * destructive, kept off the face of the panel.
+ */
+export function OptionsMenu({ hint, items }: { hint: string; items: readonly MenuItem[] }): ReactNode {
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null);
+  return (
+    <>
+      <IconButton
+        variant="ghost"
+        hint={hint}
+        onClick={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect();
+          setAt({ x: rect.right - 220, y: rect.bottom + 4 });
+        }}
+      >
+        <MoreHorizontal size={16} aria-hidden="true" />
+      </IconButton>
+      {at !== null && <ContextMenu x={at.x} y={at.y} items={[...items]} onClose={() => setAt(null)} />}
+    </>
+  );
+}
+
+/** A details heading: icon, the selection's name, a quiet second line, and its controls. */
+export function DetailsHeading({ icon, title, sub, children }: { icon: ReactNode; title: string; sub?: string | null; children?: ReactNode }): ReactNode {
+  return (
+    <div className="flex items-start gap-2">
+      <span className="mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <h2 className="truncate text-[15px] font-semibold text-[var(--color-text-primary)]">{title}</h2>
+        {sub != null && sub !== '' && <p className="truncate text-[12px] text-[var(--color-text-muted)]">{sub}</p>}
+      </div>
+      {children}
+    </div>
+  );
 }

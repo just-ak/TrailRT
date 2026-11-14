@@ -27,6 +27,8 @@ interface NavState {
   setSection(section: LibrarySection): void;
   openTrip(tripId: string): void;
   closeTrip(): void;
+  /** ‹ Trips: closes the trip page and leaves its trip selected in the list. */
+  backToList(): void;
   setTab(tab: TripTab): void;
 }
 
@@ -78,6 +80,14 @@ export const useNavStore = create<NavState>((set, get) => ({
     if (get().openTripId === null) return;
     set({ openTripId: null });
     persist('openTripId', null);
+  },
+
+  backToList: () => {
+    const tripId = get().openTripId;
+    if (tripId === null) return;
+    get().closeTrip();
+    const selected = useSelectionStore.getState().selected;
+    if (selected?.kind !== 'trip' || selected.id !== tripId) void useSelectionStore.getState().select({ kind: 'trip', id: tripId });
   },
 
   setTab: (tripTab) => {

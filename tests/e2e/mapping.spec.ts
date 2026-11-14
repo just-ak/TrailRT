@@ -6,8 +6,7 @@ import { editSelection,
   createTripViaUi,
   launch,
   makeUserDataDir,
-  type Harness, tripAction,
-  openTrip } from './helpers';
+  type Harness, tripAction } from './helpers';
 
 /**
  * Phase 4 acceptance criteria, against the built application.
@@ -542,8 +541,7 @@ test.describe('the snap routing tool', () => {
 
     await expect(page.getByRole('button', { name: 'Snap routing' })).toHaveCount(0);
 
-    await openTrip(page, /Phase Four Trip/);
-    await page.getByRole('button', { name: 'New route', exact: true }).click();
+    await tripAction(page, /Phase Four Trip/, 'New Route');
     await expect(page.getByText(/no map region loaded yet/i)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add map regions…' })).toBeVisible();
 

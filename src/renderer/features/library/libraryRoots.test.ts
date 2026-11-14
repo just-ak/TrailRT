@@ -78,10 +78,10 @@ describe('the trip list', () => {
     expect(root.children[3]?.children[0]?.children.map((c) => c.name)).toEqual(['nested']);
   });
 
-  it('gives each trip its second line and no children, because selecting it opens it', () => {
+  it('gives each trip its second line and keeps its contents, to open in place in the list', () => {
     const idea = tripListRoot(TREE, OVERVIEWS, '2026-11-12').children[0]?.children[0];
     expect(idea?.detail).toBe('Today · Thu 12 Nov · 1 day · 33 km');
-    expect(idea?.children).toEqual([]);
+    expect(idea?.children.map((c) => c.name)).toEqual(['Leek → Lathkill']);
     expect(idea?.id).toBe('trip:idea');
   });
 

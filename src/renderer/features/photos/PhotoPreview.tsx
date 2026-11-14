@@ -1,7 +1,11 @@
-import { ChevronLeft, ChevronRight, Crosshair, ExternalLink, FolderOpen, ImageOff, X } from 'lucide-react';
+import { NO_LOCATION_TEXT } from '@shared/photos/photoWaypoint';
+import { CalendarPlus, ChevronLeft, ChevronRight, Crosshair, ExternalLink, FolderOpen, ImageOff, MapPin, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { IconButton } from '../../components/IconButton';
+import { photoToPlan, photoToWaypoint } from '../../lib/actions';
 import { api, call, describeError } from '../../lib/client';
+import { useItineraryStore } from '../../stores/itineraryStore';
+import { useNavStore } from '../../stores/navStore';
 import { usePhotoStore } from '../../stores/photoStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useUiStore } from '../../stores/uiStore';
@@ -33,6 +37,10 @@ export function PhotoPreview(): ReactNode {
   const folders = usePhotoStore((s) => s.folders);
   const listFolder = usePhotoStore((s) => s.listFolder);
   const units = useSettingsStore((s) => s.settings.units);
+  // Add to the Plan needs a trip open with a plan (Requirement 18.4).
+  const openTrip = useNavStore((s) => (s.section === 'trips' ? s.openTripId : null));
+  const planTrip = useItineraryStore((s) => (s.view === null ? null : s.tripId));
+  const canPlan = openTrip !== null && planTrip === openTrip;
   // Keyed by photo, so a new selection reads as loading without an extra render.
   const [loaded, setLoaded] = useState<{ photoId: string; picture: Picture } | null>(null);
   const picture: Picture = loaded !== null && loaded.photoId === anchor ? loaded.picture : { kind: 'loading' };
@@ -75,6 +83,7 @@ export function PhotoPreview(): ReactNode {
     folders[details.photo.folderId]?.state ?? (listFolder?.id === details.photo.folderId ? listFolder.state : null);
   const model = previewModel({ details, folderState, units, sequence, inBurst: burst !== null });
   const store = usePhotoStore.getState;
+  const located = details.photo.lat !== null && details.photo.lon !== null;
 
   const zoom = (): void => {
     const map = getMapInstance();
@@ -163,6 +172,24 @@ export function PhotoPreview(): ReactNode {
         <IconButton variant="ghost" hint={model.zoomHint} disabled={!model.canZoom} onClick={zoom}>
           <Crosshair size={16} aria-hidden="true" />
         </IconButton>
+        <IconButton
+          variant="ghost"
+          hint={located ? 'Use as a waypoint' : NO_LOCATION_TEXT}
+          disabled={!located}
+          onClick={() => void photoToWaypoint(anchor)}
+        >
+          <MapPin size={16} aria-hidden="true" />
+        </IconButton>
+        {canPlan && (
+          <IconButton
+            variant="ghost"
+            hint={located ? 'Add to the plan, on the day it was taken' : NO_LOCATION_TEXT}
+            disabled={!located}
+            onClick={() => void photoToPlan(anchor)}
+          >
+            <CalendarPlus size={16} aria-hidden="true" />
+          </IconButton>
+        )}
         <IconButton
           variant="ghost"
           hint={model.openHint}

@@ -73,6 +73,8 @@ export interface ShapingOptions {
 
 const PANE = 'trailrt-shaping';
 const HIT_WEIGHT = 16;
+/** On the map container while the line is dragged; see `index.css`. */
+const DRAG_CLASS = 'trailrt-shaping-drag';
 const PREVIEW_COLOUR = '#f59e0b';
 
 
@@ -237,11 +239,14 @@ export function useRouteShaping(map: L.Map | null, options: ShapingOptions): voi
       detach();
       handle({ type: 'up' }, event);
     };
+    // The closed hand, from press to release or Escape (Requirement 18.1).
     const attach = (): void => {
+      leaflet.getContainer().classList.add(DRAG_CLASS);
       window.addEventListener('mousemove', onMove);
       window.addEventListener('mouseup', onUp);
     };
     const detach = (): void => {
+      leaflet.getContainer().classList.remove(DRAG_CLASS);
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };

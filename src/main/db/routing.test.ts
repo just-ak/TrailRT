@@ -13,6 +13,17 @@ import * as control from './repositories/routeControlPoints';
 import * as routeRepo from './repositories/routes';
 import * as tripRepo from './repositories/trips';
 
+/**
+ * A trip written as a build before migration 0007 would write it: the
+ * repository writes every column the current schema has, `role` included.
+ */
+function legacyTrip(sqlite: Database.Database, id: string, name: string): { id: string } {
+  const now = Date.now();
+  sqlite.prepare('INSERT INTO trips (id, folder_id, name, status, created_at, updated_at) VALUES (?, NULL, ?, ?, ?, ?)').run(id, name, 'active', now, now);
+  return { id };
+}
+
+
 let dir: string;
 let handle: DbHandle;
 let db: Db;
@@ -48,7 +59,7 @@ afterEach(() => {
 describe('migration 0002', () => {
   it('is applied, and 0003 is the current schema version', () => {
     expect(handle.migration.schemaVersion).toBe(expectedSchemaVersion());
-    expect(expectedSchemaVersion()).toBe(7);
+    expect(expectedSchemaVersion()).toBe(11);
   });
 
   it('applies on top of a Phase 3 database without losing data', () => {
@@ -105,14 +116,7 @@ describe('migration 0003', () => {
         .run(migration.version, migration.name, Date.now());
     }
     const old = drizzle(sqlite, { schema });
-    const trip = tripRepo.insertTrip(old, {
-      id: '0190c3ae-1f2b-7c4d-9e8f-000000000003',
-      folderId: null,
-      name: 'Phase 5 trip',
-      description: null,
-      notes: null,
-      now: Date.now(),
-    });
+    const trip = legacyTrip(sqlite, '0190c3ae-1f2b-7c4d-9e8f-000000000003', 'Phase 5 trip');
     const route = routeRepo.insertRoute(old, {
       tripId: trip.id,
       name: 'Snapped in Phase 5',
@@ -129,7 +133,7 @@ describe('migration 0003', () => {
 
     const upgraded = createDatabase({ file });
     // 0004 (Phase 10) follows on the same upgrade; it touches no route table.
-    expect(upgraded.migration.applied).toEqual([4, 5, 6, 7]);
+    expect(upgraded.migration.applied).toEqual([4, 5, 6, 7, 8, 9, 10, 11]);
     expect(control.listControlRows(upgraded.db, route.id)).toEqual([
       { lat: 53.2588, lon: -1.911, role: 'via', shapeIndex: null },
       { lat: 53.2602, lon: -2.1255, role: 'via', shapeIndex: null },

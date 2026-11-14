@@ -8,6 +8,7 @@ import {
   sqliteTable,
   text,
   unique,
+  uniqueIndex,
   type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core';
 
@@ -59,12 +60,19 @@ export const trips = sqliteTable(
     metadata: text('metadata'),
     createdAt: integer('created_at').notNull().default(now),
     updatedAt: integer('updated_at').notNull().default(now),
+    /**
+     * Phase 14, ADR 0022: `'loose'` marks the one hidden holder of items that
+     * are outside any trip. Every other trip is `'trip'`.
+     */
+    role: text('role').notNull().default('trip'),
   },
   (t) => [
     index('idx_trips_folder').on(t.folderId),
     index('idx_trips_status').on(t.status),
     index('idx_trips_updated').on(t.updatedAt),
     check('trips_status_valid', sql`${t.status} in ('active', 'archived')`),
+    check('trips_role_valid', sql`${t.role} in ('trip', 'loose')`),
+    uniqueIndex('idx_trips_one_loose').on(t.role).where(sql`${t.role} = 'loose'`),
   ],
 );
 
@@ -410,7 +418,8 @@ export const itineraryStops = sqliteTable(
       .notNull()
       .references(() => itineraries.tripId, { onDelete: 'cascade' }),
     seq: integer('seq').notNull(),
-    waypointId: text('waypoint_id').notNull(),
+    /** Null for a stop that is only a point (Phase 14, migration 0008). */
+    waypointId: text('waypoint_id'),
     legRouteId: text('leg_route_id'),
     /** `road`, `route` or `other`. Phase 10 feedback, design §15.1. */
     legMode: text('leg_mode').notNull().default('road'),
@@ -426,11 +435,22 @@ export const itineraryStops = sqliteTable(
     notes: text('notes'),
     createdAt: integer('created_at').notNull().default(now),
     updatedAt: integer('updated_at').notNull().default(now),
+    /** A stop with no waypoint: where a route starts or ends. Phase 14. */
+    pointLat: real('point_lat'),
+    pointLon: real('point_lon'),
+    pointName: text('point_name'),
+    /** Phase 14: `stop`, `route` for a route placed in the plan as a drive, or `day` for a day break. */
+    entryKind: text('entry_kind').notNull().default('stop'),
+    entryRouteId: text('entry_route_id'),
   },
   (t) => [
     index('idx_itinerary_stops_trip').on(t.tripId, t.seq),
     index('idx_itinerary_stops_waypoint').on(t.waypointId),
     check('itinerary_stops_kind_valid', sql`${t.durationKind} in ('hours', 'days')`),
+    check(
+      'itinerary_stops_entry_valid',
+      sql`(${t.entryKind} = 'route' AND ${t.entryRouteId} IS NOT NULL AND ${t.waypointId} IS NULL AND ${t.pointLat} IS NULL) OR (${t.entryKind} = 'day' AND ${t.entryRouteId} IS NULL AND ${t.waypointId} IS NULL AND ${t.pointLat} IS NULL) OR (${t.entryKind} = 'stop' AND ${t.entryRouteId} IS NULL AND ((${t.waypointId} IS NOT NULL) <> (${t.pointLat} IS NOT NULL AND ${t.pointLon} IS NOT NULL)))`,
+    ),
   ],
 );
 

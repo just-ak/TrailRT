@@ -44,6 +44,7 @@ import { resolveFilePath } from '../linkedFolders/resolve';
 import { thumbnailCache } from '../photoCache/runtime';
 import * as linkedFolderService from '../services/linkedFolderService';
 import * as photoService from '../services/photoService';
+import * as photoWaypointService from '../services/photoWaypointService';
 import type { LinkedFolder, LinkedFolderSummary, PhotoMapScope } from '@shared/domain/linkedFolders';
 import { assertNotInLinkedFolder } from '../linkedFolders/writeGuard';
 import * as undoService from '../services/undoService';
@@ -354,6 +355,8 @@ export function registerIpcHandlers(): void {
     libraryService.overview(ctx().handle.db, { includeArchived: req.includeArchived }),
   );
 
+  handleNoArgs(CHANNELS.trips.loose, () => ({ id: tripService.looseTripId(ctx().handle.db) }));
+
   handle(CHANNELS.trips.search, S.tripSearchRequest, (req) =>
     tripService.search(ctx().handle.db, req.query),
   );
@@ -554,6 +557,38 @@ export function registerIpcHandlers(): void {
     return withPlanning([req.tripId], mutation, 'add stop');
   });
 
+  handle(CHANNELS.itinerary.addPlaceStop, S.itineraryAddPlaceStopRequest, async (req) =>
+    withPlanning([req.tripId], poiTripService.addPlaceStop(ctx().handle.db, req), 'add stop'),
+  );
+
+  handle(CHANNELS.itinerary.addWaypointStop, S.itineraryAddWaypointStopRequest, async (req) =>
+    withPlanning([req.tripId], poiTripService.addWaypointStop(ctx().handle.db, req), 'add stop'),
+  );
+
+  handle(CHANNELS.itinerary.addPhotoStop, S.itineraryAddPhotoStopRequest, async (req) =>
+    withPlanning([req.tripId], photoWaypointService.addPhotoStop(ctx().handle.db, req, planning()), 'add stop'),
+  );
+
+  handle(CHANNELS.itinerary.addRouteLeg, S.itineraryAddRouteLegRequest, async (req) =>
+    withPlanning([req.tripId], poiTripService.addRouteLeg(ctx().handle.db, req), 'add route to the plan'),
+  );
+
+  handle(CHANNELS.itinerary.deleteItem, S.itineraryDeleteItemRequest, (req) =>
+    commit(poiTripService.deleteItem(ctx().handle.db, req), req.kind === 'route' ? 'delete route' : 'delete waypoint'),
+  );
+
+  handle(CHANNELS.itinerary.addDay, S.itineraryAddDayRequest, (req) =>
+    commit(itineraryService.addDay(ctx().handle.db, req, planning()), 'add a day'),
+  );
+
+  handle(CHANNELS.itinerary.removeDay, S.itineraryRemoveDayRequest, async (req) =>
+    withPlanning([req.tripId], itineraryService.removeDay(ctx().handle.db, req, planning()), 'remove a day'),
+  );
+
+  handle(CHANNELS.routes.join, S.routeJoinRequest, async (req) =>
+    commit(await poiTripService.joinWithRoute(ctx().handle.db, optionalProvider(), req), 'join with a new route'),
+  );
+
   handle(CHANNELS.itinerary.exportIcs, S.itineraryExportIcsRequest, async (req) => {
     const db = ctx().handle.db;
     const view = itineraryService.get(db, req.tripId, planning());
@@ -749,6 +784,12 @@ export function registerIpcHandlers(): void {
   handle(CHANNELS.waypoints.createGroup, S.waypointCreateGroupRequest, (req) =>
     commit(waypointService.createGroup(ctx().handle.db, req)),
   );
+
+  // A photo used again gives back its waypoint, with nothing to undo.
+  handle(CHANNELS.waypoints.fromPhoto, S.waypointFromPhotoRequest, (req) => {
+    const mutation = photoWaypointService.fromPhoto(ctx().handle.db, req);
+    return mutation.inverse.kind === 'none' ? mutation.result : commit(mutation);
+  });
 
   // --------------------------------------------------------------- tracks
   handle(CHANNELS.tracks.listForTrip, S.trackListForTripRequest, (req) =>

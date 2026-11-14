@@ -46,6 +46,8 @@ export interface TimelineLeg {
    */
   kind?: 'road' | 'other';
   minutes?: number | null;
+  /** Phase 14: nothing lies between this entry and the one before; no time passes. */
+  joined?: boolean;
 }
 
 export interface TimelineStopInput {
@@ -54,6 +56,18 @@ export interface TimelineStopInput {
   position: LatLon | null;
   /** The leg arriving at this stop. Ignored on the first stop. */
   leg: TimelineLeg | null;
+  /**
+   * Phase 14: this entry is itself a drive, a route placed in the plan. It is
+   * reached at the route's start and left at its end, after the drive; its
+   * driving counts on the day it starts. Null or absent for a stop.
+   */
+  drive?: TimelineLeg | null;
+  /**
+   * Phase 14 Requirement 15: a day break. The next day starts here, on the
+   * date after the entry before it is left, at this time (or the plan's
+   * usual leaving time). It has no place and takes no time of its own.
+   */
+  dayBreak?: { departTime: string | null } | null;
 }
 
 export interface TimelineInput {
@@ -99,6 +113,9 @@ export interface TimedStop {
   legMode: TransportMode | null;
   /** Whether the leg arriving here is by road or other transport; null on the first stop. */
   legKind: 'road' | 'other' | null;
+  /** Phase 14: for a route placed in the plan, its own driving time and length. */
+  driveSeconds: number | null;
+  driveDistanceM: number | null;
   flags: StopFlag[];
 }
 
@@ -136,6 +153,7 @@ export function legDriveSeconds(
   leg: TimelineLeg | null,
   walkingSpeedKmh: number,
 ): { seconds: number; speedKmh: number | null } | null {
+  if (leg?.joined === true) return { seconds: 0, speedKmh: null };
   if (leg !== null && leg.kind === 'other') {
     const minutes = leg.minutes ?? null;
     return minutes !== null && minutes > 0 ? { seconds: minutes * 60, speedKmh: null } : null;
@@ -170,6 +188,33 @@ export function computeTimeline(
 
   for (const [index, entry] of input.stops.entries()) {
     const { stop } = entry;
+    if (entry.dayBreak != null) {
+      // Placed in the zone of the day it ends, so its date is that day's.
+      const zone = stops.at(-1)?.zone ?? calendarZone;
+      const base: string | null = index === 0 ? itinerary.startDate : previousDeparture === null ? null : utcToWallClock(previousDeparture, zone).date;
+      const starts: number | null =
+        base === null ? null : wallClockToUtc({ date: addDays(base, 1), time: entry.dayBreak.departTime ?? itinerary.defaultDepart }, zone);
+      stops.push({
+        stopId: stop.id,
+        index,
+        zone,
+        zoneKnown: true,
+        arrival: starts,
+        departure: starts,
+        arrivalLocal: local(starts, zone),
+        departureLocal: local(starts, zone),
+        legDriveSeconds: null,
+        legDistanceM: null,
+        legSpeedKmh: null,
+        legMode: null,
+        legKind: null,
+        driveSeconds: null,
+        driveDistanceM: null,
+        flags: starts === null ? ['unknown-time'] : [],
+      });
+      previousDeparture = starts;
+      continue;
+    }
     const zoneInfo = zones[index] ?? { zone: input.fallbackZone, known: false };
     const zone = zoneInfo.zone;
     const flags: StopFlag[] = [];
@@ -182,8 +227,13 @@ export function computeTimeline(
     let arrival: number | null = null;
     let departure: number | null = null;
     let timed: { seconds: number; speedKmh: number | null } | null = null;
+    const drive = entry.drive ?? null;
+    const driven = drive === null ? null : legDriveSeconds(drive, input.walkingSpeedKmh);
 
-    if (isFirst) {
+    if (isFirst && drive !== null) {
+      // A plan that starts with a route sets off along it at the start time.
+      arrival = wallClockToUtc({ date: itinerary.startDate, time: itinerary.startTime }, zone);
+    } else if (isFirst) {
       departure = wallClockToUtc(
         { date: itinerary.startDate, time: itinerary.startTime },
         zone,
@@ -206,7 +256,11 @@ export function computeTimeline(
       if (arrival > deadline) flags.push('arrive-by-missed');
     }
 
-    if (!isFirst && !isLast && arrival !== null && arrivalLocal !== null) {
+    if (drive !== null) {
+      // A drive is left at its end: no stay, and no time when its length is unknown.
+      if (driven === null) flags.push('unplanned-leg');
+      departure = arrival === null || driven === null ? null : arrival + Math.round(driven.seconds) * MS_PER_SECOND;
+    } else if (!isFirst && !isLast && arrival !== null && arrivalLocal !== null) {
       if (stop.durationKind === 'days') {
         const days = Math.max(1, stop.durationDays ?? 1);
         departure = wallClockToUtc(
@@ -243,20 +297,28 @@ export function computeTimeline(
       legSpeedKmh: timed?.speedKmh ?? null,
       legMode: isFirst ? null : (entry.leg?.mode ?? null),
       legKind: isFirst ? null : (entry.leg?.kind ?? 'road'),
+      driveSeconds: driven === null ? null : Math.round(driven.seconds),
+      driveDistanceM: drive?.distanceM ?? null,
       flags,
     });
 
     previousDeparture = isLast ? null : departure;
   }
 
-  const complete = stops.every((s, i) => (i === 0 ? s.departure !== null : s.arrival !== null));
+  // A drive's end is known only once it is timed, so its departure counts too.
+  const complete = stops.every((s, i) => {
+    if (input.stops[i]?.drive != null) return s.arrival !== null && s.departure !== null;
+    return i === 0 ? s.departure !== null : s.arrival !== null;
+  });
   const last = stops.at(-1);
   const endDate =
     last === undefined
       ? null
-      : last.index === 0
+      : input.stops.at(-1)?.drive != null
         ? (local(last.departure, calendarZone)?.date ?? null)
-        : (local(last.arrival, calendarZone)?.date ?? null);
+        : last.index === 0
+          ? (local(last.departure, calendarZone)?.date ?? null)
+          : (local(last.arrival, calendarZone)?.date ?? null);
 
   return {
     calendarZone,
@@ -284,9 +346,10 @@ function buildDays(
   endDate: string | null,
 ): TimelineDay[] {
   const first = stops[0];
-  if (first === undefined || first.departure === null) return [];
+  const setOff = first?.departure ?? first?.arrival ?? null;
+  if (first === undefined || setOff === null) return [];
 
-  const startDate = utcToWallClock(first.departure, zone).date;
+  const startDate = utcToWallClock(setOff, zone).date;
 
   // The last date anything is known to happen on.
   let lastKnown = startDate;
@@ -328,6 +391,15 @@ function buildDays(
     }
     day.driveSeconds += stop.legDriveSeconds;
     day.driveDistanceM += stop.legDistanceM ?? 0;
+  }
+
+  // A route in the plan drives on the day it starts.
+  for (const stop of stops) {
+    if (stop.driveSeconds === null || stop.arrival === null) continue;
+    const day = byDate.get(utcToWallClock(stop.arrival, zone).date);
+    if (day === undefined) continue;
+    day.driveSeconds += stop.driveSeconds;
+    day.driveDistanceM += stop.driveDistanceM ?? 0;
   }
 
   for (const day of days) {

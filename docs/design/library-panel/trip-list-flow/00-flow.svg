@@ -1,0 +1,393 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 724" width="1080" height="724" role="img" aria-labelledby="t00-flow d00-flow">
+<title id="t00-flow">The trip list flow</title>
+<desc id="d00-flow">Now, a click on a trip replaces the list with its page. Proposed, a click selects and previews; opening is a separate, deliberate step, and Back returns to the list as it was.</desc>
+
+<style>
+  .bg{fill:var(--ui-surface,#ffffff)} .sunk{fill:var(--ui-sunken,#f1f5f9)}
+  .ln{fill:none;stroke:var(--ui-border,#e2e8f0)} .bdf{fill:var(--ui-border,#e2e8f0)}
+  .t1{fill:var(--ui-text,#0f172a)} .t2{fill:var(--ui-text2,#475569)} .t3{fill:var(--ui-text3,#94a3b8)}
+  .acc{fill:var(--ui-accent,#2563eb)} .acct{fill:var(--ui-accent,#2563eb)}
+  .accl{fill:var(--ui-accent,#2563eb);fill-opacity:.13} .accr{fill:none;stroke:var(--ui-accent,#2563eb);stroke-width:2}
+  .on{fill:#ffffff} .onm{fill:#ffffff;fill-opacity:.78} .ph{fill:var(--ui-photo,#0d9488)} .dng{fill:#dc2626}
+  .rail{fill:none;stroke:var(--ui-text3,#94a3b8);stroke-width:2}
+  .mapbg{fill:var(--ui-map,#e9efe1)} .mapg{fill:var(--ui-map-green,#d3e4c1)} .mapw{fill:none;stroke:var(--ui-map-water,#a9cbee);stroke-width:5;stroke-linecap:round}
+  .road{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:4;stroke-linecap:round} .road2{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:2.2;stroke-linecap:round}
+  .rte{fill:none;stroke:#7c3aed;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round} .rtec{fill:none;stroke:#ffffff;stroke-width:8;stroke-linecap:round;stroke-opacity:.9}
+  .i{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i2{stroke:var(--ui-text2,#475569)} .i3{stroke:var(--ui-text3,#94a3b8)} .ia{stroke:var(--ui-accent,#2563eb)}
+  .iw{stroke:#ffffff} .ip{stroke:var(--ui-photo,#0d9488)} .ir{stroke:#7c3aed} .it{stroke:#ea580c} .iy{stroke:#dc2626} .id{stroke:#dc2626}
+  .co{fill:#f59e0b} .cot{fill:#1f2937;font-size:11px;font-weight:700}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<style>@media (prefers-color-scheme: dark){svg{--ui-surface:#0f172a;--ui-sunken:#080d17;--ui-border:#2a3550;--ui-text:#f1f5f9;--ui-text2:#94a3b8;--ui-text3:#64748b;--ui-accent:#60a5fa;--ui-photo:#2dd4bf;--ui-map:#162030;--ui-map-green:#1b2f25;--ui-map-water:#1f4069;--ui-map-road:#2c3b54}}</style>
+<rect x="0" y="0" width="1080" height="724" rx="12" class="bg" />
+<rect x="0.5" y="0.5" width="1079" height="723" rx="12" class="ln"/>
+<text x="24" y="34" class="dng" font-size="11" font-weight="700" text-anchor="start" letter-spacing="0.08em">NOW</text>
+<text x="24" y="54" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >A click opens the trip, so the list is gone and the next trip is a Back and a click away.</text>
+<g transform="translate(24 70) scale(0.36) translate(-52 -30)">
+<clipPath id="ovl1"><rect x="52" y="30" width="272" height="638"/></clipPath><g clip-path="url(#ovl1)">
+<rect x="52" y="30" width="272" height="638" rx="0" class="bg" />
+<text x="66" y="60" class="t1" font-size="16" font-weight="700" text-anchor="start" >Trips</text>
+<text x="114" y="60" class="t3" font-size="13" font-weight="400" text-anchor="start" >8</text>
+<g transform="translate(266.0 48.0) scale(0.6666666666666666)" class="i i2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></g>
+<rect x="288" y="42" width="28" height="28" rx="7" class="acc" />
+<g transform="translate(294.0 48.0) scale(0.6666666666666666)" class="i iw"><path d="M12 5v14M5 12h14"/></g>
+<rect x="62" y="78" width="252" height="28" rx="7" class="sunk" />
+<g transform="translate(70 84) scale(0.625)" class="i i3"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<text x="90" y="96.5" class="t3" font-size="12" font-weight="400" text-anchor="start" >Search trips</text>
+<text x="66" y="130" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">COMING UP</text>
+<g transform="translate(60 149) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 147) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="158" class="t1" font-size="13" font-weight="600" text-anchor="start" >Idea1</text>
+<text x="100" y="174" class="t3" font-size="11" font-weight="400" text-anchor="start" >Today · Thu 12 Nov · 1 day · 33 km</text>
+<rect x="56" y="188" width="264" height="46" rx="8" class="accl" />
+<g transform="translate(60 199) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 197) scale(0.6666666666666666)" class="i ia"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="208" class="t1" font-size="13" font-weight="600" text-anchor="start" >Peak loop</text>
+<text x="100" y="224" class="t3" font-size="11" font-weight="400" text-anchor="start" >Fri 13 – Sun 15 Nov · 97 km</text>
+<g transform="translate(60 249) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 247) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="258" class="t1" font-size="13" font-weight="600" text-anchor="start" >FringeOne</text>
+<text x="100" y="274" class="t3" font-size="11" font-weight="400" text-anchor="start" >From Wed 18 Nov · times unknown</text>
+<text x="66" y="300" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">IDEAS · NO DATES</text>
+<g transform="translate(60 319) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 317) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="328" class="t1" font-size="13" font-weight="600" text-anchor="start" >Active Log: 08 Jun 2024 18:13</text>
+<text x="100" y="344" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 track</text>
+<g transform="translate(60 369) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 367) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="378" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="394" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+<g transform="translate(60 419) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 417) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="428" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="444" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 route</text>
+<g transform="translate(60 469) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 467) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="478" class="t1" font-size="13" font-weight="600" text-anchor="start" >Something</text>
+<text x="100" y="494" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+</g>
+</g>
+<rect x="24.5" y="70.5" width="96.92" height="228.67999999999998" rx="6" class="ln"/>
+<g transform="translate(211.92000000000002 70) scale(0.36) translate(-52 -30)">
+<g transform="translate(62 42) scale(0.5833333333333334)" class="i ia"><path d="M15 6l-6 6 6 6"/></g>
+<text x="77" y="54" class="acct" font-size="12.5" font-weight="500" text-anchor="start" >Trips</text>
+<g transform="translate(207.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 11v5M9.5 13.5h5"/></g>
+<g transform="translate(236.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></g>
+<g transform="translate(265.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></g>
+<g transform="translate(294.0 43.0) scale(0.6666666666666666)" class="i i2"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></g>
+<text x="66" y="82" class="t1" font-size="18" font-weight="700" text-anchor="start" >Peak loop</text>
+<text x="66" y="102" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >Fri 13 – Sun 15 Nov · 3 days · 97 km</text>
+<rect x="62" y="116" width="252" height="26" rx="7" class="sunk" />
+<rect x="64.0" y="118" width="82.66666666666667" height="22" rx="6" class="bg" />
+<text x="105.33333333333334" y="133" class="t1" font-size="12" font-weight="600" text-anchor="middle" >Plan</text>
+<text x="188.00000000000003" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Objects 9</text>
+<text x="270.6666666666667" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Photos 27</text>
+<rect x="60" y="156" width="256" height="156" rx="8" class="sunk" />
+<text x="70" y="175" class="t1" font-size="10.5" font-weight="700" text-anchor="start" letter-spacing="0.06em">FRI 13 NOV</text>
+<text x="306" y="175" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >65 min · 40 km · 9 photos</text>
+<g transform="translate(72 191) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="202.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Buxton</text>
+<text x="306" y="202.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >leave 09:00</text>
+<g transform="translate(72 215) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="226.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A537 · Cat and Fiddle</text>
+<text x="306" y="226.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >35 min</text>
+<g transform="translate(72 239) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="250.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Macclesfield</text>
+<text x="306" y="250.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >09:35–12:00</text>
+<g transform="translate(72 263) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="274.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A523</text>
+<text x="306" y="274.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >30 min</text>
+<g transform="translate(72 287) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="298.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Leek</text>
+<text x="306" y="298.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >12:30 · night</text>
+<rect x="60" y="320" width="256" height="108" rx="8" class="sunk" />
+<text x="70" y="339" class="t1" font-size="10.5" font-weight="700" text-anchor="start" letter-spacing="0.06em">SAT 14 NOV</text>
+<text x="306" y="339" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >35 min · 25 km · 14 photos</text>
+<g transform="translate(72 355) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="366.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A523 · A52</text>
+<text x="306" y="366.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >10:00 · 35 min</text>
+<g transform="translate(72 379) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="390.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Ashbourne</text>
+<text x="306" y="390.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >10:35 · night</text>
+<g transform="translate(72 403) scale(0.5833333333333334)" class="i it"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<text x="92" y="414.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Tissington Trail</text>
+<text x="306" y="414.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >recorded</text>
+<rect x="60" y="436" width="256" height="84" rx="8" class="sunk" />
+<text x="70" y="455" class="t1" font-size="10.5" font-weight="700" text-anchor="start" letter-spacing="0.06em">SUN 15 NOV</text>
+<text x="306" y="455" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >40 min · 32 km · 4 photos</text>
+<g transform="translate(72 471) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="482.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A515</text>
+<text x="306" y="482.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >09:30 · 40 min</text>
+<g transform="translate(72 495) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="506.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Buxton</text>
+<text x="306" y="506.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >arrive 10:10</text>
+<g transform="translate(64 536) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(80 534) scale(0.625)" class="i i3"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g>
+<text x="102" y="547" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Not in the plan</text>
+<text x="310" y="547" class="t3" font-size="11" font-weight="400" text-anchor="end" >1 waypoint</text>
+<g transform="translate(64 562) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(80 560) scale(0.625)" class="i ip"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<text x="102" y="573" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Peak loop 2026</text>
+<text x="310" y="573" class="t3" font-size="11" font-weight="400" text-anchor="end" >folder · up to date</text>
+</g>
+<rect x="212.42000000000002" y="70.5" width="96.92" height="228.67999999999998" rx="6" class="ln"/>
+<defs><marker id="ova2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#dc2626"/></marker></defs>
+<path d="M129.92000000000002 184.83999999999997 Q166.92000000000002 184.83999999999997 203.92000000000002 184.83999999999997" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#ova2)"/>
+<text x="166.92000000000002" y="172.83999999999997" class="t1" font-size="12.5" font-weight="600" text-anchor="middle" >click</text>
+<text x="339.84000000000003" y="112" class="t2" font-size="12" font-weight="400" text-anchor="start" >Every click on a trip replaces the list with that trip’s page.</text>
+<text x="339.84000000000003" y="130" class="t2" font-size="12" font-weight="400" text-anchor="start" >Comparing trips means Back, find the row, click, Back again,</text>
+<text x="339.84000000000003" y="148" class="t2" font-size="12" font-weight="400" text-anchor="start" >and the list loses its place each time.</text>
+<g transform="translate(339.84000000000003 172) scale(0.75)" class="i id"><path d="M6 6l12 12M18 6L6 18"/></g>
+<text x="365.84000000000003" y="186" class="t1" font-size="12.5" font-weight="600" text-anchor="start" >Selecting and opening are the same gesture.</text>
+<line x1="24" y1="318" x2="1056" y2="318" class="ln" />
+<text x="24" y="348" class="acct" font-size="11" font-weight="700" text-anchor="start" letter-spacing="0.08em">PROPOSED</text>
+<text x="24" y="368" class="t1" font-size="13.5" font-weight="600" text-anchor="start" >Selecting previews. Opening is its own, deliberate step.</text>
+<g transform="translate(24.0 384) scale(0.36) translate(-52 -30)">
+<clipPath id="ovl3"><rect x="52" y="30" width="272" height="638"/></clipPath><g clip-path="url(#ovl3)">
+<rect x="52" y="30" width="272" height="638" rx="0" class="bg" />
+<text x="66" y="60" class="t1" font-size="16" font-weight="700" text-anchor="start" >Trips</text>
+<text x="114" y="60" class="t3" font-size="13" font-weight="400" text-anchor="start" >8</text>
+<g transform="translate(266.0 48.0) scale(0.6666666666666666)" class="i i2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></g>
+<rect x="288" y="42" width="28" height="28" rx="7" class="acc" />
+<g transform="translate(294.0 48.0) scale(0.6666666666666666)" class="i iw"><path d="M12 5v14M5 12h14"/></g>
+<rect x="62" y="78" width="252" height="28" rx="7" class="sunk" />
+<g transform="translate(70 84) scale(0.625)" class="i i3"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<text x="90" y="96.5" class="t3" font-size="12" font-weight="400" text-anchor="start" >Search trips</text>
+<text x="66" y="130" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">COMING UP</text>
+<g transform="translate(60 149) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 147) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="158" class="t1" font-size="13" font-weight="600" text-anchor="start" >Idea1</text>
+<text x="100" y="174" class="t3" font-size="11" font-weight="400" text-anchor="start" >Today · Thu 12 Nov · 1 day · 33 km</text>
+<rect x="56" y="188" width="264" height="46" rx="8" class="accl" />
+<g transform="translate(60 199) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 197) scale(0.6666666666666666)" class="i ia"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="208" class="t1" font-size="13" font-weight="600" text-anchor="start" >Peak loop</text>
+<text x="100" y="224" class="t3" font-size="11" font-weight="400" text-anchor="start" >Fri 13 – Sun 15 Nov · 97 km</text>
+<rect x="284" y="197" width="28" height="28" rx="7" class="bg" />
+<rect x="284.5" y="197.5" width="27" height="27" rx="7" class="ln"/>
+<g transform="translate(290 203) scale(0.6666666666666666)" class="i ia"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(60 249) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 247) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="258" class="t1" font-size="13" font-weight="600" text-anchor="start" >FringeOne</text>
+<text x="100" y="274" class="t3" font-size="11" font-weight="400" text-anchor="start" >From Wed 18 Nov · times unknown</text>
+<text x="66" y="300" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">IDEAS · NO DATES</text>
+<g transform="translate(60 319) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 317) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="328" class="t1" font-size="13" font-weight="600" text-anchor="start" >Active Log: 08 Jun 2024 18:13</text>
+<text x="100" y="344" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 track</text>
+<g transform="translate(60 369) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 367) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="378" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="394" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+<g transform="translate(60 419) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 417) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="428" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="444" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 route</text>
+<g transform="translate(60 469) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 467) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="478" class="t1" font-size="13" font-weight="600" text-anchor="start" >Something</text>
+<text x="100" y="494" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+</g>
+</g>
+<rect x="24.5" y="384.5" width="96.92" height="228.67999999999998" rx="6" class="ln"/>
+<text x="72.96000000000001" y="635.68" class="t1" font-size="13" font-weight="700" text-anchor="middle" >Selected</text>
+<g transform="translate(335.35999999999996 384) scale(0.36) translate(-52 -30)">
+<clipPath id="ovl4"><rect x="52" y="30" width="272" height="638"/></clipPath><g clip-path="url(#ovl4)">
+<rect x="52" y="30" width="272" height="638" rx="0" class="bg" />
+<text x="66" y="60" class="t1" font-size="16" font-weight="700" text-anchor="start" >Trips</text>
+<text x="114" y="60" class="t3" font-size="13" font-weight="400" text-anchor="start" >8</text>
+<g transform="translate(266.0 48.0) scale(0.6666666666666666)" class="i i2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></g>
+<rect x="288" y="42" width="28" height="28" rx="7" class="acc" />
+<g transform="translate(294.0 48.0) scale(0.6666666666666666)" class="i iw"><path d="M12 5v14M5 12h14"/></g>
+<rect x="62" y="78" width="252" height="28" rx="7" class="sunk" />
+<g transform="translate(70 84) scale(0.625)" class="i i3"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<text x="90" y="96.5" class="t3" font-size="12" font-weight="400" text-anchor="start" >Search trips</text>
+<text x="66" y="130" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">COMING UP</text>
+<g transform="translate(60 149) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 147) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="158" class="t1" font-size="13" font-weight="600" text-anchor="start" >Idea1</text>
+<text x="100" y="174" class="t3" font-size="11" font-weight="400" text-anchor="start" >Today · Thu 12 Nov · 1 day · 33 km</text>
+<g transform="translate(60 199) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 197) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="208" class="t1" font-size="13" font-weight="600" text-anchor="start" >Peak loop</text>
+<text x="100" y="224" class="t3" font-size="11" font-weight="400" text-anchor="start" >Fri 13 – Sun 15 Nov · 97 km</text>
+<rect x="56" y="238" width="264" height="46" rx="8" class="accl" />
+<g transform="translate(60 249) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 247) scale(0.6666666666666666)" class="i ia"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="258" class="t1" font-size="13" font-weight="600" text-anchor="start" >FringeOne</text>
+<text x="100" y="274" class="t3" font-size="11" font-weight="400" text-anchor="start" >From Wed 18 Nov · times unknown</text>
+<rect x="284" y="247" width="28" height="28" rx="7" class="bg" />
+<rect x="284.5" y="247.5" width="27" height="27" rx="7" class="ln"/>
+<g transform="translate(290 253) scale(0.6666666666666666)" class="i ia"><path d="M9 6l6 6-6 6"/></g>
+<text x="66" y="300" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">IDEAS · NO DATES</text>
+<g transform="translate(60 319) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 317) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="328" class="t1" font-size="13" font-weight="600" text-anchor="start" >Active Log: 08 Jun 2024 18:13</text>
+<text x="100" y="344" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 track</text>
+<g transform="translate(60 369) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 367) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="378" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="394" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+<g transform="translate(60 419) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 417) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="428" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="444" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 route</text>
+<g transform="translate(60 469) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 467) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="478" class="t1" font-size="13" font-weight="600" text-anchor="start" >Something</text>
+<text x="100" y="494" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+</g>
+</g>
+<rect x="335.85999999999996" y="384.5" width="96.92" height="228.67999999999998" rx="6" class="ln"/>
+<text x="384.31999999999994" y="635.68" class="t1" font-size="13" font-weight="700" text-anchor="middle" >Next trip</text>
+<g transform="translate(646.7199999999999 384) scale(0.36) translate(-52 -30)">
+<clipPath id="ovl5"><rect x="52" y="30" width="272" height="638"/></clipPath><g clip-path="url(#ovl5)">
+<rect x="52" y="30" width="272" height="638" rx="0" class="bg" />
+<text x="66" y="60" class="t1" font-size="16" font-weight="700" text-anchor="start" >Trips</text>
+<text x="114" y="60" class="t3" font-size="13" font-weight="400" text-anchor="start" >8</text>
+<g transform="translate(266.0 48.0) scale(0.6666666666666666)" class="i i2"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></g>
+<rect x="288" y="42" width="28" height="28" rx="7" class="acc" />
+<g transform="translate(294.0 48.0) scale(0.6666666666666666)" class="i iw"><path d="M12 5v14M5 12h14"/></g>
+<rect x="62" y="78" width="252" height="28" rx="7" class="sunk" />
+<g transform="translate(70 84) scale(0.625)" class="i i3"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<text x="90" y="96.5" class="t3" font-size="12" font-weight="400" text-anchor="start" >Search trips</text>
+<text x="66" y="130" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">COMING UP</text>
+<g transform="translate(60 149) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 147) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="158" class="t1" font-size="13" font-weight="600" text-anchor="start" >Idea1</text>
+<text x="100" y="174" class="t3" font-size="11" font-weight="400" text-anchor="start" >Today · Thu 12 Nov · 1 day · 33 km</text>
+<rect x="56" y="188" width="264" height="232" rx="8" class="sunk" />
+<g transform="translate(60 199) scale(0.5)" class="i i3"><path d="M6 9l6 6 6-6"/></g>
+<g transform="translate(76 197) scale(0.6666666666666666)" class="i ia"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="208" class="t1" font-size="13" font-weight="600" text-anchor="start" >Peak loop</text>
+<text x="100" y="224" class="t3" font-size="11" font-weight="400" text-anchor="start" >Fri 13 – Sun 15 Nov · 97 km</text>
+<g transform="translate(98 240) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="120" y="252" class="t1" font-size="12" font-weight="400" text-anchor="start" >A537 · Cat and Fiddle</text>
+<text x="306" y="252" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >21 km</text>
+<g transform="translate(98 266) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="120" y="278" class="t1" font-size="12" font-weight="400" text-anchor="start" >A523</text>
+<text x="306" y="278" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >19 km</text>
+<rect x="88" y="288" width="226" height="24" rx="6" class="acc" />
+<g transform="translate(98 292) scale(0.5833333333333334)" class="i iw"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="120" y="304" class="on" font-size="12" font-weight="400" text-anchor="start" >A523 · A52</text>
+<text x="306" y="304" class="onm" font-size="10.5" font-weight="400" text-anchor="end" >25 km</text>
+<g transform="translate(98 318) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="120" y="330" class="t1" font-size="12" font-weight="400" text-anchor="start" >A515</text>
+<text x="306" y="330" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >32 km</text>
+<g transform="translate(98 344) scale(0.5833333333333334)" class="i it"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<text x="120" y="356" class="t1" font-size="12" font-weight="400" text-anchor="start" >Tissington Trail</text>
+<text x="306" y="356" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >9.8 km</text>
+<g transform="translate(98 370) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="120" y="382" class="t1" font-size="12" font-weight="400" text-anchor="start" >4 waypoints</text>
+<text x="306" y="382" class="t3" font-size="10.5" font-weight="400" text-anchor="end" ></text>
+<g transform="translate(98 396) scale(0.5833333333333334)" class="i ip"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<text x="120" y="408" class="t1" font-size="12" font-weight="400" text-anchor="start" >Peak loop 2026</text>
+<text x="306" y="408" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >27 photos</text>
+<g transform="translate(60 437) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 435) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="446" class="t1" font-size="13" font-weight="600" text-anchor="start" >FringeOne</text>
+<text x="100" y="462" class="t3" font-size="11" font-weight="400" text-anchor="start" >From Wed 18 Nov · times unknown</text>
+<text x="66" y="488" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">IDEAS · NO DATES</text>
+<g transform="translate(60 507) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 505) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="516" class="t1" font-size="13" font-weight="600" text-anchor="start" >Active Log: 08 Jun 2024 18:13</text>
+<text x="100" y="532" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 track</text>
+<g transform="translate(60 557) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 555) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="566" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="582" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+<g transform="translate(60 607) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 605) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="616" class="t1" font-size="13" font-weight="600" text-anchor="start" >New Trip</text>
+<text x="100" y="632" class="t3" font-size="11" font-weight="400" text-anchor="start" >1 route</text>
+<g transform="translate(60 657) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(76 655) scale(0.6666666666666666)" class="i i2"><path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></g>
+<text x="100" y="666" class="t1" font-size="13" font-weight="600" text-anchor="start" >Something</text>
+<text x="100" y="682" class="t3" font-size="11" font-weight="400" text-anchor="start" >Empty</text>
+</g>
+</g>
+<rect x="647.2199999999999" y="384.5" width="96.92" height="228.67999999999998" rx="6" class="ln"/>
+<text x="695.68" y="635.68" class="t1" font-size="13" font-weight="700" text-anchor="middle" >Looked inside</text>
+<g transform="translate(958.0799999999999 384) scale(0.36) translate(-52 -30)">
+<g transform="translate(62 42) scale(0.5833333333333334)" class="i ia"><path d="M15 6l-6 6 6 6"/></g>
+<text x="77" y="54" class="acct" font-size="12.5" font-weight="500" text-anchor="start" >Trips</text>
+<g transform="translate(207.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 11v5M9.5 13.5h5"/></g>
+<g transform="translate(236.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></g>
+<g transform="translate(265.0 43.0) scale(0.6666666666666666)" class="i i2"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></g>
+<g transform="translate(294.0 43.0) scale(0.6666666666666666)" class="i i2"><circle cx="5" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="19" cy="12" r="1.2"/></g>
+<text x="66" y="82" class="t1" font-size="18" font-weight="700" text-anchor="start" >Peak loop</text>
+<text x="66" y="102" class="t2" font-size="11.5" font-weight="400" text-anchor="start" >Fri 13 – Sun 15 Nov · 3 days · 97 km</text>
+<rect x="62" y="116" width="252" height="26" rx="7" class="sunk" />
+<rect x="64.0" y="118" width="82.66666666666667" height="22" rx="6" class="bg" />
+<text x="105.33333333333334" y="133" class="t1" font-size="12" font-weight="600" text-anchor="middle" >Plan</text>
+<text x="188.00000000000003" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Objects 9</text>
+<text x="270.6666666666667" y="133" class="t2" font-size="12" font-weight="500" text-anchor="middle" >Photos 27</text>
+<rect x="60" y="156" width="256" height="156" rx="8" class="sunk" />
+<text x="70" y="175" class="t1" font-size="10.5" font-weight="700" text-anchor="start" letter-spacing="0.06em">FRI 13 NOV</text>
+<text x="306" y="175" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >65 min · 40 km · 9 photos</text>
+<g transform="translate(72 191) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="202.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Buxton</text>
+<text x="306" y="202.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >leave 09:00</text>
+<g transform="translate(72 215) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="226.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A537 · Cat and Fiddle</text>
+<text x="306" y="226.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >35 min</text>
+<g transform="translate(72 239) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="250.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Macclesfield</text>
+<text x="306" y="250.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >09:35–12:00</text>
+<g transform="translate(72 263) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="274.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A523</text>
+<text x="306" y="274.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >30 min</text>
+<g transform="translate(72 287) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="298.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Leek</text>
+<text x="306" y="298.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >12:30 · night</text>
+<rect x="60" y="320" width="256" height="108" rx="8" class="sunk" />
+<text x="70" y="339" class="t1" font-size="10.5" font-weight="700" text-anchor="start" letter-spacing="0.06em">SAT 14 NOV</text>
+<text x="306" y="339" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >35 min · 25 km · 14 photos</text>
+<g transform="translate(72 355) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="366.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A523 · A52</text>
+<text x="306" y="366.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >10:00 · 35 min</text>
+<g transform="translate(72 379) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="390.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Ashbourne</text>
+<text x="306" y="390.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >10:35 · night</text>
+<g transform="translate(72 403) scale(0.5833333333333334)" class="i it"><path d="M3 12h4l3-8 4 16 3-8h4"/></g>
+<text x="92" y="414.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Tissington Trail</text>
+<text x="306" y="414.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >recorded</text>
+<rect x="60" y="436" width="256" height="84" rx="8" class="sunk" />
+<text x="70" y="455" class="t1" font-size="10.5" font-weight="700" text-anchor="start" letter-spacing="0.06em">SUN 15 NOV</text>
+<text x="306" y="455" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >40 min · 32 km · 4 photos</text>
+<g transform="translate(72 471) scale(0.5833333333333334)" class="i ir"><path d="M4 18c4 0 4-12 8-12s4 12 8 12"/><circle cx="4" cy="18" r="1.6"/><circle cx="20" cy="18" r="1.6"/></g>
+<text x="92" y="482.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >A515</text>
+<text x="306" y="482.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >09:30 · 40 min</text>
+<g transform="translate(72 495) scale(0.5833333333333334)" class="i iy"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></g>
+<text x="92" y="506.5" class="t1" font-size="12" font-weight="400" text-anchor="start" >Buxton</text>
+<text x="306" y="506.5" class="t3" font-size="10.5" font-weight="400" text-anchor="end" >arrive 10:10</text>
+<g transform="translate(64 536) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(80 534) scale(0.625)" class="i i3"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></g>
+<text x="102" y="547" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Not in the plan</text>
+<text x="310" y="547" class="t3" font-size="11" font-weight="400" text-anchor="end" >1 waypoint</text>
+<g transform="translate(64 562) scale(0.5)" class="i i3"><path d="M9 6l6 6-6 6"/></g>
+<g transform="translate(80 560) scale(0.625)" class="i ip"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3.2"/></g>
+<text x="102" y="573" class="t1" font-size="12.5" font-weight="400" text-anchor="start" >Peak loop 2026</text>
+<text x="310" y="573" class="t3" font-size="11" font-weight="400" text-anchor="end" >folder · up to date</text>
+</g>
+<rect x="958.5799999999999" y="384.5" width="96.92" height="228.67999999999998" rx="6" class="ln"/>
+<text x="1007.04" y="635.68" class="t1" font-size="13" font-weight="700" text-anchor="middle" >Opened</text>
+<defs><marker id="ova6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ui-accent,#2563eb)"/></marker></defs>
+<path d="M127.92 478.84 Q228.64 478.84 329.35999999999996 478.84" fill="none" stroke="var(--ui-accent,#2563eb)" stroke-width="2" marker-end="url(#ova6)"/>
+<text x="228.64" y="466.84" class="t1" font-size="12.5" font-weight="600" text-anchor="middle" >click · ↑ ↓</text>
+<text x="228.64" y="500.84" class="t2" font-size="11.5" font-weight="400" text-anchor="middle" >list stays</text>
+<defs><marker id="ova7" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ui-accent,#2563eb)"/></marker></defs>
+<path d="M439.28 478.84 Q540.0 478.84 640.7199999999999 478.84" fill="none" stroke="var(--ui-accent,#2563eb)" stroke-width="2" marker-end="url(#ova7)"/>
+<text x="540.0" y="466.84" class="t1" font-size="12.5" font-weight="600" text-anchor="middle" >chevron · →</text>
+<text x="540.0" y="500.84" class="t2" font-size="11.5" font-weight="400" text-anchor="middle" >opens in place</text>
+<defs><marker id="ova8" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ui-accent,#2563eb)"/></marker></defs>
+<path d="M750.6399999999999 478.84 Q851.3599999999999 478.84 952.0799999999999 478.84" fill="none" stroke="var(--ui-accent,#2563eb)" stroke-width="2" marker-end="url(#ova8)"/>
+<text x="851.3599999999999" y="466.84" class="t1" font-size="12.5" font-weight="600" text-anchor="middle" >double-click</text>
+<text x="851.3599999999999" y="500.84" class="t2" font-size="11.5" font-weight="400" text-anchor="middle" >or Return, or Open</text>
+<defs><marker id="ova9" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--ui-text2,#475569)"/></marker></defs>
+<path d="M1007.04 653.68 V667.68 H72.96000000000001 V655.68" fill="none" stroke="var(--ui-text2,#475569)" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#ova9)"/>
+<rect x="350.0" y="657.68" width="380" height="20" rx="0" class="bg" />
+<text x="540.0" y="672.68" class="t2" font-size="11.5" font-weight="500" text-anchor="middle" >‹ Trips: back to the same row, the same scroll, the same selection</text>
+<text x="1056" y="348" class="t3" font-size="11.5" font-weight="400" text-anchor="end" >The right panel and the map follow the selection in every state.</text>
+</svg>

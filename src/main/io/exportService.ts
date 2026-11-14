@@ -178,6 +178,8 @@ function gather(db: Db, scope: ExportScope): Gathered {
           ? tripRepo
               .listTrips(db, {
                 includeArchived: true,
+                // ADR 0022: everything means items outside a trip too.
+                includeLoose: true,
                 sortKey: 'name',
                 sortDirection: 'asc',
               })

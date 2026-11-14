@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { asc, eq } from 'drizzle-orm';
 import type {
+  StopPoint,
   DurationKind,
   LegMode,
   OtherTransport,
@@ -40,7 +41,13 @@ function rowToStop(row: typeof itineraryStops.$inferSelect): ItineraryStop {
     id: row.id,
     tripId: row.tripId,
     seq: row.seq,
-    waypointId: row.waypointId,
+    waypointId: row.waypointId ?? null,
+    point:
+      row.pointLat === null || row.pointLon === null
+        ? null
+        : { lat: row.pointLat, lon: row.pointLon, name: row.pointName ?? 'Point' },
+    kind: row.entryKind === 'route' ? 'route' : row.entryKind === 'day' ? 'day' : 'stop',
+    entryRouteId: row.entryRouteId ?? null,
     legRouteId: row.legRouteId ?? null,
     legMode: row.legMode as LegMode,
     legTransport: (row.legTransport ?? null) as OtherTransport | null,
@@ -133,7 +140,12 @@ export interface InsertStopValues {
   id?: string;
   tripId: string;
   seq: number;
-  waypointId: string;
+  waypointId: string | null;
+  /** Phase 14: a stop with no waypoint. Exactly one of the two is set. */
+  point?: StopPoint | null;
+  /** Phase 14: a route entry, with no waypoint or point. */
+  kind?: 'stop' | 'route' | 'day';
+  entryRouteId?: string | null;
   legRouteId: string | null;
   legMode?: LegMode;
   legTransport?: OtherTransport | null;
@@ -158,6 +170,11 @@ export function insertStop(db: Db, values: InsertStopValues): ItineraryStop {
       tripId: values.tripId,
       seq: values.seq,
       waypointId: values.waypointId,
+      // Written only when set, so a pre-0008 database in an upgrade test can
+      // still take a stop.
+      ...(values.point == null ? {} : { pointLat: values.point.lat, pointLon: values.point.lon, pointName: values.point.name }),
+      ...(values.kind === 'route' ? { entryKind: 'route', entryRouteId: values.entryRouteId ?? null } : {}),
+      ...(values.kind === 'day' ? { entryKind: 'day' } : {}),
       legRouteId: values.legRouteId,
       legMode: values.legMode ?? 'road',
       legTransport: values.legTransport ?? null,

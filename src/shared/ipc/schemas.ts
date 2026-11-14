@@ -443,6 +443,11 @@ export const waypointSearchRequest = z
   .object({ query: z.string().trim().max(200) })
   .strict();
 
+/** Phase 14 Requirement 18.3: in `tripId`, or else the photo's own trip. */
+export const waypointFromPhotoRequest = z
+  .object({ photoId: idSchema, tripId: idSchema.optional() })
+  .strict();
+
 export const waypointGroupsRequest = z.object({ tripId: idSchema }).strict();
 
 export const waypointCreateGroupRequest = z
@@ -1156,6 +1161,60 @@ export const itineraryUpdateStopRequest = z
 
 export const itineraryLinkLegRequest = z
   .object({ id: idSchema, routeId: idSchema.nullable() })
+  .strict();
+
+/** Phase 14 Requirement 16: delete a route or waypoint with its plan entries. */
+export const itineraryDeleteItemRequest = z.object({ kind: z.enum(['route', 'waypoint']), id: idSchema }).strict();
+
+/** Phase 14 Requirement 15: add a day after a day (or at the end), and remove a day. */
+export const itineraryAddDayRequest = z.object({ tripId: idSchema, afterDate: dateSchema.optional() }).strict();
+export const itineraryRemoveDayRequest = z.object({ tripId: idSchema, date: dateSchema }).strict();
+
+/** Phase 14 Requirement 13.5: join two routes or waypoints with a new route. */
+const joinEndSchema = z.object({ kind: z.enum(['route', 'waypoint']), id: idSchema }).strict();
+export const routeJoinRequest = z.object({ from: joinEndSchema, to: joinEndSchema, straight: z.boolean() }).strict();
+
+/** Phase 14 Requirement 12.6: an item elsewhere is moved or copied in. */
+const transferSchema = z.enum(['move', 'copy']);
+
+/** Phase 14: a waypoint from anywhere as a stop, brought into the trip first. */
+export const itineraryAddWaypointStopRequest = z
+  .object({
+    tripId: idSchema,
+    waypointId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+    transfer: transferSchema.optional(),
+  })
+  .strict();
+
+/** Phase 14 Requirement 18.4: a photo as a stop. The photo's place is read in main. */
+export const itineraryAddPhotoStopRequest = z
+  .object({
+    tripId: idSchema,
+    photoId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+  })
+  .strict();
+
+/** Phase 14: a route placed in the plan as an entry of its own, at `index`. */
+export const itineraryAddRouteLegRequest = z
+  .object({
+    tripId: idSchema,
+    routeId: idSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS),
+    transfer: transferSchema.optional(),
+  })
+  .strict();
+
+/** Phase 14: a place or postcode from the offline search, as a stop. */
+export const itineraryAddPlaceStopRequest = z
+  .object({
+    tripId: idSchema,
+    name: nameSchema,
+    lat: latSchema,
+    lon: lonSchema,
+    index: z.number().int().min(0).max(MAX_ITINERARY_STOPS).optional(),
+  })
   .strict();
 
 export const itineraryAddPoiStopRequest = z

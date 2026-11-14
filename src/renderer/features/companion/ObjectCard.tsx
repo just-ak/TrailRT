@@ -7,6 +7,7 @@ import { useLibraryStore } from '../../stores/libraryStore';
 import { useSelectionStore } from '../../stores/selectionStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { Card, CardTitle, KIND_COLOUR } from './parts';
+import { PutInPlan } from './PutInPlan';
 
 /**
  * The selected object's card (design §4.3), with the pencil to its editor.
@@ -15,7 +16,7 @@ import { Card, CardTitle, KIND_COLOUR } from './parts';
  * shown as zero.
  */
 
-function climb(gain: number | null, loss: number | null, units: UnitSystem): string | null {
+export function climb(gain: number | null, loss: number | null, units: UnitSystem): string | null {
   if (gain === null || loss === null) return null;
   return `+${formatElevation(gain, units)} · −${formatElevation(loss, units)}`;
 }
@@ -24,8 +25,13 @@ function clock(ms: number): string {
   return new Date(ms).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 }
 
+/** The item's trip by name, or "Not in a trip" for ADR 0022's holder. */
 function useTripName(tripId: string | undefined): string | null {
-  return useLibraryStore((s) => (tripId === undefined ? null : (s.overview.find((t) => t.id === tripId)?.name ?? null)));
+  return useLibraryStore((s) => {
+    if (tripId === undefined) return null;
+    if (tripId === s.looseTripId) return 'Not in a trip';
+    return s.overview.find((t) => t.id === tripId)?.name ?? null;
+  });
 }
 
 export function ObjectCard({ refTo, onEdit }: { refTo: ObjectRef; onEdit: () => void }): ReactNode {
@@ -33,7 +39,7 @@ export function ObjectCard({ refTo, onEdit }: { refTo: ObjectRef; onEdit: () => 
   const units = useSettingsStore((s) => s.settings.units);
   const owner = route?.tripId ?? track?.tripId ?? waypoint?.tripId ?? linkedFolder?.tripId;
   const tripName = useTripName(owner);
-  const inTrip = tripName === null ? null : `In ${tripName}`;
+  const inTrip = tripName === null ? null : tripName === 'Not in a trip' ? tripName : `In ${tripName}`;
 
   let body: ReactNode = <p className="text-[12px] text-[var(--color-text-muted)]">Loading…</p>;
   if (refTo.kind === 'route' && route?.id === refTo.id) {
@@ -49,6 +55,13 @@ export function ObjectCard({ refTo, onEdit }: { refTo: ObjectRef; onEdit: () => 
         onEdit={onEdit}
         editHint="Edit the route"
       />
+    );
+    // Phase 14 Requirement 12.5: a route not in a plan can be put into one.
+    body = (
+      <>
+        {body}
+        <PutInPlan route={route} />
+      </>
     );
   } else if (refTo.kind === 'track' && track?.id === refTo.id) {
     const when =

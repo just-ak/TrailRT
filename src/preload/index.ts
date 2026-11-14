@@ -56,6 +56,7 @@ const api: TrailRtApi = {
     delete: (req) => call(CHANNELS.trips.delete, req),
     search: (req) => call(CHANNELS.trips.search, req),
     overview: (req) => call(CHANNELS.trips.overview, req),
+    loose: () => call(CHANNELS.trips.loose),
   },
   folders: {
     list: () => call(CHANNELS.folders.list),
@@ -78,6 +79,7 @@ const api: TrailRtApi = {
   routes: {
     listForTrip: (req) => call(CHANNELS.routes.listForTrip, req),
     listAll: () => call(CHANNELS.routes.listAll),
+    join: (req) => call(CHANNELS.routes.join, req),
     get: (req) => call(CHANNELS.routes.get, req),
     create: (req) => call(CHANNELS.routes.create, req),
     update: (req) => call(CHANNELS.routes.update, req),
@@ -139,6 +141,13 @@ const api: TrailRtApi = {
     setLegMode: (req) => call(CHANNELS.itinerary.setLegMode, req),
     planAll: (req) => call(CHANNELS.itinerary.planAll, req),
     addPoiStop: (req) => call(CHANNELS.itinerary.addPoiStop, req),
+    addPlaceStop: (req) => call(CHANNELS.itinerary.addPlaceStop, req),
+    addWaypointStop: (req) => call(CHANNELS.itinerary.addWaypointStop, req),
+    addPhotoStop: (req) => call(CHANNELS.itinerary.addPhotoStop, req),
+    addRouteLeg: (req) => call(CHANNELS.itinerary.addRouteLeg, req),
+    addDay: (req) => call(CHANNELS.itinerary.addDay, req),
+    deleteItem: (req) => call(CHANNELS.itinerary.deleteItem, req),
+    removeDay: (req) => call(CHANNELS.itinerary.removeDay, req),
     planLeg: (req) => call(CHANNELS.itinerary.planLeg, req),
     planAround: (req) => call(CHANNELS.itinerary.planAround, req),
     exportIcs: (req) => call(CHANNELS.itinerary.exportIcs, req),
@@ -156,6 +165,7 @@ const api: TrailRtApi = {
     search: (req) => call(CHANNELS.waypoints.search, req),
     groups: (req) => call(CHANNELS.waypoints.groups, req),
     createGroup: (req) => call(CHANNELS.waypoints.createGroup, req),
+    fromPhoto: (req) => call(CHANNELS.waypoints.fromPhoto, req),
   },
   tracks: {
     listForTrip: (req) => call(CHANNELS.tracks.listForTrip, req),

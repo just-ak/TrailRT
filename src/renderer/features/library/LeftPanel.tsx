@@ -9,7 +9,7 @@ import { useLibraryStore, type ObjectSortKey } from "../../stores/libraryStore";
 import { useNavStore } from "../../stores/navStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useUiStore } from "../../stores/uiStore";
-import { linkFolderToSelectedTrip } from "../photos/photoActions";
+import { linkFolderToSelectedTrip, linkLooseFolder } from "../photos/photoActions";
 import { PhotoViewFilters } from "../photos/PhotoViewFilters";
 import { LibraryList, SearchResults } from "./LibraryList";
 import { TripPage } from "./TripPage";
@@ -114,8 +114,23 @@ function Header(): ReactNode {
   const [more, setMore] = useState<{ x: number; y: number } | null>(null);
   const showToast = useUiStore((s) => s.showToast);
 
+  const section = useNavStore((s) => s.section);
+  // Phase 14 Requirement 9.2: in a cross-trip section, what makes sense there,
+  // made outside any trip (ADR 0022).
+  const sectionItems: MenuItem[] =
+    section === "routes"
+      ? [
+          { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
+          { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+        ]
+      : section === "waypoints"
+        ? [{ label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() }]
+        : section === "photos"
+          ? [{ label: "Link a Folder…", onSelect: () => void linkLooseFolder() }]
+          : [];
   const moreItems: MenuItem[] = [
-    { label: "New Trip", onSelect: () => useNavStore.getState().ask("newTrip") },
+    ...sectionItems,
+    { label: "New Trip", separatorBefore: sectionItems.length > 0, onSelect: () => useNavStore.getState().ask("newTrip") },
     { label: "New Folder", onSelect: () => useNavStore.getState().ask("newFolder") },
     { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
     {

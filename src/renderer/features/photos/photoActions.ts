@@ -51,6 +51,16 @@ export function selectedTrip(): { id: string; name: string } | null {
 }
 
 /** File › Link Folder to Trip… and the trip's own button. */
+/** Links a folder outside any trip, from the Photos section (Phase 14 Requirement 9.2). */
+export async function linkLooseFolder(): Promise<void> {
+  try {
+    const { id } = await call(api().trips.loose());
+    await linkFolderToTrip(id, 'Not in a trip');
+  } catch (cause) {
+    toast(describeError(cause), 'error');
+  }
+}
+
 export function linkFolderToSelectedTrip(): void {
   const trip = selectedTrip();
   if (trip === null) {
@@ -67,8 +77,13 @@ export async function confirmLink(token: string, includeSubfolders: boolean): Pr
     // (Phase 14), where the trip's linked folders are listed.
     const library = useLibraryStore.getState();
     await library.refresh();
-    useNavStore.getState().openTrip(folder.tripId);
-    useNavStore.getState().setTab('photos');
+    // ADR 0022: a folder outside a trip stays in the Photos section.
+    if (folder.tripId === useLibraryStore.getState().looseTripId) {
+      useNavStore.getState().setSection('photos');
+    } else {
+      useNavStore.getState().openTrip(folder.tripId);
+      useNavStore.getState().setTab('photos');
+    }
     await useSelectionStore.getState().select({ kind: 'linkedFolder', id: folder.id });
     toast(`Linked ${folder.name}. TrailRT reads it and never changes it.`);
     return true;

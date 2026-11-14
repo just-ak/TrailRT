@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1100" width="1080" height="1100" role="img" aria-labelledby="t00-today d00-today">
+<title id="t00-today">The trip editor today</title>
+<desc id="d00-today">The editor as it is, with what makes it hard to use marked.</desc>
+
+<style>
+  .bg{fill:var(--ui-surface,#ffffff)} .sunk{fill:var(--ui-sunken,#f1f5f9)}
+  .ln{fill:none;stroke:var(--ui-border,#e2e8f0)} .bdf{fill:var(--ui-border,#e2e8f0)}
+  .t1{fill:var(--ui-text,#0f172a)} .t2{fill:var(--ui-text2,#475569)} .t3{fill:var(--ui-text3,#94a3b8)}
+  .acc{fill:var(--ui-accent,#2563eb)} .acct{fill:var(--ui-accent,#2563eb)}
+  .accl{fill:var(--ui-accent,#2563eb);fill-opacity:.13} .accr{fill:none;stroke:var(--ui-accent,#2563eb);stroke-width:2}
+  .on{fill:#ffffff} .onm{fill:#ffffff;fill-opacity:.78} .ph{fill:var(--ui-photo,#0d9488)} .dng{fill:#dc2626}
+  .rail{fill:none;stroke:var(--ui-text3,#94a3b8);stroke-width:2}
+  .mapbg{fill:var(--ui-map,#e9efe1)} .mapg{fill:var(--ui-map-green,#d3e4c1)} .mapw{fill:none;stroke:var(--ui-map-water,#a9cbee);stroke-width:5;stroke-linecap:round}
+  .road{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:4;stroke-linecap:round} .road2{fill:none;stroke:var(--ui-map-road,#ffffff);stroke-width:2.2;stroke-linecap:round}
+  .rte{fill:none;stroke:#7c3aed;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round} .rtec{fill:none;stroke:#ffffff;stroke-width:8;stroke-linecap:round;stroke-opacity:.9}
+  .i{fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .i2{stroke:var(--ui-text2,#475569)} .i3{stroke:var(--ui-text3,#94a3b8)} .ia{stroke:var(--ui-accent,#2563eb)}
+  .iw{stroke:#ffffff} .ip{stroke:var(--ui-photo,#0d9488)} .ir{stroke:#7c3aed} .it{stroke:#ea580c} .iy{stroke:#dc2626} .id{stroke:#dc2626}
+  .co{fill:#f59e0b} .cot{fill:#1f2937;font-size:11px;font-weight:700}
+  text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+</style>
+<style>@media (prefers-color-scheme: dark){svg{--ui-surface:#0f172a;--ui-sunken:#080d17;--ui-border:#2a3550;--ui-text:#f1f5f9;--ui-text2:#94a3b8;--ui-text3:#64748b;--ui-accent:#60a5fa;--ui-photo:#2dd4bf;--ui-map:#162030;--ui-map-green:#1b2f25;--ui-map-water:#1f4069;--ui-map-road:#2c3b54}}</style>
+<rect x="0" y="0" width="1080" height="1100" rx="12" class="bg" />
+<rect x="0.5" y="0.5" width="1079" height="1099" rx="12" class="ln"/>
+<rect x="40" y="30" width="470" height="1040" rx="10" class="sunk" />
+<rect x="40.5" y="30.5" width="469" height="1039" rx="10" class="ln"/>
+<g transform="translate(50 45) scale(0.5833333333333334)" class="i i2"><path d="M15 6l-6 6 6 6"/></g>
+<text x="76" y="57" class="t3" font-size="13" font-weight="400" text-anchor="start" >Editing</text>
+<g transform="translate(480 43) scale(0.6666666666666666)" class="i i2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></g>
+<line x1="40" y1="72" x2="510" y2="72" class="ln" />
+<text x="50" y="92" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">TRIP</text>
+<text x="50" y="121" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">NAME</text>
+<rect x="49" y="129" width="452" height="29" rx="6" class="bg" />
+<rect x="49.5" y="129.5" width="451" height="28" rx="6" class="ln"/>
+<text x="59" y="148.5" class="t1" font-size="13" font-weight="400" text-anchor="start" >Buxty</text>
+<text x="50" y="182" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">DESCRIPTION</text>
+<rect x="49" y="190" width="452" height="68" rx="6" class="bg" />
+<rect x="49.5" y="190.5" width="451" height="67" rx="6" class="ln"/>
+<text x="50" y="288" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">NOTES</text>
+<rect x="49" y="296" width="452" height="88" rx="6" class="bg" />
+<rect x="49.5" y="296.5" width="451" height="87" rx="6" class="ln"/>
+<line x1="49" y1="406" x2="501" y2="406" class="ln" />
+<text x="50" y="434" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">STATUS</text>
+<text x="50" y="458" class="t1" font-size="13" font-weight="400" text-anchor="start" >Active</text>
+<text x="50" y="486" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">CONTENTS</text>
+<text x="50" y="510" class="t1" font-size="13" font-weight="400" text-anchor="start" >0 routes</text>
+<text x="50" y="530" class="t1" font-size="13" font-weight="400" text-anchor="start" >0 tracks</text>
+<text x="50" y="550" class="t1" font-size="13" font-weight="400" text-anchor="start" >1 waypoints</text>
+<text x="50" y="570" class="t3" font-size="10.5" font-weight="400" text-anchor="start" >Tracks are recorded GPS files. Import GPX, KML, KMZ, TCX, FIT or CSV to add them.</text>
+<rect x="50" y="582" width="28" height="28" rx="6" class="bg" />
+<rect x="50.5" y="582.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(56 588) scale(0.6666666666666666)" class="i i2"><circle cx="6" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 6h7a3 3 0 0 1 0 6H9a3 3 0 0 0 0 6h7"/></g>
+<rect x="84" y="582" width="28" height="28" rx="6" class="bg" />
+<rect x="84.5" y="582.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(90 588) scale(0.6666666666666666)" class="i i2"><path d="M12 21s-7-6.2-7-11.2a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><path d="M12 7v6M9 10h6"/></g>
+<rect x="118" y="582" width="28" height="28" rx="6" class="bg" />
+<rect x="118.5" y="582.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(124 588) scale(0.6666666666666666)" class="i i2"><path d="M12 15V4M7 9l5-5 5 5M5 20h14"/></g>
+<rect x="152" y="582" width="28" height="28" rx="6" class="bg" />
+<rect x="152.5" y="582.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(158 588) scale(0.6666666666666666)" class="i i2"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></g>
+<rect x="186" y="582" width="28" height="28" rx="6" class="bg" />
+<rect x="186.5" y="582.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(192 588) scale(0.6666666666666666)" class="i i2"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2.5h8.5A1.5 1.5 0 0 1 21 9v8.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><path d="M12 11v5M9.5 13.5h5"/></g>
+<line x1="49" y1="627" x2="501" y2="627" class="ln" />
+<text x="50" y="655" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">ITINERARY</text>
+<text x="50" y="682" class="t1" font-size="13" font-weight="400" text-anchor="start" >18 Nov 2026</text>
+<text x="50" y="712" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">START</text>
+<rect x="49" y="720" width="132" height="29" rx="6" class="bg" />
+<rect x="49.5" y="720.5" width="131" height="28" rx="6" class="ln"/>
+<text x="59" y="739" class="t1" font-size="13" font-weight="400" text-anchor="start" >18/11/2026</text>
+<rect x="190" y="720" width="86" height="29" rx="6" class="bg" />
+<rect x="190.5" y="720.5" width="85" height="28" rx="6" class="ln"/>
+<text x="200" y="739" class="t1" font-size="13" font-weight="400" text-anchor="start" >09:00</text>
+<rect x="49" y="762" width="452" height="92" rx="8" class="bg" />
+<rect x="49.5" y="762.5" width="451" height="91" rx="8" class="ln"/>
+<text x="60" y="784" class="t3" font-size="12" font-weight="400" text-anchor="start" >1</text>
+<text x="73" y="784" class="t1" font-size="13" font-weight="600" text-anchor="start" >KO</text>
+<text x="73" y="802" class="t2" font-size="12" font-weight="400" text-anchor="start" >Leave Wed 18 Nov, 09:00</text>
+<g transform="translate(420 774) scale(0.5833333333333334)" class="i i3"><path d="M12 19V5M6 11l6-6 6 6"/></g>
+<g transform="translate(448 774) scale(0.5833333333333334)" class="i i3"><path d="M12 5v14M6 13l6 6 6-6"/></g>
+<g transform="translate(476 774) scale(0.5833333333333334)" class="i i2"><path d="M6 6l12 12M18 6L6 18"/></g>
+<rect x="58" y="815" width="434" height="29" rx="6" class="bg" />
+<rect x="58.5" y="815.5" width="433" height="28" rx="6" class="ln"/>
+<text x="68" y="834" class="t3" font-size="12.5" font-weight="400" text-anchor="start" >Notes</text>
+<text x="50" y="878" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">ADD A STOP</text>
+<rect x="49" y="886" width="412" height="31" rx="6" class="bg" />
+<rect x="49.5" y="886.5" width="411" height="30" rx="6" class="ln"/>
+<text x="62" y="906" class="t1" font-size="13" font-weight="400" text-anchor="start" >Choose a waypoint…</text>
+<g transform="translate(438 894) scale(0.5833333333333334)" class="i i2"><path d="M6 9l6 6 6-6"/></g>
+<rect x="470" y="887" width="28" height="28" rx="6" class="bg" />
+<rect x="470.5" y="887.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(476 893) scale(0.6666666666666666)" class="i i2"><path d="M12 5v14M5 12h14"/></g>
+<text x="50" y="942" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">▸ TRIP SETTINGS</text>
+<rect x="50" y="958" width="28" height="28" rx="6" class="bg" />
+<rect x="50.5" y="958.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(56 964) scale(0.6666666666666666)" class="i i2"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g>
+<rect x="84" y="958" width="28" height="28" rx="6" class="bg" />
+<rect x="84.5" y="958.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(90 964) scale(0.6666666666666666)" class="i i2"><path d="M20 11a8 8 0 0 0-14.5-4.5L4 8M4 4v4h4M4 13a8 8 0 0 0 14.5 4.5L20 16M20 20v-4h-4"/></g>
+<rect x="118" y="958" width="28" height="28" rx="6" class="bg" />
+<rect x="118.5" y="958.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(124 964) scale(0.6666666666666666)" class="i i2"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5"/></g>
+<rect x="470" y="958" width="28" height="28" rx="6" class="bg" />
+<rect x="470.5" y="958.5" width="27" height="27" rx="6" class="ln"/>
+<g transform="translate(476 964) scale(0.6666666666666666)" class="i i2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></g>
+<line x1="49" y1="1004" x2="501" y2="1004" class="ln" />
+<text x="50" y="1030" class="t3" font-size="10.5" font-weight="600" text-anchor="start" letter-spacing="0.06em">CREATED</text>
+<text x="50" y="1052" class="t1" font-size="13" font-weight="400" text-anchor="start" >13 Nov 2026, 18:15</text>
+<line x1="506" y1="52" x2="530" y2="52" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="540" cy="52" r="10" class="co"/>
+<text x="540" y="56" class="cot" font-size="11" font-weight="700" text-anchor="middle" >1</text>
+<text x="560" y="57" class="t1" font-size="14" font-weight="700" text-anchor="start" >Editing hides the day</text>
+<text x="560" y="77" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >The pencil swaps the trip by the hour for this form.</text>
+<text x="560" y="95" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >You edit the plan without seeing it, and go Back</text>
+<text x="560" y="113" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >to check what changed.</text>
+<line x1="506" y1="182" x2="530" y2="182" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="540" cy="182" r="10" class="co"/>
+<text x="540" y="186" class="cot" font-size="11" font-weight="700" text-anchor="middle" >2</text>
+<text x="560" y="187" class="t1" font-size="14" font-weight="700" text-anchor="start" >Description and notes lead</text>
+<text x="560" y="207" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >The two biggest boxes sit at the top, and are</text>
+<text x="560" y="225" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >rarely used. The plan starts 620 px down.</text>
+<line x1="506" y1="434" x2="530" y2="434" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="540" cy="434" r="10" class="co"/>
+<text x="540" y="438" class="cot" font-size="11" font-weight="700" text-anchor="middle" >3</text>
+<text x="560" y="439" class="t1" font-size="14" font-weight="700" text-anchor="start" >Facts that cannot be edited</text>
+<text x="560" y="459" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Status, “1 waypoints” and Created are read-only.</text>
+<text x="560" y="477" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >The trip page already shows the counts.</text>
+<line x1="506" y1="596" x2="530" y2="596" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="540" cy="596" r="10" class="co"/>
+<text x="540" y="600" class="cot" font-size="11" font-weight="700" text-anchor="middle" >4</text>
+<text x="560" y="601" class="t1" font-size="14" font-weight="700" text-anchor="start" >Eight buttons without words</text>
+<text x="560" y="621" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Contents and the itinerary each have a row of</text>
+<text x="560" y="639" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >icons. Import and export repeat the trip page’s.</text>
+<line x1="506" y1="778" x2="530" y2="778" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="540" cy="778" r="10" class="co"/>
+<text x="540" y="782" class="cot" font-size="11" font-weight="700" text-anchor="middle" >5</text>
+<text x="560" y="783" class="t1" font-size="14" font-weight="700" text-anchor="start" >A stop is a list row</text>
+<text x="560" y="803" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Arrive, stay and leave are hidden until a stop</text>
+<text x="560" y="821" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >is opened; reordering is up and down arrows.</text>
+<line x1="506" y1="894" x2="530" y2="894" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="540" cy="894" r="10" class="co"/>
+<text x="540" y="898" class="cot" font-size="11" font-weight="700" text-anchor="middle" >6</text>
+<text x="560" y="899" class="t1" font-size="14" font-weight="700" text-anchor="start" >A stop must be a waypoint first</text>
+<text x="560" y="919" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >To stop in a town or at a café you make a</text>
+<text x="560" y="937" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >waypoint elsewhere, then choose it here.</text>
+<line x1="506" y1="972" x2="530" y2="972" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<circle cx="540" cy="972" r="10" class="co"/>
+<text x="540" y="976" class="cot" font-size="11" font-weight="700" text-anchor="middle" >7</text>
+<text x="560" y="977" class="t1" font-size="14" font-weight="700" text-anchor="start" >Remove sits with the everyday</text>
+<text x="560" y="997" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Remove the itinerary is in the same row as</text>
+<text x="560" y="1015" class="t2" font-size="12.5" font-weight="400" text-anchor="start" >Places along the way; Delete trip is in the header.</text>
+</svg>

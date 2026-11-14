@@ -178,6 +178,33 @@ test('a burst opens at its first photo, and the preview steps through it', async
   await expect(preview).toHaveCount(0);
 });
 
+test('a photo becomes a waypoint from the preview box, once, and undo removes it (Phase 14 task 19)', async () => {
+  const { page } = harness;
+  const photoWaypoints = async () =>
+    page.evaluate(async () => {
+      const result = await window.trailrt.waypoints.listAll();
+      return result.ok ? result.data.filter((w) => w.source === 'photo').map((w) => ({ name: w.name, symbol: w.symbol })) : null;
+    });
+  await page.locator('[title="7 photos taken here"]').click();
+  const preview = page.getByTestId('photo-preview');
+  await expect(preview.getByTestId('photo-preview-position')).toHaveText('1 of 7 here');
+  const name = ((await preview.locator('p.font-semibold').textContent()) ?? '').replace(/\.[^.]+$/, '');
+
+  await preview.getByRole('button', { name: 'Use as a waypoint' }).click();
+  await expect.poll(photoWaypoints).toEqual([{ name, symbol: 'photo' }]);
+  // The second time gives back the same waypoint.
+  await preview.getByRole('button', { name: 'Use as a waypoint' }).click();
+  await expect(page.getByText(`${name} is a waypoint.`, { exact: false }).first()).toBeVisible();
+  expect(await photoWaypoints()).toHaveLength(1);
+
+  await page.evaluate(() => window.trailrt.undo.undo());
+  await expect.poll(photoWaypoints).toEqual([]);
+  if (await preview.count() > 0) await preview.getByRole('button', { name: 'Close the preview' }).click();
+  // The waypoint took the selection; the tests after this one start from the folder.
+  await page.getByRole('treeitem', { name: 'Peak 2026' }).first().click();
+  await expect(page.getByTestId('photo-list')).toBeVisible();
+});
+
 test('an unplugged folder’s photo says so and still shows its saved thumbnail', async () => {
   const { page } = harness;
   // Select buxton.heic, whose thumbnail has been made, then "unplug" the drive.

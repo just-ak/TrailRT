@@ -152,7 +152,11 @@ requirements. Routes, tracks, waypoints and photo folders can now stand
 outside any trip and be worked on from their sections. ADR 0022 keeps them in
 one hidden holder rather than making five foreign keys nullable. The build
 also follows the chosen drawings closely, line icons and day cards included.
-The phase grew from ten tasks to twelve.
+The phase grew from ten tasks to twelve. The same day the owner asked for the
+trip list to stop jumping to the trip page on every click: selecting a trip
+now previews it, and opening is its own step. That became task 7, drawn in
+`docs/design/library-panel/trip-list-flow/` first, and the phase has
+thirteen.
 
 ## Supporting documents
 

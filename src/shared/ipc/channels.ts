@@ -18,6 +18,8 @@ export const CHANNELS = {
     search: 'trips:search',
     /** Phase 14: every visible trip with its dates, length and counts. */
     overview: 'trips:overview',
+    /** Phase 14, ADR 0022: the id of the holder of items outside a trip, made on first use. */
+    loose: 'trips:loose',
   },
   folders: {
     list: 'folders:list',
@@ -48,6 +50,8 @@ export const CHANNELS = {
     duplicate: 'routes:duplicate',
     move: 'routes:move',
     delete: 'routes:delete',
+    /** Phase 14: a new route from one route's or waypoint's end to another's start. */
+    join: 'routes:join',
   },
   /**
    * Phase 11: folders on disk linked to a trip. Named for folders, not photos,
@@ -117,6 +121,20 @@ export const CHANNELS = {
     planAll: 'itinerary:planAll',
     /** A POI as a stop: waypoint and stop in one undoable step. */
     addPoiStop: 'itinerary:addPoiStop',
+    /** Phase 14: a place or postcode as a stop, waypoint and stop in one undoable step. */
+    addPlaceStop: 'itinerary:addPlaceStop',
+    /** Phase 14: a waypoint from anywhere as a stop, moved or copied in first. */
+    addWaypointStop: 'itinerary:addWaypointStop',
+    /** Phase 14 Requirement 18.4: a photo as a stop, its waypoint made or reused. */
+    addPhotoStop: 'itinerary:addPhotoStop',
+    /** Phase 14: a route as a drive, brought in and linked, or with its ends as stops. */
+    addRouteLeg: 'itinerary:addRouteLeg',
+    /** Phase 14: a day break after a day, or at the end. */
+    addDay: 'itinerary:addDay',
+    /** Phase 14: a route or waypoint deleted with its plan entries, one undo step. */
+    deleteItem: 'itinerary:deleteItem',
+    /** Phase 14: a day's entries out of the plan, and its day break. */
+    removeDay: 'itinerary:removeDay',
     /** Routes the leg arriving at a stop, saves the route and links it. */
     planLeg: 'itinerary:planLeg',
     /** Routes the legs into and out of a stop inserted between two others. */
@@ -137,6 +155,8 @@ export const CHANNELS = {
     search: 'waypoints:search',
     groups: 'waypoints:groups',
     createGroup: 'waypoints:createGroup',
+    /** Phase 14 Requirement 18.3: a waypoint at a photo's location. */
+    fromPhoto: 'waypoints:fromPhoto',
   },
   tracks: {
     listForTrip: 'tracks:listForTrip',

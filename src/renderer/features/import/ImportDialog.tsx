@@ -7,6 +7,7 @@ import { Dialog } from '../../components/Dialog';
 import { api, call, callOr, describeError } from '../../lib/client';
 import { useGeometryStore } from '../../stores/geometryStore';
 import { useLibraryStore } from '../../stores/libraryStore';
+import { useNavStore } from '../../stores/navStore';
 import { useUiStore } from '../../stores/uiStore';
 
 /**
@@ -168,6 +169,9 @@ function ReportView({ reports }: { reports: readonly ImportReport[] }): ReactNod
   );
 }
 
+/** The Destination choice for outside any trip; resolved to the holder at import time (ADR 0022). */
+const LOOSE = 'loose';
+
 export function ImportDialog({ staged }: { staged: StagedImport[] }): ReactNode {
   const closeDialog = useUiStore((s) => s.closeDialog);
   const showToast = useUiStore((s) => s.showToast);
@@ -175,7 +179,13 @@ export function ImportDialog({ staged }: { staged: StagedImport[] }): ReactNode 
 
   const [phase, setPhase] = useState<Phase>('choosing');
   const [trips, setTrips] = useState<TripWithCounts[]>([]);
-  const [destination, setDestination] = useState<string | null>(null);
+  // Phase 14 Requirement 9.6: files go where the user is. The open trip; a
+  // cross-trip section means outside any trip; the trip list, a new trip per file.
+  const [destination, setDestination] = useState<string | null>(() => {
+    const nav = useNavStore.getState();
+    if (nav.section !== 'trips') return LOOSE;
+    return nav.openTripId;
+  });
   const [progress, setProgress] = useState<ImportProgress | null>(null);
   const [reports, setReports] = useState<ImportReport[]>([]);
   const [selections, setSelections] = useState<Map<string, Selection>>(() => {
@@ -257,13 +267,14 @@ export function ImportDialog({ staged }: { staged: StagedImport[] }): ReactNode 
   const run = async (): Promise<void> => {
     setPhase('importing');
     try {
+      const target = destination === LOOSE ? (await call(api().trips.loose())).id : destination;
       const result = await call(
         api().importing.commit({
           files: importable.map((file) => {
             const selection = selections.get(file.token);
             return {
               token: file.token,
-              destinationTripId: destination,
+              destinationTripId: target,
               routeIndices: [...(selection?.routes ?? [])],
               trackIndices: [...(selection?.tracks ?? [])],
               waypointIndices: [...(selection?.waypoints ?? [])],
@@ -374,6 +385,7 @@ export function ImportDialog({ staged }: { staged: StagedImport[] }): ReactNode 
           className="w-full rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-1 text-[13px]"
         >
           <option value="">New trip named after each file</option>
+          <option value={LOOSE}>Not in a trip</option>
           {trips.map((trip) => (
             <option key={trip.id} value={trip.id}>
               {trip.name}

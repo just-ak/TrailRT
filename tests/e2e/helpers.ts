@@ -50,7 +50,8 @@ export async function launch(userDataDir: string): Promise<Harness> {
   const page = await app.firstWindow();
   // The app renders a loading state until settings arrive, so wait for the
   // real workspace rather than merely a painted window.
-  await page.waitForSelector('[role="tree"]', { timeout: 30_000 });
+  // The workspace is a list, or a dated trip's day cards when it reopens on one.
+  await page.waitForSelector('[role="tree"], [data-testid="plan-cards"]', { timeout: 30_000 });
   return { app, page, userDataDir };
 }
 
@@ -69,7 +70,7 @@ export async function showTripList(page: Page): Promise<void> {
   if (await back.isVisible()) await back.click();
 }
 
-/** Opens a trip's page by selecting it in the trip list (Phase 14). Nothing to do if it is open. */
+/** Opens a trip's page by double-clicking it in the trip list (the trip list flow). Nothing to do if it is open. */
 export async function openTrip(page: Page, name: string | RegExp): Promise<void> {
   const heading = page.getByTestId('trip-header').getByRole('heading', { name });
   if ((await heading.count()) > 0 && (await page.getByRole('tab', { name: 'Trips' }).getAttribute('aria-selected')) === 'true') {
@@ -78,7 +79,7 @@ export async function openTrip(page: Page, name: string | RegExp): Promise<void>
     return;
   }
   await showTripList(page);
-  await page.getByRole('treeitem', { name }).first().click();
+  await page.getByRole('treeitem', { name }).first().dblclick();
   await page.getByTestId('trip-header').waitFor();
 }
 
@@ -112,7 +113,15 @@ export async function editSelection(page: Page): Promise<void> {
   const companion = page.getByTestId('companion');
   await companion.waitFor();
   if ((await companion.getAttribute('data-view')) === 'edit') return;
-  await companion.getByRole('button', { name: /^Edit/ }).first().click();
+  // A card has a pencil. A trip's, stop's or drive's details have none: their
+  // editors open from the ⋯ menu (Phase 14 design §4.8).
+  const pencil = companion.getByRole('button', { name: /^Edit/ });
+  if ((await pencil.count()) > 0) {
+    await pencil.first().click();
+  } else {
+    await companion.getByRole('button', { name: / options$/ }).first().click();
+    await page.getByRole('menuitem', { name: /^Edit the / }).click();
+  }
   await page.locator('[data-testid="companion"][data-view="edit"]').waitFor();
 }
 

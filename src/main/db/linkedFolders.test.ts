@@ -2,7 +2,6 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ASHBOURNE, BUXTON, LEEK } from '@fixtures/places';
 import type { PhotoMetadata } from '@shared/domain/linkedFolders';
@@ -15,6 +14,17 @@ import * as filesRepo from './repositories/folderFiles';
 import * as foldersRepo from './repositories/linkedFolders';
 import * as photosRepo from './repositories/photoMetadata';
 import * as tripRepo from './repositories/trips';
+
+/**
+ * A trip written as a build before migration 0007 would write it: the
+ * repository writes every column the current schema has, `role` included.
+ */
+function legacyTrip(sqlite: Database.Database, id: string, name: string): { id: string } {
+  const now = Date.now();
+  sqlite.prepare('INSERT INTO trips (id, folder_id, name, status, created_at, updated_at) VALUES (?, NULL, ?, ?, ?, ?)').run(id, name, 'active', now, now);
+  return { id };
+}
+
 
 let dir: string;
 let handle: DbHandle;
@@ -95,18 +105,11 @@ describe('migration 0006', () => {
       for (const statement of splitStatements(migration.sql)) sqlite.exec(statement);
       sqlite.prepare('INSERT INTO schema_migrations VALUES (?, ?, ?)').run(migration.version, migration.name, Date.now());
     }
-    tripRepo.insertTrip(drizzle(sqlite, { schema }), {
-      id: 'before-phase-11',
-      folderId: null,
-      name: 'Before Phase 11',
-      description: null,
-      notes: null,
-      now: Date.now(),
-    });
+    legacyTrip(sqlite, 'before-phase-11', 'Before Phase 11');
     sqlite.close();
 
     const upgraded = createDatabase({ file });
-    expect(upgraded.migration.applied).toEqual([7]);
+    expect(upgraded.migration.applied).toEqual([7, 8, 9, 10, 11]);
     expect(tripRepo.findTrip(upgraded.db, 'before-phase-11')?.name).toBe('Before Phase 11');
     expect(foldersRepo.listLinkedFolders(upgraded.db)).toEqual([]);
     upgraded.close();

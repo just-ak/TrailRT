@@ -28,6 +28,8 @@ interface LibraryState {
   tree: TreeNode | null;
   /** Phase 14: every visible trip with its dates, length and counts. */
   overview: TripOverview[];
+  /** ADR 0022: the holder of items outside a trip, so a row can say "Not in a trip". */
+  looseTripId: string | null;
   loading: boolean;
   error: string | null;
 
@@ -90,6 +92,7 @@ let searchSeq = 0;
 export const useLibraryStore = create<LibraryState>((set, get) => ({
   tree: null,
   overview: [],
+  looseTripId: null,
   loading: false,
   error: null,
 
@@ -116,7 +119,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   refresh: async () => {
     set({ loading: true, error: null });
     try {
-      const [tree, overview] = await Promise.all([
+      const [tree, overview, loose] = await Promise.all([
         call(
           api().library.tree({
             includeArchived: get().showArchived,
@@ -125,8 +128,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
           }),
         ),
         callOr(api().trips.overview({ includeArchived: get().showArchived }), [] as TripOverview[]),
+        callOr(api().trips.loose(), null),
       ]);
-      set({ tree, overview, loading: false });
+      set({ tree, overview, looseTripId: loose?.id ?? null, loading: false });
       // Phase 11: the Photos view's Year and Trip choices follow the tree.
       if (get().expanded.has('view:photos')) void usePhotoStore.getState().loadFilterOptions(get().showArchived);
       // Rows marked to open by default (a dated trip's days) open the first
