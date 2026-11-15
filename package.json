@@ -28,7 +28,7 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e",
-    "package": "npm run build && electron-builder --mac && npm run verify:package",
+    "package": "npm run build && electron-builder --mac && npm run verify:package && cp ./release/TrailRT-0.1.0-arm64.dmg ./downloads/",
     "verify:package": "node scripts/verify-package.mjs",
     "postinstall": "install-electron && electron-builder install-app-deps",
     "verify:native": "electron scripts/verify-native.mjs",
