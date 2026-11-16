@@ -5,6 +5,6 @@
   "license": "MIT",
   "scripts": {
     "preview": "npx --yes wrangler@4.163.0 dev",
-    "deploy": "npx --yes wrangler@4.163.0 deploy"
+    "deploy": "node check-assets.mjs && npx --yes wrangler@4.163.0 deploy"
   }
 }
