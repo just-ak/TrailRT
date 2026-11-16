@@ -125,6 +125,21 @@ h1 { font-size: clamp(40px, 6.4vw, 68px); letter-spacing: -0.035em; }
 .section-alt { background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .section-lede { color: var(--text-2); font-size: 18px; max-width: 40em; margin: 14px 0 40px; }
 
+/* ---------- video ---------- */
+/* No bottom padding: the features section follows with its own. */
+.section-video { padding-bottom: 0; }
+@media (min-width: 960px) { .section-video { padding-bottom: 0; } }
+.promo { margin: 0; }
+.promo video {
+  display: block; width: 100%; height: auto; aspect-ratio: 16 / 9;
+  background: var(--bg-2);
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.7);
+}
+.promo figcaption { margin-top: 10px; color: var(--text-3); font-size: 13px; }
+.promo figcaption a { color: inherit; }
+
 .cards { display: grid; gap: 16px; }
 @media (min-width: 680px) { .cards { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1000px) { .cards { grid-template-columns: repeat(3, 1fr); } }

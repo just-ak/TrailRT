@@ -1,7 +1,7 @@
 # Cloudflare Pages response headers. The site is static HTML and CSS with no
-# scripts, so the policy allows nothing else.
+# scripts, so the policy allows nothing else. media-src is for the promo video.
 /*
-  Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'none'; style-src 'self'; img-src 'self'; media-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
