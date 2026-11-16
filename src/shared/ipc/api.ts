@@ -160,6 +160,7 @@ export interface TrailRtApi {
     ): Promise<Result<Route[]>>;
     join(req: Req<typeof S.routeJoinRequest>): Promise<Result<Route>>;
     listAll(): Promise<Result<RouteWithTrip[]>>;
+    search(req: Req<typeof S.routeSearchRequest>): Promise<Result<RouteWithTrip[]>>;
     get(req: Req<typeof S.routeGetRequest>): Promise<Result<RouteWithPoints>>;
     create(req: Req<typeof S.routeCreateRequest>): Promise<Result<Route>>;
     update(req: Req<typeof S.routeUpdateRequest>): Promise<Result<Route>>;

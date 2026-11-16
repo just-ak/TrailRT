@@ -448,6 +448,10 @@ export function registerIpcHandlers(): void {
     routeService.listAll(ctx().handle.db),
   );
 
+  handle(CHANNELS.routes.search, S.routeSearchRequest, (req) =>
+    routeService.search(ctx().handle.db, req.query),
+  );
+
   handle(CHANNELS.routes.get, S.routeGetRequest, (req) =>
     routeService.get(ctx().handle.db, req.id),
   );

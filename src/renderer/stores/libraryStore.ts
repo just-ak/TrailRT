@@ -7,7 +7,8 @@ import type {
   TripSortKey,
   TripWithCounts,
 } from '@shared/domain/types';
-import type { WaypointWithTrip } from '@shared/ipc/api';
+import type { RouteWithTrip, WaypointWithTrip } from '@shared/ipc/api';
+import { compileNamePattern } from '@shared/search/namePattern';
 import type { TripOverview } from '@shared/domain/library';
 
 /** Matches the main process `ObjectSortKey`. Distance arrived with tracks. */
@@ -50,7 +51,11 @@ interface LibraryState {
 
   search: string;
   searchResults: TripWithCounts[] | null;
+  /** Phase 14 Requirement 20: routes are searched too. */
+  routeResults: RouteWithTrip[] | null;
   waypointResults: WaypointWithTrip[] | null;
+  /** Why the search text is not a valid pattern, or null when it is. */
+  searchError: string | null;
 
   hydrate(settings: AppSettings): void;
   refresh(): Promise<void>;
@@ -105,7 +110,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   search: '',
   searchResults: null,
+  routeResults: null,
   waypointResults: null,
+  searchError: null,
 
   hydrate: (settings) => {
     set({
@@ -210,18 +217,28 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setSearch: async (query) => {
     set({ search: query });
     const trimmed = query.trim();
+    // Guard against an earlier request resolving after a later one. Bumped
+    // before every early return too, so a slow answer to an earlier pattern
+    // cannot land under an empty or invalid one.
+    const seq = ++searchSeq;
     if (trimmed.length === 0) {
-      set({ searchResults: null, waypointResults: null });
+      set({ searchResults: null, routeResults: null, waypointResults: null, searchError: null });
       return;
     }
-    // Guard against an earlier request resolving after a later one.
-    const seq = ++searchSeq;
-    const [trips, waypoints] = await Promise.all([
+    // Phase 14 Requirement 20.3: a bad pattern, often a half-typed one, says
+    // why and shows nothing, rather than results for some earlier pattern.
+    const compiled = compileNamePattern(trimmed);
+    if (!compiled.ok) {
+      set({ searchResults: [], routeResults: [], waypointResults: [], searchError: compiled.message });
+      return;
+    }
+    const [trips, routes, waypoints] = await Promise.all([
       callOr(api().trips.search({ query: trimmed }), []),
+      callOr(api().routes.search({ query: trimmed }), []),
       callOr(api().waypoints.search({ query: trimmed }), []),
     ]);
     if (seq === searchSeq) {
-      set({ searchResults: trips, waypointResults: waypoints });
+      set({ searchResults: trips, routeResults: routes, waypointResults: waypoints, searchError: null });
     }
   },
 }));

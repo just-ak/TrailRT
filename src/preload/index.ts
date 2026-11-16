@@ -79,6 +79,7 @@ const api: TrailRtApi = {
   routes: {
     listForTrip: (req) => call(CHANNELS.routes.listForTrip, req),
     listAll: () => call(CHANNELS.routes.listAll),
+    search: (req) => call(CHANNELS.routes.search, req),
     join: (req) => call(CHANNELS.routes.join, req),
     get: (req) => call(CHANNELS.routes.get, req),
     create: (req) => call(CHANNELS.routes.create, req),

@@ -154,8 +154,12 @@ function Header(): ReactNode {
         <input
           type="search"
           value={search}
-          placeholder="Search trips and waypoints"
+          // Phase 14 Requirement 20.4: say it takes a pattern.
+          placeholder="Search names (pattern)"
           aria-label="Search trips"
+          aria-description="Searches trip, route and waypoint names. Takes a regular expression, ignoring case, such as ^Day [0-9] or wales|scotland."
+          title={"Searches trip, route and waypoint names.\nTakes a regular expression, ignoring case:\n^Day [0-9]   wales|scotland   20(24|25)"}
+          spellCheck={false}
           onChange={(event) => void setSearch(event.target.value)}
           className="min-w-0 flex-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-1 text-[13px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
         />

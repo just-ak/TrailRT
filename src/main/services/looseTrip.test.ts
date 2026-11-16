@@ -52,6 +52,9 @@ describe('the holder of items outside a trip', () => {
     tripService.looseTripId(db);
     expect(listed()).toEqual(['Peak loop']);
     expect(tripService.search(db, 'trip').map((t) => t.name)).toEqual([]);
+    // Phase 14 Requirement 20: a route outside a trip is still found, under its holder.
+    const outside = route(tripService.looseTripId(db), 'Snake Pass');
+    expect(routeService.search(db, '^snake').map((r) => [r.id, r.tripId])).toEqual([[outside, tripService.looseTripId(db)]]);
     expect(libraryService.overview(db, { includeArchived: true }).map((t) => t.name)).toEqual(['Peak loop']);
     const tree = libraryService.tree(db, { includeArchived: true });
     const trips = tree.children.find((c) => c.viewId === 'trips');

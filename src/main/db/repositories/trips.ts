@@ -105,17 +105,16 @@ export function findTripWithCounts(db: Db, id: string): TripWithCounts | null {
   };
 }
 
-export function searchTrips(db: Db, query: string): TripWithCounts[] {
-  // A user typing "%" or "_" means those characters literally, so they are
-  // escaped. SQLite only treats a character as an escape when an explicit
-  // ESCAPE clause says so — without it the backslashes would be matched
-  // literally and the search would find nothing.
-  const escaped = query.replace(/[\\%_]/g, (c) => `\\${c}`);
-  const pattern = `%${escaped.toLowerCase()}%`;
+/**
+ * Phase 14 Requirement 20: `pattern` is a regular expression, matched anywhere
+ * in the name and ignoring case, by the `regexp` function `createDatabase`
+ * registers. It has been checked with `compileNamePattern` already.
+ */
+export function searchTrips(db: Db, pattern: string): TripWithCounts[] {
   const rows = db
     .select({ trip: trips, ...countsSelect })
     .from(trips)
-    .where(and(eq(trips.role, 'trip'), sql`lower(${trips.name}) LIKE ${pattern} ESCAPE '\\'`))
+    .where(and(eq(trips.role, 'trip'), sql`${trips.name} REGEXP ${pattern}`))
     .orderBy(asc(trips.name))
     .all();
   return rows.map((r) => ({

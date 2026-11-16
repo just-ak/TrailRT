@@ -463,6 +463,43 @@ circumstances". Asked what it should hide, the owner chose the map.
    without them is never a surprise. The lists in the left panel SHALL be
    unchanged.
 
+## Requirement 20: Search by pattern, across routes too
+
+Added 16 November 2026 from the owner's feedback: "Search trips/routes should
+use regex".
+
+1. THE left panel's search SHALL match the names of trips, routes and
+   waypoints. Routes were not searched before.
+2. THE search text SHALL be a regular expression, matched anywhere in the
+   name and ignoring case, so plain text still finds what it did (`peak`
+   finds "Peak District Weekend"), and `^Day [0-9]`, `wales|scotland` and
+   `20(24|25)` work as patterns. Items outside a trip SHALL be found too and
+   shown as "Not in a trip", never as a trip (Requirement 9.7).
+3. A PATTERN that is not valid, often one half typed such as `(`, SHALL say
+   what is wrong in place of the results, and SHALL NOT show results from
+   an earlier pattern as if they matched this one.
+4. THE search field SHALL say that it takes a pattern, so the behaviour is
+   discoverable rather than a surprise.
+
+## Requirement 21: Move to any trip from the right-click menu
+
+Added 16 November 2026 from the owner's feedback: "Right click should be able
+to pick from a long list of trips."
+
+1. A ROUTE, track or waypoint's right-click menu, and a multi-selection's,
+   SHALL offer Move to Trip…, which opens a list of every trip, with "Not in
+   a trip" first. The menu listed only the first eight or nine before, so
+   most trips could not be reached.
+2. THE list SHALL scroll, and SHALL have a filter at the top that takes the
+   same patterns as the search (Requirement 20), with the focus in it when
+   the list opens.
+3. THE list SHALL work from the keyboard: the arrow keys move through the
+   trips shown, Return moves to the one highlighted, and Escape closes the
+   list without moving anything.
+4. A MOVE SHALL be one undo step, through the batch path, as before
+   (Requirement 9.5). Choosing Move to Trip… SHALL NOT itself move anything:
+   the multi-selection's version moved to the first trip in the list.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its

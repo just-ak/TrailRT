@@ -52,6 +52,8 @@ export const CHANNELS = {
     delete: 'routes:delete',
     /** Phase 14: a new route from one route's or waypoint's end to another's start. */
     join: 'routes:join',
+    /** Phase 14 Requirement 20: by name pattern, across every trip. */
+    search: 'routes:search',
   },
   /**
    * Phase 11: folders on disk linked to a trip. Named for folders, not photos,

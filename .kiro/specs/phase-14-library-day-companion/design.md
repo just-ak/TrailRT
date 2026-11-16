@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 21).
+  library's tens of thousands, which is the Photos section's case (task 25).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -647,13 +647,73 @@ persist; `MapView` already passes no waypoints to the layer when it is off.
 The button keeps one label, "Hide waypoints on the map", with `aria-pressed`
 true while they are hidden, the accent outline, and a crossed-out pin.
 
+### 5.13 Search by pattern, across routes too (Requirement 20)
+
+**One compiler, in `shared/search/namePattern.ts`.** `compileNamePattern(text)`
+trims the text and returns `{ ok: true, regex }` or `{ ok: false, message }`,
+where the message is the engine's own, without its `Invalid regular
+expression: /…/i:` prefix. The flag is `i` alone. `u` would reject escapes
+people type out of habit, such as `\-` and `\ `, and without it `i` still
+folds accented Latin letters. Both processes use it: the renderer to explain
+a bad pattern without a round trip, and the request schemas to refuse one.
+
+**Matching in SQLite, with a JavaScript engine.** `createDatabase` registers
+a deterministic `regexp(pattern, value)` function on the connection, which is
+what SQLite's `X REGEXP Y` calls. It compiles through `compileNamePattern` and
+keeps the last pattern compiled, because one query tests it against every row.
+The three repositories change `lower(name) LIKE …` to `name REGEXP ?`, so
+ordering, the join to the trip's name and the trip counts stay in SQL. The
+`LIKE` escaping goes, since a pattern's `%` and `_` are already literal.
+
+**Routes.** `routes:search` mirrors `waypoints:search`: `searchRoutes`
+returns `RouteWithTrip`, through `routeService.search`, its handler, the
+preload and `ApiSurface`. `tripSearchRequest`, `waypointSearchRequest` and
+the new `routeSearchRequest` share one `nameSearchRequest`, which refines the
+query with `compileNamePattern`.
+
+**The renderer.** `libraryStore.setSearch` compiles first. A bad pattern sets
+`searchError` and clears all three result lists before any request, so stale
+results are never shown under a new pattern; a good one runs the three
+searches in parallel behind the existing sequence guard. `SearchResults`
+shows the error in place of the count. Otherwise it shows trips, then routes,
+then waypoints, each with its line icon (Map, Route, MapPin) rather than an
+emoji (Requirement 10.3). An item outside a trip names its trip "Not in a
+trip" and, as a waypoint already did, opens its section instead of a trip
+page. The field reads "Search names (pattern)", and its hint gives the
+examples.
+
+**A pattern cannot be interrupted.** V8 has no time limit on a match, and a
+pattern such as `(a+)+$` can backtrack for seconds against a long run of one
+letter. The text is the user's own and names are at most 200 characters, so
+this is accepted rather than defended against; it is written down so it is
+not rediscovered as a bug.
+
+### 5.14 Move to any trip from the right-click menu (Requirement 21)
+
+`TripPickerDialog` in `features/library/` takes the destinations, a title and
+`onPick`. It is a `Dialog` with a filter field and a `listbox` of `option`s
+underneath, which scrolls on its own so the filter stays in view. The filter
+goes through `compileNamePattern`, so one syntax works in both places, and a
+bad pattern says why rather than emptying the list without explanation. The
+highlighted option follows the arrow keys and the pointer, Return picks it,
+and Escape is the dialog's own cancel.
+
+`LibraryList` keeps `movePicker: BatchMember[] | null`. The single-item
+`moveTo` and the multi-selection menu both become one Move to Trip… item that
+sets it, so the eight- and nine-trip caps and the inline "→ trip" rows go,
+and so does the multi-selection header that moved to the first trip when
+clicked. Picking calls `moveBatchToTrip`, unchanged, so a move is still one
+undo step. The list is `moveDestinations(overview, looseTripId)` as before.
+It is not virtualised: a long list here is hundreds of trips, not the
+photos' tens of thousands.
+
 ## 6. Risks
 
 - **Scope.** The largest UI change since Phase 1. Mitigated by the order of
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 24).
+  checklist (task 26).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

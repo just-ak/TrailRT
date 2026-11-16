@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 24 here, against the new panels.
+after task 26 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -365,7 +365,48 @@ after task 24 here, against the new panels.
     (2,056 unit, 175 end-to-end)
   - _Requirements: 19.1–19.3_
 
-- [ ] 21. The day and what is in it
+- [x] 21. Search by pattern, across routes too
+  - `shared/search/namePattern.ts`: `compileNamePattern`; the `regexp`
+    function on the connection in `db/client.ts`; `REGEXP` in place of
+    `LIKE` in `searchTrips` and `searchWaypoints`; new `searchRoutes`,
+    `routeService.search` and `routes:search` through the handler, preload
+    and `ApiSurface`; one shared `nameSearchRequest` (design §5.13)
+  - `libraryStore`: `routeResults`, `searchError`; `SearchResults` with
+    routes, line icons and the error; the field's label and hint
+  - Unit tests: plain text still matches; anchors, alternation and groups
+    work; case is ignored; a bad pattern gives the engine's message and is
+    refused by the schema; the repositories match by pattern, and routes and
+    items outside a trip are found
+  - End-to-end: a pattern finds a route and a trip; a half-typed pattern
+    explains itself and shows no results
+  - Done: as above. `namePattern.test.ts` covers plain text, anchors,
+    alternation, groups, literal `%` and `_`, accents and the engine's
+    messages; the service tests search trips, routes and waypoints by
+    pattern, across trips and outside one, and refuse `(`;
+    `schemas.test.ts` refuses a bad pattern for all three; `search.spec.ts`
+    finds trips and routes by pattern, opens a route in its trip or its
+    section, and explains `peak (`. `npm run verify` passes (2,091 unit,
+    186 end-to-end)
+  - _Requirements: 20.1–20.4_
+
+- [x] 22. Move to any trip from the right-click menu
+  - `TripPickerDialog`; Move to Trip… on a route's, track's and waypoint's
+    menu and on a multi-selection's, replacing the capped inline lists
+    (design §5.14)
+  - Unit tests: the filter narrows by pattern and explains a bad one; the
+    arrow keys and Return pick the highlighted trip
+  - End-to-end: an item moves to a trip beyond the old cap, picked through
+    the filter by keyboard, and one undo moves it back
+  - Done: as above. `tripPicker.test.ts` covers the filter, a bad pattern
+    and the highlight's keys over 43 trips; `trip-picker.spec.ts` lists all
+    18 destinations with the focus in the filter, moves to the last trip by
+    filter and Return, moves a multi-selection by the arrow keys only once
+    a trip is picked, picks with the pointer, and undoes each in one step;
+    `loose.spec.ts` moves through the list. `npm run verify` passes (2,091
+    unit, 186 end-to-end)
+  - _Requirements: 21.1–21.4_
+
+- [ ] 23. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -373,19 +414,19 @@ after task 24 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 22. The left panel as drawn
+- [ ] 24. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 23. The Photos section
+- [ ] 25. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 24. End-to-end and verification pass
+- [ ] 26. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

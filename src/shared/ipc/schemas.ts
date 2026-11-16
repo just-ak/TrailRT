@@ -3,6 +3,7 @@ import { MAX_ITINERARY_STOPS, MAX_OTHER_MINUTES, MAX_STAY_DAYS, MAX_STOP_MINUTES
 import { POI_CATEGORY_IDS } from '../poi/categories';
 import { checkRoutingOrigin } from '../net/origin';
 import { isValidDate, isValidTime } from '../time/zoned';
+import { compileNamePattern } from '../search/namePattern';
 
 /**
  * Request schemas for every IPC channel. The main process validates against
@@ -116,9 +117,25 @@ export const tripSetStatusRequest = z
 
 export const tripDeleteRequest = z.object({ id: idSchema }).strict();
 
-export const tripSearchRequest = z
-  .object({ query: z.string().trim().max(200) })
+/**
+ * Phase 14 Requirement 20: the library search's text is a pattern, refused
+ * here when it is not a valid one, so the main process never compiles a bad
+ * pattern and the renderer gets the engine's explanation back.
+ */
+export const nameSearchRequest = z
+  .object({
+    query: z
+      .string()
+      .trim()
+      .max(200)
+      .superRefine((query, ctx) => {
+        const compiled = compileNamePattern(query);
+        if (!compiled.ok) ctx.addIssue({ code: 'custom', message: `Not a valid search pattern: ${compiled.message}` });
+      }),
+  })
   .strict();
+
+export const tripSearchRequest = nameSearchRequest;
 
 // ---------------------------------------------------------------- folders
 
@@ -439,9 +456,8 @@ export const waypointMoveToTripRequest = z
   .object({ id: idSchema, tripId: idSchema })
   .strict();
 
-export const waypointSearchRequest = z
-  .object({ query: z.string().trim().max(200) })
-  .strict();
+export const waypointSearchRequest = nameSearchRequest;
+export const routeSearchRequest = nameSearchRequest;
 
 /** Phase 14 Requirement 18.3: in `tripId`, or else the photo's own trip. */
 export const waypointFromPhotoRequest = z
