@@ -30,6 +30,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tripTab: 'plan',
   backupIntervalHours: 24,
   backupRetention: 7,
+  backupMaxGb: 2,
   planningSpeedKmh: 4.5,
   tripSortKey: 'updatedAt',
   tripSortDirection: 'desc',

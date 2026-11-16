@@ -209,6 +209,8 @@ export interface AppSettings {
   tripTab: TripTab;
   backupIntervalHours: number;
   backupRetention: number;
+  /** Phase 14 Requirement 24: the most space backups may use together, in GB. The newest is always kept. */
+  backupMaxGb: number;
   /** Used for route duration estimates. Nothing is estimated without it. */
   planningSpeedKmh: number;
   tripSortKey: TripSortKey;

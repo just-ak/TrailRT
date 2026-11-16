@@ -109,7 +109,7 @@ describe('migration 0006', () => {
     sqlite.close();
 
     const upgraded = createDatabase({ file });
-    expect(upgraded.migration.applied).toEqual([7, 8, 9, 10, 11]);
+    expect(upgraded.migration.applied).toEqual([7, 8, 9, 10, 11, 12]);
     expect(tripRepo.findTrip(upgraded.db, 'before-phase-11')?.name).toBe('Before Phase 11');
     expect(foldersRepo.listLinkedFolders(upgraded.db)).toEqual([]);
     upgraded.close();

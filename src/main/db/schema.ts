@@ -256,17 +256,34 @@ export const trackPoints = sqliteTable(
 /**
  * Phase 3. The original imported bytes, retained so "preserve the original
  * data" is literally true and any edit can be rolled back to the import.
+ *
+ * Each file is kept once, by its SHA-256, however many tracks were read from
+ * it (ADR 0025, migration 0011). A trigger removes a file when the last track
+ * that links to it goes.
  */
-export const trackSources = sqliteTable('track_sources', {
-  id: text('id').primaryKey(),
-  trackId: text('track_id')
-    .notNull()
-    .references(() => tracks.id, { onDelete: 'cascade' }),
+export const sourceFiles = sqliteTable('source_files', {
+  contentHash: text('content_hash').primaryKey(),
   format: text('format').notNull(),
-  contentHash: text('content_hash').notNull(),
-  originalBytes: blob('original_bytes', { mode: 'buffer' }).notNull(),
+  byteSize: integer('byte_size').notNull(),
+  bytes: blob('bytes', { mode: 'buffer' }).notNull(),
   createdAt: integer('created_at').notNull().default(now),
 });
+
+/** A track's link to the file it was imported from. */
+export const trackSources = sqliteTable(
+  'track_sources',
+  {
+    id: text('id').primaryKey(),
+    trackId: text('track_id')
+      .notNull()
+      .references(() => tracks.id, { onDelete: 'cascade' }),
+    contentHash: text('content_hash')
+      .notNull()
+      .references(() => sourceFiles.contentHash),
+    createdAt: integer('created_at').notNull().default(now),
+  },
+  (t) => [index('idx_track_sources_track').on(t.trackId), index('idx_track_sources_hash').on(t.contentHash)],
+);
 
 /** Phase 2. */
 export const waypointGroups = sqliteTable('waypoint_groups', {

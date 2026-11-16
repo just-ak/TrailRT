@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 30 here, against the new panels.
+after task 32 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -476,7 +476,40 @@ after task 30 here, against the new panels.
     (2,152 unit, 200 end-to-end)
   - _Requirements: 23.1–23.4_
 
-- [ ] 27. The day and what is in it
+- [x] 27. Each imported file kept once
+  - Migration 0011: `source_files`, `track_sources` as a link, the trigger;
+    `insertTrackSource` and `findTrackSource`; `COMPACT_AFTER` and the
+    `VACUUM` in `createDatabase`; ADR 0025 (design §5.18)
+  - Unit tests: an old-format database upgrades with one copy per file, every
+    track's own bytes, and a smaller file with no free pages; an empty one
+    upgrades; new imports share a file; the file goes with its last track,
+    and with a trip's cascade
+  - Trial: the migration on a clone of the owner's database
+  - Done: as above. `sourceFiles.test.ts` covers the upgrade, the empty
+    upgrade, sharing and both ways a file goes. On a clone of the owner's
+    12.4 GB database the migration and `VACUUM` took 9 seconds and left
+    140 MB, with all 685 tracks reaching their originals, all five files
+    matching their hashes and `integrity_check` ok. `npm run verify` passes
+    (2,166 unit, 203 end-to-end)
+  - _Requirements: 25.1–25.3_
+
+- [x] 28. A space limit on backups
+  - `planPrune`, the limits and protection in `createBackup` and
+    `restoreBackup`, the free-space check; `backupMaxGb`; `BackupUsage` in
+    Settings (design §5.18)
+  - Unit tests: oldest first within space and count, the stricter limit,
+    the newest always kept, protected files kept; on disk, a backup rolls,
+    an oversized one is the only one kept, a new one survives its own clean-up
+    whatever the dates, and a restore keeps its source
+  - End-to-end: 2 GB to start with and what is not backed up; a backup in
+    the usage; a changed limit kept across a restart
+  - Done: as above. `backupService.test.ts` (10 cases) found and covers a
+    backup removed by its own clean-up when a nearby file was dated in the
+    future; `backups.spec.ts` covers Settings. `npm run verify` passes
+    (2,166 unit, 203 end-to-end)
+  - _Requirements: 24.1–24.5_
+
+- [ ] 29. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -484,19 +517,19 @@ after task 30 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 28. The left panel as drawn
+- [ ] 30. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 29. The Photos section
+- [ ] 31. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 30. End-to-end and verification pass
+- [ ] 32. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

@@ -570,6 +570,38 @@ the detail arrow (which we don't have yet)".
    clear it. A new request SHALL replace the last.
 4. A TRACK's arrow SHALL also select the track, as clicking its row does.
 
+## Requirement 24: A space limit on backups
+
+Added 16 November 2026 from the owner's feedback, after their disk filled:
+"Lets add a max backup space, 2GB as default, make it rolling", and "we need
+to separate user data backup, and offline backup of maps which we shouldn't
+backup". ADR 0025.
+
+1. BACKUPS SHALL be kept within a space limit, 2 GB by default and set in
+   Settings, as well as the existing count. The oldest SHALL be removed first,
+   whichever limit is reached.
+2. THE newest backup SHALL always be kept, even when it alone is over the
+   limit, and Settings SHALL say when that is so.
+3. A BACKUP SHALL NOT be written when it would leave the disk with less than
+   1 GB free; it SHALL say why instead.
+4. A RESTORE's safety copy SHALL NOT remove the backup being restored, and a
+   backup SHALL NOT be removed by its own clean-up.
+5. SETTINGS SHALL show how much space the backups use against the limit, and
+   say what a backup holds: everything the user made, and not map regions,
+   terrain, place and postcode search or photo thumbnails, which are
+   downloaded or rebuilt and are never backed up.
+
+## Requirement 25: Each imported file kept once
+
+Found while measuring the owner's library for Requirement 24. ADR 0025.
+
+1. AN imported file's original bytes SHALL be stored once, however many tracks
+   were read from it, and every track SHALL still reach its original byte for
+   byte.
+2. A file SHALL be removed when the last track read from it is removed.
+3. AN existing library SHALL be upgraded in place: the copies collapsed and the
+   database compacted, with nothing lost.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its
@@ -582,6 +614,8 @@ the detail arrow (which we don't have yet)".
   moves to the trip page's Photos tab and the Photos section.
 - **Phase 2 and 3: every route, track and waypoint belongs to a trip.**
   Requirement 9 lets them stand outside one. ADR 0022.
+- **Phase 3: original files.** Kept once per file rather than once per track
+  (Requirement 25, ADR 0025). What is kept is unchanged.
 - **Phase 11 Requirement 1: a folder is linked to a trip.** A folder can now
   be linked outside any trip too (Requirement 9.2).
 

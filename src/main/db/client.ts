@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { compileNamePattern, matchesName } from '@shared/search/namePattern';
 import { applyMigrations, type MigrationResult } from './migrate';
+import { COMPACT_AFTER } from './migrations/index';
 import * as schema from './schema';
 
 /**
@@ -51,6 +52,15 @@ export function createDatabase(options: CreateDbOptions): DbHandle {
   const migration = options.skipMigrations
     ? { applied: [], alreadyCurrent: true, schemaVersion: 0 }
     : applyMigrations(sqlite);
+
+  // ADR 0025: a migration that dropped gigabytes leaves them as free pages
+  // inside the file. VACUUM rewrites only the live data, so it needs space for
+  // the compacted file, not the old one, and runs once, outside the
+  // migration's transaction, which VACUUM cannot run inside.
+  if (migration.applied.some((version) => COMPACT_AFTER.has(version))) {
+    sqlite.exec('VACUUM');
+    sqlite.pragma('wal_checkpoint(TRUNCATE)');
+  }
 
   const db = drizzle(sqlite, { schema });
 

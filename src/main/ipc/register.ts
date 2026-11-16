@@ -396,11 +396,12 @@ export function registerIpcHandlers(): void {
 
   handleNoArgs(CHANNELS.backup.create, async () => {
     const current = ctx();
-    const retention = settingsService.all(current.handle.db).backupRetention;
+    const { backupRetention, backupMaxGb } = settingsService.all(current.handle.db);
     return backupService.createBackup(
       current.handle,
       current.paths.backupsDir,
-      retention,
+      { retention: backupRetention, maxBytes: backupMaxGb * 1024 ** 3 },
+      { databaseFile: current.paths.databaseFile },
     );
   });
 
@@ -422,13 +423,13 @@ export function registerIpcHandlers(): void {
 
   handle(CHANNELS.backup.restore, S.backupRestoreRequest, async (req) => {
     const current = ctx();
-    const retention = settingsService.all(current.handle.db).backupRetention;
+    const { backupRetention, backupMaxGb } = settingsService.all(current.handle.db);
     await backupService.restoreBackup({
       handle: current.handle,
       databaseFile: current.paths.databaseFile,
       backupsDir: current.paths.backupsDir,
       fileName: req.fileName,
-      retention,
+      limits: { retention: backupRetention, maxBytes: backupMaxGb * 1024 ** 3 },
     });
     reopenDatabase();
     // The restored database has its own folder rows (Phase 11 Requirement 10.2).

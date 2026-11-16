@@ -3,7 +3,7 @@ import { asc, eq, inArray, sql } from 'drizzle-orm';
 import type { GeometrySource } from '@shared/domain/types';
 import type { Db } from '../client';
 import { encodeMetadata } from '../metadata';
-import { trackPoints, tracks, trackSources, trips } from '../schema';
+import { sourceFiles, trackPoints, tracks, trackSources, trips } from '../schema';
 
 /**
  * Data access for tracks.
@@ -332,7 +332,12 @@ export function deleteTrack(db: Db, id: string): void {
 
 // ----------------------------------------------------------- source bytes
 
-/** Retains the imported file verbatim, so an edit can always be rolled back. */
+/**
+ * Retains the imported file verbatim, so an edit can always be rolled back.
+ *
+ * The file is stored once, by its hash: the second and later tracks read from
+ * the same file only link to it (ADR 0025).
+ */
 export function insertTrackSource(
   db: Db,
   values: {
@@ -343,13 +348,21 @@ export function insertTrackSource(
     now: number;
   },
 ): void {
+  db.insert(sourceFiles)
+    .values({
+      contentHash: values.contentHash,
+      format: values.format,
+      byteSize: values.bytes.byteLength,
+      bytes: Buffer.from(values.bytes),
+      createdAt: values.now,
+    })
+    .onConflictDoNothing({ target: sourceFiles.contentHash })
+    .run();
   db.insert(trackSources)
     .values({
       id: randomUUID(),
       trackId: values.trackId,
-      format: values.format,
       contentHash: values.contentHash,
-      originalBytes: Buffer.from(values.bytes),
       createdAt: values.now,
     })
     .run();
@@ -360,15 +373,16 @@ export function findTrackSource(
   trackId: string,
 ): { format: string; contentHash: string; bytes: Uint8Array } | null {
   const row = db
-    .select()
+    .select({ format: sourceFiles.format, contentHash: sourceFiles.contentHash, bytes: sourceFiles.bytes })
     .from(trackSources)
+    .innerJoin(sourceFiles, eq(sourceFiles.contentHash, trackSources.contentHash))
     .where(eq(trackSources.trackId, trackId))
     .get();
   if (row === undefined) return null;
   return {
     format: row.format,
     contentHash: row.contentHash,
-    bytes: new Uint8Array(row.originalBytes),
+    bytes: new Uint8Array(row.bytes),
   };
 }
 

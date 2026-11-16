@@ -107,7 +107,7 @@ describe('migration 0004', () => {
     sqlite.close();
 
     const upgraded = createDatabase({ file });
-    expect(upgraded.migration.applied).toEqual([5, 6, 7, 8, 9, 10, 11]);
+    expect(upgraded.migration.applied).toEqual([5, 6, 7, 8, 9, 10, 11, 12]);
     expect(tripRepo.findTrip(upgraded.db, existing.id)?.name).toBe('Before Phase 10');
     expect(itineraryRepo.findItinerary(upgraded.db, existing.id)).toBeNull();
     upgraded.close();
@@ -217,7 +217,7 @@ describe('migration 0008', () => {
     sqlite.close();
 
     const upgraded = createDatabase({ file });
-    expect(upgraded.migration.applied).toEqual([9, 10, 11]);
+    expect(upgraded.migration.applied).toEqual([9, 10, 11, 12]);
     const [kept] = itineraryRepo.listStops(upgraded.db, trip.id);
     expect(kept).toMatchObject({ id: 's1', waypointId: 'w1', point: null, kind: 'stop', entryRouteId: null, notes: 'kept', legMode: 'road' });
     const point = itineraryRepo.insertStop(upgraded.db, {

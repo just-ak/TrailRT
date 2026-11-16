@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 29).
+  library's tens of thousands, which is the Photos section's case (task 31).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -761,6 +761,26 @@ aggregate over `track_points` like a trip's. `MapView` draws them beside the
 trip's tracks, de-duplicated, fits once per request, and shows a strip at the
 top right with Clear. Nothing is persisted.
 
+### 5.18 Backups within a limit; imported files kept once (Requirements 24, 25)
+
+**Files once.** Migration 0011 adds `source_files` (hash, format, size,
+bytes) and rebuilds `track_sources` as a link with an index on each side. A
+trigger after a link is deleted removes the file when nothing else links to
+it, which also covers rows removed by a foreign key's cascade.
+`insertTrackSource` inserts the file with `ON CONFLICT DO NOTHING` and then the
+link; `findTrackSource` joins them. `COMPACT_AFTER` in the migration list makes
+`createDatabase` run `VACUUM` and truncate the WAL once after migration 12.
+
+**Backups.** `planPrune` walks the backups newest first and keeps one while
+the count and total size fit; the newest and any protected file are always
+kept. `createBackup` takes the limits and the database path: before writing it
+prunes as if the new backup, sized by the database and its WAL, were already
+the newest, but spares the newest existing one; it refuses when less than the
+backup plus 1 GB would be free (`statfsSync`); after writing it prunes again
+with the new file protected. `restoreBackup` protects the file it restores.
+`backupMaxGb` is a setting; `BackupUsage` in Settings lists the backups when
+it opens and states what is and is not backed up.
+
 ### 5.14 Move to any trip from the right-click menu (Requirement 21)
 
 `TripPickerDialog` in `features/library/` takes the destinations, a title and
@@ -786,7 +806,7 @@ photos' tens of thousands.
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 30).
+  checklist (task 32).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

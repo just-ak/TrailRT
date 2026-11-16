@@ -215,6 +215,12 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
     .strict(),
   z
     .object({
+      key: z.literal('backupMaxGb'),
+      value: z.number().finite().min(0.5).max(1000),
+    })
+    .strict(),
+  z
+    .object({
       key: z.literal('planningSpeedKmh'),
       value: z.number().finite().min(0.5).max(100),
     })

@@ -1,4 +1,4 @@
-import { copyFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, readdirSync, rmSync, statfsSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import Database from 'better-sqlite3';
 import type { BackupEntry } from '@shared/ipc/api';
@@ -17,6 +17,84 @@ import { ServiceError } from './errors';
 
 const PREFIX = 'trailrt-backup-';
 const SUFFIX = '.db';
+
+/** Room left on the disk after a backup, so a backup never fills it. */
+export const FREE_SPACE_MARGIN_BYTES = 1024 ** 3;
+
+/** How many backups to keep, and how much space they may use together. */
+export interface BackupLimits {
+  retention: number;
+  maxBytes: number;
+}
+
+/**
+ * Which backups to remove, newest first in `entries` (Phase 14 Requirement
+ * 24). Walking from the newest, a backup is kept while both the count and the
+ * total size fit. The newest is always kept, even when it alone is over the
+ * size limit, because a library larger than the limit must still have one
+ * backup. A protected file, such as the one a restore is reading, is never
+ * removed and counts towards both limits.
+ */
+export function planPrune(
+  entries: readonly BackupEntry[],
+  limits: BackupLimits,
+  protect: ReadonlySet<string> = new Set(),
+): string[] {
+  const keepCount = Math.max(1, limits.retention);
+  let kept = 0;
+  let bytes = 0;
+  const remove: string[] = [];
+  for (const entry of entries) {
+    const fits = kept === 0 || (kept < keepCount && bytes + entry.byteSize <= limits.maxBytes);
+    if (fits || protect.has(entry.fileName)) {
+      kept += 1;
+      bytes += entry.byteSize;
+    } else {
+      remove.push(entry.fileName);
+    }
+  }
+  return remove;
+}
+
+function removeFiles(backupsDir: string, fileNames: readonly string[]): string[] {
+  const removed: string[] = [];
+  for (const fileName of fileNames) {
+    try {
+      rmSync(join(backupsDir, fileName), { force: true });
+      removed.push(fileName);
+    } catch {
+      // A backup that will not delete is not worth failing the operation over;
+      // the next prune will try again.
+    }
+  }
+  return removed;
+}
+
+/** The live database's size on disk, with its write-ahead log: what a backup will roughly need. */
+function databaseBytes(databaseFile: string): number {
+  let total = 0;
+  for (const file of [databaseFile, `${databaseFile}-wal`]) {
+    try {
+      total += statSync(file).size;
+    } catch {
+      // No WAL yet.
+    }
+  }
+  return total;
+}
+
+function freeBytes(dir: string): number | null {
+  try {
+    const stats = statfsSync(dir);
+    return stats.bavail * stats.bsize;
+  } catch {
+    return null;
+  }
+}
+
+function gb(bytes: number): string {
+  return bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
+}
 
 /** Tables a candidate file must have before we will restore over live data. */
 const REQUIRED_TABLES = ['trips', 'folders', 'settings', 'schema_migrations'];
@@ -55,13 +133,36 @@ export function listBackups(backupsDir: string): BackupEntry[] {
 export async function createBackup(
   handle: DbHandle,
   backupsDir: string,
-  retention: number,
+  limits: BackupLimits,
+  options: { databaseFile?: string; protect?: ReadonlySet<string> } = {},
 ): Promise<BackupEntry> {
   const fileName = backupFileName(new Date());
   const target = join(backupsDir, fileName);
+  const protect = options.protect ?? new Set<string>();
+
+  // Make room first, as if the new backup were already the newest, but keep
+  // the newest existing one until the new one is safely written.
+  if (options.databaseFile !== undefined) {
+    const expected = databaseBytes(options.databaseFile);
+    const existing = listBackups(backupsDir);
+    const newest = existing[0]?.fileName;
+    const planned = planPrune([{ fileName, createdAt: Date.now(), byteSize: expected }, ...existing], limits, protect);
+    removeFiles(backupsDir, planned.filter((name) => name !== newest));
+
+    // Never fill the disk: a full disk stops the app saving anything at all.
+    const free = freeBytes(backupsDir);
+    if (free !== null && free < expected + FREE_SPACE_MARGIN_BYTES) {
+      throw new ServiceError(
+        'IO_ERROR',
+        `There is not enough free disk space for a backup. It needs about ${gb(expected)}, and ${gb(FREE_SPACE_MARGIN_BYTES)} is kept free; ${gb(free)} is free now.`,
+      );
+    }
+  }
 
   await handle.sqlite.backup(target);
-  pruneBackups(backupsDir, retention);
+  // The backup just written is never pruned by its own clean-up, whatever the
+  // dates on the files around it say (a clock change, a copy from elsewhere).
+  pruneBackups(backupsDir, limits, new Set([...protect, fileName]));
 
   const stat = statSync(target);
   return { fileName, createdAt: stat.mtimeMs, byteSize: stat.size };
@@ -75,20 +176,13 @@ export async function createBackupAt(
   await handle.sqlite.backup(targetPath);
 }
 
-/** Keeps the newest `retention` generations and removes the rest. */
-export function pruneBackups(backupsDir: string, retention: number): string[] {
-  const keep = Math.max(1, retention);
-  const removed: string[] = [];
-  for (const entry of listBackups(backupsDir).slice(keep)) {
-    try {
-      rmSync(join(backupsDir, entry.fileName), { force: true });
-      removed.push(entry.fileName);
-    } catch {
-      // A backup that will not delete is not worth failing the operation over;
-      // the next prune will try again.
-    }
-  }
-  return removed;
+/** Applies `planPrune` to the backups folder. Returns what was removed. */
+export function pruneBackups(
+  backupsDir: string,
+  limits: BackupLimits,
+  protect: ReadonlySet<string> = new Set(),
+): string[] {
+  return removeFiles(backupsDir, planPrune(listBackups(backupsDir), limits, protect));
 }
 
 export interface ValidationResult {
@@ -167,7 +261,7 @@ export async function restoreBackup(options: {
   databaseFile: string;
   backupsDir: string;
   fileName: string;
-  retention: number;
+  limits: BackupLimits;
 }): Promise<RestoreOutcome> {
   const source = join(options.backupsDir, basename(options.fileName));
 
@@ -179,11 +273,14 @@ export async function restoreBackup(options: {
     );
   }
 
-  // Snapshot first. If anything below fails the user still has this.
+  // Snapshot first. If anything below fails the user still has this. The
+  // backup being restored is protected: making room for the safety copy must
+  // never delete the file about to be read.
   const safety = await createBackup(
     options.handle,
     options.backupsDir,
-    options.retention + 1,
+    { retention: options.limits.retention + 1, maxBytes: options.limits.maxBytes },
+    { databaseFile: options.databaseFile, protect: new Set([basename(options.fileName)]) },
   );
 
   options.handle.close();
