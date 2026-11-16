@@ -1,7 +1,11 @@
-# Cloudflare Pages project for the TrailRT website. Separate from the app:
-# nothing here is built, bundled or shipped with TrailRT. See README.md.
+# Cloudflare Worker serving the TrailRT website as static assets. Separate from
+# the app: nothing here is built, bundled or shipped with TrailRT. See README.md.
 #
-# `name` must match your Pages project. Change it if yours differs.
+# Deployed by Workers Builds from the repository (root directory `website`,
+# deploy command `npm run deploy`), or by hand with the same command.
+# `name` must match the Worker in your Cloudflare dashboard.
 name = "trailrt"
-pages_build_output_dir = "./public"
 compatibility_date = "2026-11-16"
+
+[assets]
+directory = "./public"

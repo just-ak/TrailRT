@@ -1,8 +1,8 @@
 # TrailRT website
 
-The one-page site for TrailRT, deployed to Cloudflare Pages with Wrangler. It is
-also the page given to App Store Connect for the marketing, support and privacy
-policy URLs.
+The one-page site for TrailRT, served by a Cloudflare Worker as static assets
+and deployed with Wrangler. It is also the page given to App Store Connect for
+the marketing, support and privacy policy URLs.
 
 ## Kept away from the app
 
@@ -25,7 +25,7 @@ This folder is deliberately separate from the application:
 | --- | --- |
 | `public/index.html` | The page: hero, features, privacy policy (`#privacy`), support (`#support`) |
 | `public/styles.css` | All styling. Dark, matching the app icon |
-| `public/_headers` | Security headers for Pages, including a CSP that allows only this site's own CSS and images |
+| `public/_headers` | Security headers, including a CSP that allows only this site's own CSS and images. Applied by Workers static assets, and not served as a file |
 | `public/icon.svg` | Copy of `build/icon.svg`. Copy it again if the app icon changes |
 | `public/og.png`, `public/apple-touch-icon.png` | Rendered from `art/og.svg` and `public/icon.svg` |
 | `art/og.svg` | Source of the social sharing image. Not deployed |
@@ -39,18 +39,40 @@ rsvg-convert -w 180 -h 180 public/icon.svg -o public/apple-touch-icon.png
 
 ## Preview and deploy
 
+Deployed automatically by **Workers Builds** from the repository, with these
+settings in the dashboard (Worker → Settings → Build):
+
+| Setting | Value |
+| --- | --- |
+| Root directory | `website` |
+| Build command | *(empty)* — nothing to build |
+| Deploy command | `npm run deploy` |
+| Build variable | `SKIP_DEPENDENCY_INSTALL` = `1` |
+
+The build variable matters. When the root directory is a subfolder, Workers
+Builds also looks at the repository's top level. Without the variable it can
+install **the app's** dependencies, which include a private GitHub Packages
+module (`@just-ak/kiro-spec-handbook`), and fail with `E401`. The site has no
+dependencies, so it skips the install. Its own empty `package-lock.json` is a
+second safeguard: an install inside `website/` has nothing to fetch.
+
+`npm run deploy` runs Wrangler at the version pinned in `package.json`, where a
+bare `npx wrangler deploy` would take whatever is newest that day.
+
+By hand, from this folder:
+
 ```sh
-cd website
-npm run preview          # local server via wrangler pages dev
-npx --yes wrangler@4.163.0 login   # first time only
-npm run deploy           # publishes public/ to the Pages project in wrangler.toml
+npm run preview                     # local server on http://localhost:8787
+npx --yes wrangler@4.163.0 login    # first time only
+npm run deploy                      # publishes public/ to the Worker named in wrangler.toml
 ```
 
 Before the first deploy, check three things:
 
-1. `name` in `wrangler.toml` is your Pages project.
-2. `og:image` in `index.html` points at your real domain. It assumes
-   `trailrt.pages.dev`.
+1. `name` in `wrangler.toml` matches your Worker.
+2. `og:image` in `index.html` points at your real domain. It still says
+   `trailrt.pages.dev`. A Worker's default address is
+   `trailrt.<your-subdomain>.workers.dev`, or use a custom domain.
 3. The GitHub links (`just-ak/TrailRT`) are public. The releases link is the
    page's download button.
 
