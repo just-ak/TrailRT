@@ -8,10 +8,10 @@ import { useUiStore } from '../../stores/uiStore';
 /**
  * About window.
  *
- * This is a licence compliance surface, not decoration. GPL-3.0 obliges us to
- * state the licence, carry third-party notices, and offer the source — so the
- * component list is generated from the installed dependency tree rather than
- * hand-maintained. Requirement 14.2 and 14.3.
+ * This is a licence compliance surface, not decoration. The dependencies'
+ * licences (MIT, BSD, BSL) oblige us to carry their notices — so the component
+ * list is generated from the installed dependency tree rather than
+ * hand-maintained. Requirement 14.2 and 14.3; ADR 0024.
  */
 export function AboutDialog(): ReactNode {
   const closeDialog = useUiStore((s) => s.closeDialog);
@@ -55,14 +55,12 @@ export function AboutDialog(): ReactNode {
       <div className="my-3 h-px bg-[var(--color-border-subtle)]" />
 
       <p className="text-[12px] text-[var(--color-text-primary)]">
-        Licensed under the{' '}
-        <strong>GNU General Public License, version 3 or later</strong>.
+        Licensed under the <strong>MIT License</strong>.
       </p>
       <p className="mt-1 text-[12px] text-[var(--color-text-secondary)]">
-        This program comes with absolutely no warranty. You are free to
-        redistribute it and change it under the terms of the GPL. The complete
-        corresponding source for this build is published alongside every release
-        at{' '}
+        This program is provided as is, with no warranty. You are free to use,
+        copy, change and share it under the terms of the MIT License. The source
+        for this build is published alongside every release at{' '}
         <button
           type="button"
           onClick={openRepo}
@@ -108,7 +106,7 @@ export function AboutDialog(): ReactNode {
       <p className="mt-3 text-[11px] text-[var(--color-text-muted)]">
         Map data, road data and the UK boundary © OpenStreetMap contributors,
         available under the Open Database License. Map regions are downloaded
-        from Geofabrik and combined with osmium-tool (GPL-3.0-or-later).
+        from Geofabrik and combined with libosmium (BSL-1.0).
       </p>
       <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
         Terrain elevation: Terrain Tiles, from the AWS Registry of Open Data,

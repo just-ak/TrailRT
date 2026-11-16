@@ -2,8 +2,11 @@
  * Generates the third-party licence list shown in the About window, and the
  * register in docs/licences/.
  *
- * GPL-3.0 obliges us to reproduce third-party notices, and a hand-maintained
- * list drifts from the lockfile immediately. Run after any dependency change:
+ * MIT, BSD and BSL dependencies oblige us to reproduce their notices, and a
+ * hand-maintained list drifts from the lockfile immediately. It also enforces
+ * the licence policy: TrailRT is MIT and distributed through the Mac App Store
+ * (ADR 0024), so nothing copyleft may enter the tree. Run after any dependency
+ * change:
  *
  *   npm run licences
  */
@@ -53,8 +56,10 @@ function classify(lic) {
       ? 'COMPATIBLE' : 'REVIEW';
   }
   if (PERMISSIVE.has(s)) return 'COMPATIBLE';
-  if (/GPL-2\.0(-only)?$/.test(s)) return 'INCOMPATIBLE';
-  if (/^(GPL|LGPL|AGPL)-[23]/.test(s)) return 'COMPATIBLE';
+  // Copyleft binds an MIT app, or conflicts with App Store terms. Under
+  // `X OR GPL` the permissive branch is taken above, so only sole-licence
+  // copyleft lands here. ADR 0024.
+  if (/^(GPL|LGPL|AGPL)-/.test(s)) return 'COPYLEFT';
   return 'REVIEW';
 }
 
@@ -87,7 +92,7 @@ const flagged = [...all.entries()].filter(
 );
 
 if (flagged.length > 0) {
-  console.error('\nLicence check FAILED. These are not compatible with GPL-3.0:\n');
+  console.error('\nLicence check FAILED. These cannot ship in an MIT app on the App Store:\n');
   for (const [name, i] of flagged) {
     console.error(`  ${name}@${i.version}  ->  ${i.licence}  [${classify(i.licence)}]`);
   }
@@ -105,8 +110,8 @@ const tsOut = `/**
  * GENERATED FILE — do not edit by hand.
  * Regenerate with \`npm run licences\` after any dependency change.
  *
- * Reproduced in the About window to satisfy the GPL-3.0 obligation to carry
- * third-party notices. See .kiro/steering/licensing.md.
+ * Reproduced in the About window, because the dependencies' own licences
+ * require their notices to travel with the app. See .kiro/steering/licensing.md.
  */
 import type { LicenceEntry } from '@shared/ipc/api';
 
@@ -130,13 +135,15 @@ for (const [, i] of all) {
 const lines = [
   '# Third-party dependency and licence register',
   '',
-  'Required by the project licensing policy and by ADR 0007. The application is',
-  'licensed GPL-3.0-or-later; every entry here must be inbound-compatible with that.',
+  'Required by the project licensing policy and by ADR 0024. The application is',
+  'licensed MIT and offered on the Mac App Store, so nothing copyleft may ship;',
+  'where a package offers a choice (`MIT OR GPL-3.0-or-later`), it is used under',
+  'the permissive licence.',
   '',
   '**GENERATED FILE** — regenerate with `npm run licences`.',
   '',
   `Generated ${new Date().toISOString().slice(0, 10)} from the installed dependency tree`,
-  `on Node ${process.version}. Packages examined: **${all.size}**. Incompatibilities: **0**.`,
+  `on Node ${process.version}. Packages examined: **${all.size}**. Copyleft or unknown: **0**.`,
   '',
   '## Licence distribution',
   '',
@@ -159,8 +166,8 @@ const lines = [
   '',
   '| Package | Licence | Reason | Replacement |',
   '| --- | --- | --- | --- |',
-  '| `react-leaflet` | Hippocratic-2.1 | Use restrictions and an indemnity obligation are further restrictions GPL-3.0 §7 forbids; not OSI-approved | Leaflet used directly, ADR 0008 |',
-  '| `@garmin/fitsdk` | Proprietary FIT Protocol License Agreement | Bilateral EULA; not open source, cannot combine with GPL-3.0 | `fit-file-parser` (MIT), ADR 0006 |',
+  '| `react-leaflet` | Hippocratic-2.1 | Field-of-use restrictions and an indemnity obligation; not OSI-approved open source | Leaflet used directly, ADR 0008 |',
+  '| `@garmin/fitsdk` | Proprietary FIT Protocol License Agreement | Bilateral EULA restricting redistribution; not open source | `fit-file-parser` (MIT), ADR 0006 |',
   '',
   '## Full dependency list',
   '',
@@ -192,5 +199,5 @@ if (existsSync(handMaintained)) {
 mkdirSync(join(root, 'docs/licences'), { recursive: true });
 writeFileSync(join(root, 'docs/licences/third-party-register.md'), lines.join('\n'));
 
-console.log(`Licence check passed: ${all.size} packages, 0 incompatible.`);
+console.log(`Licence check passed: ${all.size} packages, none copyleft or unknown.`);
 console.log('Wrote src/main/licences.ts and docs/licences/third-party-register.md');

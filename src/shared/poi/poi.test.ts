@@ -3,7 +3,7 @@ import { SYMBOL_IDS } from '../domain/symbols';
 import { compactTags, describeAttributes, extractAttributes } from './attributes';
 import {
   classifyTags,
-  osmiumPoiFilters,
+  poiFilterExpressions,
   POI_CATEGORIES,
   POI_CATEGORY_IDS,
   symbolFor,
@@ -43,8 +43,8 @@ describe('POI categories', () => {
     expect(classifyTags({ amenity: 'parking', access: 'customers' })).not.toBeNull();
   });
 
-  it('builds one osmium expression per key, taking nodes, ways and relations', () => {
-    const filters = osmiumPoiFilters();
+  it('builds one filter expression per key, taking nodes, ways and relations', () => {
+    const filters = poiFilterExpressions();
     expect(filters.every((f) => f.startsWith('nwr/'))).toBe(true);
     expect(new Set(filters.map((f) => f.split('=')[0])).size).toBe(filters.length);
     expect(filters.find((f) => f.startsWith('nwr/amenity='))).toContain('charging_station');

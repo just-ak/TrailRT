@@ -2,7 +2,7 @@
  * Which OpenStreetMap features count as which kind of point of interest.
  *
  * The single place a POI tag is named (Phase 10 Requirement 5.7). The region
- * build's `osmium tags-filter` expression is generated from this table, and
+ * build's place filter (`trailrt-osm places`) is generated from this table, and
  * the ingest classifies with it, so the two cannot disagree about what a
  * "hotel" is.
  *
@@ -202,13 +202,15 @@ export function symbolFor(classification: Classification): string {
 }
 
 /**
- * `osmium tags-filter` expressions selecting every POI in the table.
+ * Filter expressions selecting every POI in the table, in the
+ * `types/key=value,value` form `trailrt-osm places` reads (osmium-tool's
+ * tags-filter syntax, of which the tool accepts only this subset).
  *
  * `nwr/` takes nodes, ways and relations: a hotel can be a point, a building
  * outline or a multipolygon, and Requirement 5.2 forbids dropping the areas.
  * Rules sharing a key are merged into one expression.
  */
-export function osmiumPoiFilters(): string[] {
+export function poiFilterExpressions(): string[] {
   const byKey = new Map<string, Set<string>>();
   for (const category of POI_CATEGORIES) {
     for (const rule of category.rules) {

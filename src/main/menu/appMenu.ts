@@ -252,11 +252,9 @@ export function buildApplicationMenu(undo: UndoState = NO_UNDO): Menu {
         },
         { type: 'separator' },
         {
-          label: 'Licence (GPL-3.0)',
+          label: 'Licence (MIT)',
           click: () => {
-            void openExternal('https://www.gnu.org/licenses/gpl-3.0.html').catch(
-              () => {},
-            );
+            void openExternal(`${REPOSITORY_URL}/blob/main/LICENSE`).catch(() => {});
           },
         },
       ],

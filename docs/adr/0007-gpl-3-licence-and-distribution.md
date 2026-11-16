@@ -1,6 +1,7 @@
 # ADR 0007: GPL-3.0 licence and free distribution policy
 
-Status: accepted
+Status: superseded in part by ADR 0024 (2026-11-16) — the application is now MIT and the
+Mac App Store is permitted. The free-distribution policy below still stands.
 Date: 2026-11-05
 Supersedes the licensing constraints in ADR 0006.
 

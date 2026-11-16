@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1840" height="4280" viewBox="0 0 1840 4280" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
   <title>TrailRT implementation progress</title>
-  <desc>Mindmap tracking implementation status across fourteen phases. Leaf nodes carry data-status attributes: done, in-progress, todo, investigation, blocked. Leaves correspond one-to-one with the task lists in .kiro/specs.</desc>
+  <desc>Mindmap tracking implementation status across fifteen phases. Leaf nodes carry data-status attributes: done, in-progress, todo, investigation, blocked. Leaves correspond one-to-one with the task lists in .kiro/specs.</desc>
 
   <style>
     .leaf      { font-size: 15px; fill: #334155; }
@@ -19,17 +19,17 @@
 
   <!-- ============ header band ============ -->
   <text class="hdr" x="48" y="46">TrailRT — Implementation Progress</text>
-  <text class="sub" x="48" y="72">Garmin BaseCamp replacement · macOS · Electron + React · GPL-3.0 · 14 phases · 226 tracked tasks</text>
+  <text class="sub" x="48" y="72">Garmin BaseCamp replacement · macOS · Electron + React · MIT · 15 phases · 233 tracked tasks</text>
 
   <rect x="48" y="86" width="420" height="9" rx="4.5" fill="#e2e8f0"/>
-  <rect x="48" y="86" width="358" height="9" rx="4.5" fill="#16a34a"/>
-  <text class="pct" x="482" y="95">193 / 226 verified complete (85%) — Phase 14 in build at the owner’s request; Phase 11 at 11 / 13</text>
+  <rect x="48" y="86" width="351" height="9" rx="4.5" fill="#16a34a"/>
+  <text class="pct" x="482" y="95">195 / 233 verified complete (84%) — Phase 14 in build at the owner’s request; Phase 11 at 11 / 13</text>
 
   <g class="legend">
-    <circle cx="1012" cy="54" r="5" fill="#16a34a"/><text x="1026" y="59">Done (193)</text>
+    <circle cx="1012" cy="54" r="5" fill="#16a34a"/><text x="1026" y="59">Done (195)</text>
     <circle cx="1130" cy="54" r="5" fill="#f59e0b"/><text x="1144" y="59">In progress (0)</text>
-    <circle cx="1280" cy="54" r="5" fill="#94a3b8"/><text x="1294" y="59">Not started (27)</text>
-    <circle cx="1440" cy="54" r="5" fill="#8b5cf6"/><text x="1454" y="59">Investigation (6)</text>
+    <circle cx="1280" cy="54" r="5" fill="#94a3b8"/><text x="1294" y="59">Not started (30)</text>
+    <circle cx="1440" cy="54" r="5" fill="#8b5cf6"/><text x="1454" y="59">Investigation (8)</text>
     <circle cx="1604" cy="54" r="5" fill="#dc2626"/><text x="1618" y="59">Blocked (0)</text>
   </g>
   <line x1="48" y1="114" x2="1792" y2="114" stroke="#e2e8f0" stroke-width="1.5"/>
@@ -58,6 +58,7 @@
     <path class="link" stroke="#c026d3" d="M800 860 C758 860, 758 3125, 715 3125"/>
     <path class="link" stroke="#0284c7" d="M1040 860 C1082 860, 1082 3290, 1125 3290"/>
     <path class="link" stroke="#4f46e5" d="M1040 860 C1082 860, 1082 3785, 1125 3785"/>
+    <path class="link" stroke="#be123c" d="M800 860 C758 860, 758 3445, 715 3445"/>
 
     <!-- ============ PHASE 1 — Foundation (right, complete) ============ -->
     <rect x="1125" y="249" width="210" height="52" rx="10" fill="#f0fdf4" stroke="#16a34a" stroke-width="2.5"/>
@@ -256,7 +257,7 @@
     <circle data-status="done" cx="1400" cy="2350" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2350" dy="0.35em">One-way data &amp; assumed limits</text>
     <circle data-status="done" cx="1400" cy="2380" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2380" dy="0.35em">Terrain: HGT &amp; tile store</text>
     <circle data-status="done" cx="1400" cy="2410" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2410" dy="0.35em">Profile: terrain &amp; twistiness</text>
-    <circle data-status="done" cx="1400" cy="2440" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2440" dy="0.35em">Multi-region build (osmium)</text>
+    <circle data-status="done" cx="1400" cy="2440" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2440" dy="0.35em">Multi-region build (libosmium)</text>
     <circle data-status="done" cx="1400" cy="2470" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2470" dy="0.35em">UK county region picker</text>
     <circle data-status="done" cx="1400" cy="2500" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2500" dy="0.35em">Roads by default, no snap button</text>
     <circle data-status="done" cx="1400" cy="2530" r="5" fill="#16a34a"/><text class="leaf lr" x="1416" y="2530" dy="0.35em">Profile &amp; distribution display</text>
@@ -562,6 +563,27 @@
     <circle data-status="todo" cx="1400" cy="3350" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3350" dy="0.35em">Share sheet &amp; owned outputs</text>
     <circle data-status="todo" cx="1400" cy="3380" r="5" fill="#94a3b8"/><text class="leaf lr" x="1416" y="3380" dy="0.35em">Privacy zones &amp; stripped copies</text>
 
+
+    <!-- ============ Phase 15 · Mac App Store (left) ============ -->
+    <rect x="505" y="3419" width="210" height="52" rx="10" fill="#ffffff" stroke="#be123c" stroke-width="2"/>
+    <text class="phase" x="610" y="3442" fill="#be123c">Phase 15 · App Store</text>
+    <text class="count" x="610" y="3461">2 / 7 · requirements only</text>
+
+    <path class="link" stroke="#be123c" d="M505 3445 C473 3445, 473 3355, 440 3355"/>
+    <path class="link" stroke="#be123c" d="M505 3445 C473 3445, 473 3385, 440 3385"/>
+    <path class="link" stroke="#be123c" d="M505 3445 C473 3445, 473 3415, 440 3415"/>
+    <path class="link" stroke="#be123c" d="M505 3445 C473 3445, 473 3445, 440 3445"/>
+    <path class="link" stroke="#be123c" d="M505 3445 C473 3445, 473 3475, 440 3475"/>
+    <path class="link" stroke="#be123c" d="M505 3445 C473 3445, 473 3505, 440 3505"/>
+    <path class="link" stroke="#be123c" d="M505 3445 C473 3445, 473 3535, 440 3535"/>
+
+    <circle data-status="done" cx="440" cy="3355" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="3355" dy="0.35em">Requirements &amp; ADR 0024</text>
+    <circle data-status="done" cx="440" cy="3385" r="5" fill="#16a34a"/><text class="leaf ll" x="424" y="3385" dy="0.35em">MIT relicence &amp; copyleft check</text>
+    <circle data-status="investigation" cx="440" cy="3415" r="5" fill="#8b5cf6"/><text class="leaf ll" x="424" y="3415" dy="0.35em">geos (LGPL) in a signed bundle</text>
+    <circle data-status="investigation" cx="440" cy="3445" r="5" fill="#8b5cf6"/><text class="leaf ll" x="424" y="3445" dy="0.35em">LuaJIT under the store sandbox</text>
+    <circle data-status="todo" cx="440" cy="3475" r="5" fill="#94a3b8"/><text class="leaf ll" x="424" y="3475" dy="0.35em">Sandbox, helpers &amp; folder bookmarks</text>
+    <circle data-status="todo" cx="440" cy="3505" r="5" fill="#94a3b8"/><text class="leaf ll" x="424" y="3505" dy="0.35em">Developer Program &amp; mas target</text>
+    <circle data-status="todo" cx="440" cy="3535" r="5" fill="#94a3b8"/><text class="leaf ll" x="424" y="3535" dy="0.35em">DMG migration, TestFlight, review</text>
 
     <!-- ============ Phase 14 · Library & day companion (right) ============ -->
     <rect x="1125" y="3759" width="210" height="52" rx="10" fill="#ffffff" stroke="#4f46e5" stroke-width="2"/>

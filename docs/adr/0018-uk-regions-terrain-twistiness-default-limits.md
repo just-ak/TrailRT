@@ -5,6 +5,8 @@ Date: 2026-11-09
 Amends ADR 0011 §2 (Unknown is a band) and ADR 0013 (one region at a time).
 Renumbers the windy-roads phase to 8 and Garmin to 9, amending ADR 0012 and
 ADR 0017.
+§1 amended by ADR 0023: the merge is now done by `trailrt-osm`, built on
+libosmium, and osmium-tool is no longer bundled.
 
 ## Context
 

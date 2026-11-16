@@ -4,7 +4,7 @@ import { ServiceError } from '../services/errors';
  * How a bundled command-line tool ended, turned into the error the user sees.
  *
  * Shared by every child process the app runs — `valhalla_build_tiles`,
- * `osmium merge` and the `osmium` place extract — because they all have to make
+ * `trailrt-osm merge` and the `trailrt-osm` place extract — because they all have to make
  * the same distinction, and getting it wrong once already hid a broken release.
  *
  * A process that ends on a signal was **cancelled only if we asked it to be**.

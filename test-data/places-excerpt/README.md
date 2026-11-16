@@ -20,6 +20,8 @@ requires for a distributed one.
 ## How it was made
 
 ```sh
+# osmium-tool on a developer machine, before ADR 0023; the app now ships
+# trailrt-osm, whose `places` output matches `osmium export` for these features.
 osmium tags-filter derbyshire.osm.pbf <the app's filter expressions> -o filtered.osm.pbf
 osmium extract -b -1.97,53.22,-1.85,53.29 filtered.osm.pbf -o buxton.osm.pbf -s complete_ways
 osmium export buxton.osm.pbf -f geojsonseq -a type,id -o buxton.geojsonseq

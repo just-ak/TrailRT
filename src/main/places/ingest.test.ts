@@ -81,7 +81,8 @@ function parseRecord(line: string): { geometry: { type: string } } {
 
 describe('ingestPlaces', () => {
   it('keeps the Palace Hotel once, as an area, at its centroid', () => {
-    // osmium exports this way as both a LineString and a MultiPolygon.
+    // trailrt-osm, like osmium export before it, writes this way as both a
+    // LineString and a MultiPolygon.
     const raw = readFileSync(FIXTURE, 'utf8')
       .split('\n')
       .filter((line) => line.includes('"@id":117882931'));

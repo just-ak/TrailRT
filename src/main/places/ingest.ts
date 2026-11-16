@@ -11,7 +11,7 @@ import { ServiceError } from '../services/errors';
 import { PLACES_DDL, PLACES_INDEXES, PLACES_SCHEMA, TOKEN_KIND } from './store';
 
 /**
- * GeoJSON lines from `osmium export` → `places.sqlite`. Phase 10 design §5.
+ * GeoJSON lines from `trailrt-osm places` → `places.sqlite`. Phase 10 design §5.
  *
  * Streams the file and never holds it: for three counties it is 459 MB and
  * 1.2 M features. What is kept is small: 35 k POIs, 2.6 k places, 64 k

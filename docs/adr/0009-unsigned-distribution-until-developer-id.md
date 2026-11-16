@@ -102,5 +102,7 @@ Phase 1's packaging task must confirm by actually doing it, not by assuming:
 
 A Developer ID becomes available. At that point: swap `identity`, enable
 notarisation, re-verify with `spctl -a -vvv`, and update the README to drop the
-workaround instructions. The Mac App Store remains out of scope permanently for
-licence reasons (ADR 0007), so only Developer ID direct distribution is in play.
+workaround instructions. ~~The Mac App Store remains out of scope permanently
+for licence reasons (ADR 0007).~~ ADR 0024 (2026-11-16) relicensed the app MIT
+and made the Mac App Store a permitted channel, through Phase 15. Developer ID
+direct distribution stays the primary channel.

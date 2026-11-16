@@ -293,6 +293,12 @@ test (Requirement 1.1).
 
 ### 5.1 Pipeline
 
+> **Amended by ADR 0023 (2026-11-16).** `osmium tags-filter` and `osmium
+> export` are replaced by one `trailrt-osm places` process built on libosmium.
+> It writes the same GeoJSON lines for every feature the filter selects, with
+> no intermediate file. The data date is read with `trailrt-osm data-date`. The
+> text below records the original design.
+
 `main/places/` is new and owns everything about place data:
 
 ```

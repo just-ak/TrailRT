@@ -1,6 +1,7 @@
 # ADR 0006: Garmin proprietary formats — scope and licensing
 
-Status: accepted, amended 2026-11-05 by ADR 0007
+Status: accepted, amended 2026-11-05 by ADR 0007 and 2026-11-16 by ADR 0024
+(GPSBabel may not be bundled)
 Date: 2026-11-05
 
 > **Amendment.** This ADR was written before the project had a licence, and

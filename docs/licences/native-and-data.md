@@ -7,8 +7,9 @@ of this is in it. Edit that file, not the register; update it whenever
 `VALHALLA_TAG` in `scripts/build-valhalla.sh` changes or the dependency set
 moves.
 
-Compiled into the shipped app, so all of it forms part of the combined work and
-must be compatible with GPL-3.0-or-later. See ADR 0013.
+Compiled into the shipped app, so all of it reaches users and must suit an MIT
+app distributed through the Mac App Store: permissive, or MPL, and never GPL.
+LGPL is reviewed case by case. See ADRs 0013 and 0024.
 
 | Component | Version | Licence | Verdict |
 | --- | --- | --- | --- |
@@ -16,9 +17,9 @@ must be compatible with GPL-3.0-or-later. See ADR 0013.
 | boost | 1.92.0 | BSL-1.0 | Fine |
 | protobuf (+ abseil) | 36.2 | BSD-3-Clause | Fine |
 | sqlite | 3.53.4 | Public domain | Fine |
-| libspatialite | 5.1.0 | MPL-1.1 / GPL-2.0+ / LGPL-2.1+ | **LGPL-2.1-or-later elected** |
+| libspatialite | 5.1.0 | MPL-1.1 / GPL-2.0+ / LGPL-2.1+ | **MPL-1.1 elected** (ADR 0024) |
 | luajit | 2.1 | MIT | Fine |
-| geos | 3.15.0 | LGPL-2.1-or-later | Fine |
+| geos | 3.15.0 | LGPL-2.1-or-later | **Open question for the App Store build** — see below |
 | lz4 | 1.11.0 | BSD-2-Clause (library) | Fine |
 | libgeotiff | 1.7.4 | MIT-style | Fine |
 | libtiff | 4.7.2 | libtiff (BSD-like) | Fine |
@@ -27,13 +28,22 @@ must be compatible with GPL-3.0-or-later. See ADR 0013.
 | curl | 8.23.0 | curl (MIT-like) | Fine |
 | proj | 9.9.0 | MIT | Fine |
 
-### The licence election that matters
+### The licence elections that matter
 
 **libspatialite** and **readosm** are tri-licensed MPL-1.1 / GPL-2.0-or-later /
-LGPL-2.1-or-later. MPL-1.1 on its own is *not* GPL-compatible, so the default
-reading would make them unusable here. The tri-licence lets us take them under
-**LGPL-2.1-or-later**, which combines with GPL-3.0 because of the "or later".
-That election is deliberate and must be restated if these are ever upgraded.
+LGPL-2.1-or-later. While TrailRT was GPL-3.0 we took them under LGPL, because
+MPL-1.1 does not combine with GPL. TrailRT is now MIT (ADR 0024), so we take
+them under **MPL-1.1**. That licence is file-level: it covers changes to their
+own files only, imposes no relinking terms, and suits the App Store. We do not
+modify them. The election is deliberate and must be restated if these are ever
+upgraded.
+
+**geos** is LGPL-2.1-or-later only. It is dynamically linked, which meets the
+LGPL for the DMG, because a user can replace the dylib. Inside a signed App
+Store bundle they cannot, and whether that meets LGPL §6 is contested. Phase 15
+settles it before any store submission: either show that the shipped tools and
+addon do not need geos and drop it from the closure, or get advice and record
+it here.
 
 ### Bundled inside Valhalla's own source tree
 
@@ -49,37 +59,33 @@ Verified against each component's licence file at tag 3.9.1:
 | tz | Public domain |
 | googletest, fastcov | BSD-3-Clause / MIT — build and test only, not shipped |
 
-### Bundled beside Valhalla: osmium-tool (ADR 0018)
+### Bundled beside Valhalla: trailrt-osm (ADRs 0018, 0023)
 
-`resources/valhalla/bin/osmium` merges several regions' extracts into one before
-the tile build, because Valhalla aborts on overlapping extracts. Copied from the
-Homebrew bottle by `scripts/bundle-valhalla.sh` and made relocatable with the
-rest. A separate executable, run as a child process.
+`resources/valhalla/bin/trailrt-osm` merges several regions' extracts into one
+before the tile build, because Valhalla aborts on overlapping extracts, and
+pulls place data out of the extract for offline search. It is TrailRT's own
+code (`native/trailrt-osm/`, MIT), built by
+`scripts/build-osm-tool.sh` against the libraries below. A separate
+executable, run as a child process. It replaced the osmium-tool executable,
+which is no longer bundled or built.
 
 | Component | Version | Licence | Verdict |
 | --- | --- | --- | --- |
-| osmium-tool | 1.19.1 | GPL-3.0-or-later | Fine — same licence family as the app |
 | libosmium (header-only, compiled in) | 2.23.1 | BSL-1.0 | Fine |
-| protozero (header-only, compiled in) | — | BSD-2-Clause | Fine |
-| boost (program_options, container) | 1.92.0 | BSL-1.0 | Fine — already listed |
-| lz4 | 1.11.0 | BSD-2-Clause | Fine — already listed |
-| expat, zlib, bzip2 | system | MIT / zlib / bzip2 | Fine — macOS system libraries, not shipped |
-
-GPL-3.0-or-later obliges us to offer osmium-tool's corresponding source with the
-binary. The version above plus the public upstream repository
-(<https://github.com/osmcode/osmium-tool>, tag `v1.19.1`) identifies it exactly,
-and is published with each release alongside TrailRT's own source.
+| protozero (header-only, compiled in) | 1.8.2 | BSD-2-Clause | Fine |
+| expat, zlib | system | MIT / zlib | Fine — macOS system libraries, not shipped |
 
 Nothing in these tables carries a field-of-use restriction, and nothing is
-GPL-2.0-**only**, which is the combination the licensing rules reject.
+GPL. The one LGPL-only component, geos, is the open question above.
 
 ### Source availability
 
-Shipping a compiled Valhalla obliges us to publish the corresponding source for
-the combined work. Valhalla is MIT, so its own terms add no requirement beyond
-attribution, and the pinned tag in `scripts/build-valhalla.sh` plus the public
-repository identifies exactly what was built. The GPL-3.0 obligation is met by
-publishing TrailRT's source together with that pin.
+Valhalla is MIT, so its own terms require attribution only. The pinned tag in
+`scripts/build-valhalla.sh` plus the public repository identifies exactly what
+was built. TrailRT no longer owes corresponding source under GPL (ADR 0024),
+but publishes it with every release anyway. While geos is bundled, its source
+(version above, from <https://github.com/libgeos/geos>) is offered too, as the
+LGPL requires.
 
 ## Data downloaded at runtime (ADRs 0018, 0019)
 

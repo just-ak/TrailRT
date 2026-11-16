@@ -22,7 +22,7 @@ import { downloadAndBuild, resetCatalogue } from './regionCatalogue';
  * Phase 7 against real data. Task 12.
  *
  * Downloads Derbyshire, Cheshire and Staffordshire from Geofabrik (about
- * 110 MB), merges them with the bundled `osmium`, builds one graph, and routes
+ * 110 MB), merges them with the bundled `trailrt-osm`, builds one graph, and routes
  * on it. Then scores real roads for twistiness and samples real terrain. Every
  * one of these is a claim a synthetic test cannot make.
  *
@@ -49,7 +49,7 @@ describe.runIf(enabled)('Phase 7 on real regions', () => {
     paths = embeddedPaths(dir, resolve('resources'));
     resetCatalogue();
     if (!mergeToolPresent(paths)) {
-      throw new Error('resources/valhalla/bin/osmium is missing — run scripts/bundle-valhalla.sh');
+      throw new Error('resources/valhalla/bin/trailrt-osm is missing — run scripts/bundle-valhalla.sh');
     }
 
     const started = Date.now();

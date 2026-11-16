@@ -7,16 +7,16 @@ import { extractPlaces, placeFilters, readDataDate } from './extract';
 import { ingestPlaces } from './ingest';
 
 /**
- * The real tools on a real excerpt: `tiny.osm` is the OpenStreetMap data
+ * The real tool on a real excerpt: `tiny.osm` is the OpenStreetMap data
  * round Buxton's Palace Hotel (ODbL; see `test-data/places-excerpt/`).
  *
- * Skipped when the bundled `osmium` is absent, as the live tests are:
+ * Skipped when the bundled `trailrt-osm` is absent, as the live tests are:
  * `resources/valhalla/` is a build artefact and is not committed. It proves
  * what no fake can, which is that the filter expressions the app generates
- * are ones osmium accepts.
+ * are ones the tool accepts. ADR 0023.
  */
 
-const TOOL = resolve('resources/valhalla/bin/osmium');
+const TOOL = resolve('resources/valhalla/bin/trailrt-osm');
 const TINY = resolve('test-data/places-excerpt/tiny.osm');
 
 describe('placeFilters', () => {
@@ -29,11 +29,11 @@ describe('placeFilters', () => {
   });
 });
 
-describe.skipIf(!existsSync(TOOL))('osmium, for real', () => {
+describe.skipIf(!existsSync(TOOL))('trailrt-osm places, for real', () => {
   let dir: string;
 
   beforeAll(() => {
-    dir = mkdtempSync(join(tmpdir(), 'trailrt-osmium-'));
+    dir = mkdtempSync(join(tmpdir(), 'trailrt-osm-'));
   });
 
   afterAll(() => {

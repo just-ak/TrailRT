@@ -24,6 +24,7 @@ instead.
 | [`phase-12-folder-gpx-sync/`](phase-12-folder-gpx-sync/)               | Requirements only. GPX kept in step with a linked folder.                    |
 | [`phase-13-media-flythroughs-sharing/`](phase-13-media-flythroughs-sharing/) | Requirements only. Video, flythroughs and sharing; mostly investigation. |
 | [`phase-14-library-day-companion/`](phase-14-library-day-companion/) | Requirements, design and tasks. **In build**, ahead of Phase 11's last two tasks at the owner's request. |
+| [`phase-15-mac-app-store/`](phase-15-mac-app-store/)                   | Requirements only. The Mac App Store build: sandbox, signing, LuaJIT, folder bookmarks. Partly investigation. |
 
 Only the phases already built, and the next one, have a design and task
 breakdown. That is deliberate: section 20 of the source specification requires
@@ -158,6 +159,16 @@ now previews it, and opening is its own step. That became task 7, drawn in
 `docs/design/library-panel/trip-list-flow/` first, and the phase has
 thirteen.
 
+Phase 15 is the Mac App Store, from the owner's direction on 16 November
+2026. Two changes came first. osmium-tool was replaced by TrailRT's own
+`trailrt-osm` on libosmium (ADR 0023). TrailRT itself was relicensed from
+GPL-3.0-or-later to MIT, because no GPL program can be offered on the store
+(ADR 0024). Release 0.1.0 stays GPL. What remains is the store's own
+requirements. The riskiest is that Valhalla's graph tools run LuaJIT, which
+needs an entitlement the store may refuse. Next comes the sandbox, which would
+lose every linked folder on restart without security-scoped bookmarks. The
+DMG stays the primary channel.
+
 ## Supporting documents
 
 - [`../../docs/adr/`](../../docs/adr/) — architectural decisions, including the
@@ -165,7 +176,7 @@ thirteen.
 - [`../../docs/progress-mindmap.svg`](../../docs/progress-mindmap.svg) —
   implementation status across all phases
 - [`../../docs/licences/third-party-register.md`](../../docs/licences/third-party-register.md)
-  — dependency licence register, required by the GPL-3.0 policy
+  — dependency licence register, required by the licence policy (ADR 0024)
 - [`../steering/`](../steering/) — always-applied rules: agent workflow,
   toolchain, architecture boundaries, licensing, progress tracking. Kiro reads
   them directly; Claude Code imports them through
@@ -181,7 +192,7 @@ thirteen.
 | 0004 | Library tree top-level nodes are views, not containers   |
 | 0005 | Waze hand-off is single-destination only                 |
 | 0006 | Garmin proprietary format scope — amended by 0007        |
-| 0007 | GPL-3.0-or-later licence, free distribution, dep audit   |
+| 0007 | GPL-3.0-or-later licence, free distribution — licence superseded by 0024 |
 | 0008 | Leaflet used directly; react-leaflet dropped on licence  |
 | 0009 | Ad-hoc signing until a Developer ID is available         |
 | 0010 | Native module ABI and Electron binary delivery findings  |
@@ -197,3 +208,5 @@ thirteen.
 | 0020 | Linked photo folders; in-house EXIF reader; Quick Look thumbnails |
 | 0021 | The library becomes a rail, a trip page and a day companion |
 | 0022 | Items outside a trip are kept by one hidden holder        |
+| 0023 | libosmium replaces the bundled osmium-tool executable     |
+| 0024 | MIT licence; the Mac App Store becomes a target           |

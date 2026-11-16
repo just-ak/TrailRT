@@ -348,7 +348,7 @@ export async function downloadAndBuild(
         totalBytes: null,
         stage: null,
       });
-      await steps.merge(paths.mergeTool, extracts, merged, withSignal);
+      await steps.merge(paths.osmTool, extracts, merged, withSignal);
       source = merged;
     }
 

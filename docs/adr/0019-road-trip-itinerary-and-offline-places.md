@@ -2,6 +2,8 @@
 
 Status: accepted
 Date: 2026-11-10
+§4 amended by ADR 0023: place data is pulled out with `trailrt-osm places`,
+built on libosmium, instead of osmium-tool's `tags-filter` and `export`.
 
 ## Context
 

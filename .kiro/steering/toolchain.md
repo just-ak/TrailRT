@@ -101,9 +101,9 @@ TypeScript 5.9.3 to accommodate it. See `docs/adr/0002-typescript-7-and-oxlint.m
 
 ### No React binding for Leaflet
 
-`react-leaflet` is deliberately absent. It is licensed Hippocratic-2.1, which is
-incompatible with the project's GPL-3.0 licence and is not OSI-approved open
-source. Leaflet itself (BSD-2-Clause) is used directly through in-house hooks.
+`react-leaflet` is deliberately absent. It is licensed Hippocratic-2.1, which
+imposes field-of-use restrictions and is not OSI-approved open source, so it
+fails the licence policy whatever the project's own licence. Leaflet itself (BSD-2-Clause) is used directly through in-house hooks.
 Do not reintroduce `react-leaflet` or add another binding without running the
 licence check first. See ADR 0008.
 

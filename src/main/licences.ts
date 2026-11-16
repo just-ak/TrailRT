@@ -2,8 +2,8 @@
  * GENERATED FILE — do not edit by hand.
  * Regenerate with `npm run licences` after any dependency change.
  *
- * Reproduced in the About window to satisfy the GPL-3.0 obligation to carry
- * third-party notices. See .kiro/steering/licensing.md.
+ * Reproduced in the About window, because the dependencies' own licences
+ * require their notices to travel with the app. See .kiro/steering/licensing.md.
  */
 import type { LicenceEntry } from '@shared/ipc/api';
 

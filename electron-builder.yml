@@ -1,6 +1,6 @@
 appId: com.trailrt.app
 productName: TrailRT
-copyright: Copyright (C) 2026 TrailRT contributors. Licensed under GPL-3.0-or-later.
+copyright: Copyright (C) 2026 TrailRT contributors. Licensed under the MIT License.
 
 directories:
   output: release
@@ -59,7 +59,8 @@ mac:
   gatekeeperAssess: false
   # notarize: true   <- requires a Developer ID and APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID
   notarize: false
-  # No "mas" target. The Mac App Store terms conflict with GPL-3.0. See ADR 0007.
+  # No "mas" target yet. ADR 0024 permits the Mac App Store; the target, the
+  # sandbox entitlements and the provisioning profile are Phase 15 work.
 
 dmg:
   artifactName: ${productName}-${version}-${arch}.dmg

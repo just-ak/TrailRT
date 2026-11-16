@@ -7,8 +7,8 @@ import { setMapInstance } from './mapInstance';
 /**
  * Owns the Leaflet map instance.
  *
- * There is no react-leaflet: it is Hippocratic-2.1 licensed and incompatible
- * with this project's GPL-3.0 licence (ADR 0008). Leaflet itself is
+ * There is no react-leaflet: it is Hippocratic-2.1 licensed, which is not open
+ * source and fails the project's licence policy (ADR 0008). Leaflet itself is
  * BSD-2-Clause and driven directly here.
  *
  * Three things this has to get right, each of which is a common bug:

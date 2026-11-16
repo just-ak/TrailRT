@@ -3,14 +3,16 @@ import { ServiceError } from '../services/errors';
 import { toolExitError } from './toolExit';
 
 /**
- * Merges several OpenStreetMap extracts into one with `osmium merge`.
+ * Merges several OpenStreetMap extracts into one with `trailrt-osm merge`.
  *
  * Valhalla's tile builder accepts several extracts, but it aborts on
  * overlapping ones — measured with Derbyshire, Cheshire and Staffordshire:
  * "Failed tile … vector", then exit 134 — and Geofabrik's regions always
- * overlap their neighbours, because the boundaries are buffered. `osmium merge`
- * takes sorted inputs and writes one sorted, deduplicated file, which builds
- * cleanly. For those three counties it takes about 1.5 s. ADR 0018.
+ * overlap their neighbours, because the boundaries are buffered. The merge
+ * takes sorted inputs and writes one sorted file holding each object once, at
+ * its newest version: two counties downloaded on different days can carry
+ * different versions of the same border road. About 1 s for Derbyshire and
+ * Cheshire. ADRs 0018 and 0023.
  *
  * A one-shot child process, like the tile builder, and killable the same way.
  */
@@ -23,7 +25,7 @@ export function mergeExtracts(
   return new Promise((resolve, reject) => {
     const child = spawn(
       tool,
-      ['merge', ...inputs, '-o', output, '--overwrite', '--no-progress'],
+      ['merge', output, ...inputs],
       { stdio: ['ignore', 'ignore', 'pipe'] },
     );
 

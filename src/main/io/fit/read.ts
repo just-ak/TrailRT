@@ -17,8 +17,8 @@ import {
  * does not. The same reasoning as TCX, and the same steering rule.
  *
  * Licensing is why this uses `fit-file-parser` (MIT) rather than Garmin's own
- * FIT SDK, whose bilateral EULA is incompatible with GPL-3.0 — ADR 0006, as
- * amended by ADR 0007. Nothing here decodes an encrypted or DRM-protected
+ * FIT SDK, whose bilateral EULA restricts redistribution — ADR 0006, as
+ * amended by ADRs 0007 and 0024. Nothing here decodes an encrypted or DRM-protected
  * file; FIT activity data is not protected.
  *
  * ## FIT is lossy, and this module does not pretend otherwise

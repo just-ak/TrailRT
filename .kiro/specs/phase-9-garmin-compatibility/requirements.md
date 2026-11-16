@@ -21,6 +21,16 @@ support one. The project's GPL-3.0 licence permits GPSBabel
 (GPL-2.0-or-later), so unlike the other items in this phase this one has a
 realistic path to being a feature.
 
+> **Amended by ADR 0024 (2026-11-16).** TrailRT is now MIT and is meant for
+> the Mac App Store, so GPSBabel can no longer be bundled, even as a separate
+> executable. Criteria 2 and 4 describe a route that is now closed. The
+> investigation must find another one. That means an independent parser
+> written from format documentation and sample files, not from GPSBabel's GPL
+> source. It may also conclude that GDB stays unsupported. Running a
+> user-installed GPSBabel that TrailRT does not ship is a third option for the
+> DMG only. The investigation must establish whether the App Sandbox permits
+> it.
+
 #### Acceptance criteria
 
 1. THE investigation SHALL document the GDB container structure, versions in

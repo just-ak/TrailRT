@@ -27,7 +27,9 @@
 #   scripts/build-valhalla.sh --clean    # discard the build tree first
 #
 # Output: $CACHE/build/src/bindings/nodejs/lib/valhalla_node.node plus the
-# tools in $CACHE/build. `bundle-valhalla.sh` makes them relocatable.
+# tools in $CACHE/build, and trailrt-osm in $CACHE/trailrt-osm (from
+# build-osm-tool.sh, run at the end). `bundle-valhalla.sh` makes them
+# relocatable.
 
 set -euo pipefail
 
@@ -62,10 +64,12 @@ DEPS=(
   # CMake checks for the executables, not the library, so the library alone is
   # not enough and the error it gives names neither package.
   spatialite-tools
-  # Not a Valhalla dependency: bundle-valhalla.sh ships its `osmium` beside the
-  # Valhalla tools, to merge several regions into one extract before building.
-  # Valhalla aborts on overlapping extracts. ADR 0018.
-  osmium-tool
+  # Not Valhalla dependencies: header-only libraries for trailrt-osm, which
+  # bundle-valhalla.sh ships beside the Valhalla tools to merge several regions
+  # into one extract before building (Valhalla aborts on overlapping extracts)
+  # and to pull out place data. Built by build-osm-tool.sh, below. The
+  # osmium-tool executable is no longer used. ADRs 0018 and 0023.
+  libosmium protozero
 )
 
 missing=()
@@ -162,3 +166,6 @@ for tool in valhalla_build_tiles valhalla_build_admins valhalla_build_timezones;
   found="$(find "$BUILD" -maxdepth 3 -name "$tool" -type f -perm -u+x 2>/dev/null | head -1)"
   [ -n "$found" ] && echo "    tool:  $found"
 done
+
+echo
+bash "$(dirname "${BASH_SOURCE[0]}")/build-osm-tool.sh"

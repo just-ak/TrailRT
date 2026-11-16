@@ -79,6 +79,12 @@ shows nothing pre-selected rather than failing to load.
 
 ### 1.4 The merge tool
 
+> **Amended by ADR 0023 (2026-11-16).** The osmium-tool executable is no longer
+> bundled. The merge is done by `trailrt-osm merge`, TrailRT's own tool built on
+> libosmium (BSL-1.0), at `resources/valhalla/bin/trailrt-osm`.
+> `EmbeddedPaths.mergeTool` is now `osmTool`. The text below records the
+> original design.
+
 `osmium-tool` 1.19.1 (GPL-3.0-or-later), from Homebrew. It is bundled at
 `resources/valhalla/bin/osmium` by `scripts/bundle-valhalla.sh`, beside the
 Valhalla tools. That script already walks a binary's dylib closure and rewrites

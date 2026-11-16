@@ -1,22 +1,28 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { osmiumPoiFilters } from '@shared/poi/categories';
+import { poiFilterExpressions } from '@shared/poi/categories';
 import { PLACE_KINDS } from '@shared/search/PlaceSearchProvider';
 import { ServiceError } from '../services/errors';
 import { toolExitError } from '../routing/toolExit';
 
 /**
  * Pulling place data out of an OpenStreetMap extract with the bundled
- * `osmium`. Phase 10 design §5.1.
+ * `trailrt-osm` (libosmium; ADR 0023). Phase 10 design §5.1.
  *
- * Two one-shot child processes, killable on cancel, like the merge step:
+ * One one-shot child process, killable on cancel, like the merge step.
+ * `trailrt-osm places` keeps POIs, settlements, named roads and addressed
+ * buildings, and writes their geometry as GeoJSON lines, areas included, so a
+ * hotel mapped as a building outline is not lost (Requirement 5.2). The file
+ * is streamed by the ingest and then deleted.
  *
- * 1. `osmium tags-filter` keeps POIs, settlements, named roads and addressed
- *    buildings: 113 MB → 47 MB for the three Buxton counties, in 1.6 s.
- * 2. `osmium export -f geojsonseq` builds their geometry, areas included, so a
- *    hotel mapped as a building outline is not lost (Requirement 5.2). 4.1 s,
- *    1.2 M features. The file is streamed by the ingest and then deleted.
+ * It replaced `osmium tags-filter` followed by `osmium export`, and writes the
+ * same features those did for everything the filter selects — checked line by
+ * line on the Derbyshire extract, and the ingest builds the same rows from
+ * either. It leaves out what the filter does not select: tags-filter also
+ * passed on every tagged node of a matching way, such as crossings, which the
+ * ingest then discarded. On Derbyshire it takes 1.9 s and 130 MB, where the
+ * filter alone peaked at 2.1 GB.
  *
  * The filter is generated from `shared/poi/categories.ts`, so the build and
  * the search classify with the same table.
@@ -25,7 +31,7 @@ import { toolExitError } from '../routing/toolExit';
 /** Every expression the place build filters by. */
 export function placeFilters(): string[] {
   return [
-    ...osmiumPoiFilters(),
+    ...poiFilterExpressions(),
     `n/place=${PLACE_KINDS.join(',')}`,
     // All highways: the name test happens at ingest, because tags-filter
     // cannot express "has a name" together with "is a highway".
@@ -34,7 +40,7 @@ export function placeFilters(): string[] {
   ];
 }
 
-function runOsmium(tool: string, args: readonly string[], signal?: AbortSignal): Promise<string> {
+function runTool(tool: string, args: readonly string[], signal?: AbortSignal): Promise<string> {
   return new Promise((resolve, reject) => {
     const child = spawn(tool, [...args], { stdio: ['ignore', 'pipe', 'pipe'] });
     let out = '';
@@ -71,7 +77,7 @@ function runOsmium(tool: string, args: readonly string[], signal?: AbortSignal):
           failed: 'Place data could not be read from the map extract.',
           name: 'The place reader',
         },
-        `osmium ${args[0] ?? ''} exited ${String(code)}: ${tail.trim()}`,
+        `trailrt-osm ${args[0] ?? ''} exited ${String(code)}: ${tail.trim()}`,
       );
       if (failure !== null) {
         reject(failure);
@@ -85,17 +91,13 @@ function runOsmium(tool: string, args: readonly string[], signal?: AbortSignal):
 /**
  * The date of the OSM data in an extract, `YYYY-MM-DD`, from its PBF header.
  *
- * Read from each **source** extract: `osmium merge` does not carry the
- * timestamp into its output (measured), so the merged file has none. Null when
- * the header has no timestamp, which is true of some hand-made extracts.
+ * Read from each **source** extract: the merge does not carry the timestamp
+ * into its output, so the merged file has none. Null when the header has no
+ * timestamp, which is true of some hand-made extracts.
  */
 export async function readDataDate(tool: string, extract: string, signal?: AbortSignal): Promise<string | null> {
   try {
-    const out = await runOsmium(
-      tool,
-      ['fileinfo', '-g', 'header.option.osmosis_replication_timestamp', extract],
-      signal,
-    );
+    const out = await runTool(tool, ['data-date', extract], signal);
     const match = /^(\d{4}-\d{2}-\d{2})T/.exec(out.trim());
     return match?.[1] ?? null;
   } catch (error) {
@@ -104,7 +106,7 @@ export async function readDataDate(tool: string, extract: string, signal?: Abort
   }
 }
 
-/** Filters and exports an extract. Returns the path of the GeoJSON lines file. */
+/** Filters and exports an extract in one pass. Returns the path of the GeoJSON lines file. */
 export async function extractPlaces(
   tool: string,
   extract: string,
@@ -112,30 +114,9 @@ export async function extractPlaces(
   signal?: AbortSignal,
 ): Promise<string> {
   mkdirSync(workDir, { recursive: true });
-  const filtered = join(workDir, 'places.osm.pbf');
   const exported = join(workDir, 'places.geojsonseq');
-
-  await runOsmium(
-    tool,
-    ['tags-filter', extract, ...placeFilters(), '-o', filtered, '--overwrite', '--no-progress'],
-    signal,
-  );
-  await runOsmium(
-    tool,
-    [
-      'export',
-      filtered,
-      '-f',
-      'geojsonseq',
-      // Element type and id, so a POI can say where it came from (Req 8.3).
-      '-a',
-      'type,id',
-      '-o',
-      exported,
-      '--overwrite',
-      '--no-progress',
-    ],
-    signal,
-  );
+  // Each feature carries its element type and id, so a POI can say where it
+  // came from (Req 8.3).
+  await runTool(tool, ['places', extract, exported, ...placeFilters()], signal);
   return exported;
 }

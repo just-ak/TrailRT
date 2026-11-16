@@ -52,7 +52,7 @@ test.describe('application shell', () => {
       return result.ok ? result.data : null;
     });
     expect(info?.name).toBe('TrailRT');
-    expect(info?.licence).toBe('GPL-3.0-or-later');
+    expect(info?.licence).toBe('MIT');
   });
 
   test('renders all three panels', async () => {

@@ -31,7 +31,7 @@ function today(): string {
 }
 
 export async function buildPlaces(input: BuildPlacesInput): Promise<IngestStats> {
-  const tool = input.paths.mergeTool;
+  const tool = input.paths.osmTool;
   if (!existsSync(tool)) {
     throw new ServiceError(
       'PROVIDER_UNAVAILABLE',

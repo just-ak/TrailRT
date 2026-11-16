@@ -1471,7 +1471,7 @@ export function registerIpcHandlers(): void {
   handleNoArgs(CHANNELS.app.info, (): AppInfo => ({
     name: 'TrailRT',
     version: app.getVersion(),
-    licence: 'GPL-3.0-or-later',
+    licence: 'MIT',
     repositoryUrl: REPOSITORY_URL,
     electron: process.versions.electron ?? 'unknown',
     chrome: process.versions.chrome ?? 'unknown',

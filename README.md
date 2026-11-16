@@ -71,7 +71,7 @@ routing graph. **Choose map regions** opens a map of the UK: click the counties
 you ride in — England's 47, plus Scotland, Wales, and the island of Ireland
 (Northern Ireland is only published with the Republic) — and see the total
 download size before committing. Several regions are merged into one graph with
-`osmium`, because Valhalla refuses overlapping extracts, so a ride round Buxton,
+libosmium, because Valhalla refuses overlapping extracts, so a ride round Buxton,
 Macclesfield and Leek needs Derbyshire, Cheshire and Staffordshire (about
 110 MB, built in about a minute) rather than all of England. Outside the UK, the
 **Elsewhere** tab offers the published extracts covering the visible map.
@@ -212,24 +212,27 @@ Nothing in TrailRT circumvents encryption, DRM or map licensing.
 
 ## Licence
 
-**GPL-3.0-or-later.** See [`LICENSE`](LICENSE).
+**MIT.** See [`LICENSE`](LICENSE). Release 0.1.0 and earlier were published
+under GPL-3.0-or-later and remain available under it. The change to MIT is
+recorded in [ADR 0024](docs/adr/0024-mit-licence-and-mac-app-store.md).
 
 TrailRT is free to download and use. No subscriptions, no mandatory accounts, no
 advertising, no paid feature tiers, and no cloud dependency for core
-functionality. It is meant to be a community-friendly alternative to BaseCamp,
-and the licence is chosen to keep it that way.
+functionality, on every channel. It is meant to be a community-friendly
+alternative to BaseCamp.
 
-Every dependency is audited for GPL-3.0 compatibility before it is added, and
+Every dependency is audited before it is added, and nothing copyleft may ship:
 the results are recorded in
-[`docs/licences/third-party-register.md`](docs/licences/third-party-register.md).
-The current audit covers 369 packages with no incompatibilities. Two packages
+[`docs/licences/third-party-register.md`](docs/licences/third-party-register.md),
+and `npm run licences` fails on any GPL, LGPL or AGPL package. Two packages
 were excluded on licence grounds: `react-leaflet` (Hippocratic-2.1, so Leaflet
 is used directly) and Garmin's own `@garmin/fitsdk` (proprietary EULA, so the
 MIT-licensed FIT parser is used instead).
 
 Distribution is a DMG, committed under `downloads/` through Git LFS in the
-same commit as the source it was built from. The Mac App Store is not a
-target — its terms conflict with GPL-3.0.
+same commit as the source it was built from. The Mac App Store is planned but
+not available yet: it needs Apple Developer Program membership, the App Sandbox
+and App Review, which is Phase 15.
 
 ## Installing a release build
 
@@ -268,10 +271,10 @@ switched on if a Developer ID becomes available. See
 
 Recorded up front rather than discovered later:
 
-- **GDB** has no JavaScript parser. GPSBabel is the only mature reader, and
-  because it is GPL-2.0-or-later it is compatible with our licence, so support
-  is viable — but it is Phase 9 work and unproven until tested against real
-  files. See ADR 0006 as amended.
+- **GDB** has no JavaScript parser. GPSBabel is the only mature reader, and it
+  is GPL-2.0-or-later, so it cannot be bundled in an MIT app on the App Store
+  (ADR 0024). GDB support needs another route, and until Phase 9 finds one it is
+  unsupported. See ADR 0006 as amended.
 - **Garmin IMG** rendering is architecturally accommodated but not planned for
   implementation. No encryption or licensing circumvention, ever.
 - **Waze** accepts a single destination per link, so route hand-off resolves to

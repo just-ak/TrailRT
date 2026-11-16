@@ -23,6 +23,7 @@
 #   resources/valhalla/
 #     valhalla_node.node      rpath -> @loader_path/lib
 #     bin/valhalla_build_*    rpath -> @loader_path/../lib
+#     bin/trailrt-osm         system libraries only (ADR 0023)
 #     lib/*.dylib             id @rpath/<name>, rpath -> @loader_path
 #
 # Every dylib also gets @loader_path on its own rpath so the libraries can find
@@ -67,16 +68,18 @@ for tool in "${TOOLS[@]}"; do
   fi
   cp "$found" "$OUT/bin/$tool"
 done
-# osmium merges several regions' extracts into one before the tile build,
-# because Valhalla aborts on overlapping extracts (ADR 0018). Copied from
-# Homebrew's bottle and then made relocatable below like every other tool. A
+# trailrt-osm merges several regions' extracts into one before the tile build,
+# because Valhalla aborts on overlapping extracts (ADR 0018), and pulls place
+# data out for offline search. Our own tool on libosmium, built by
+# build-osm-tool.sh; it replaced the osmium-tool executable (ADR 0023). It
+# links system libraries only, so the closure below adds nothing for it. A
 # bundle without it still works, offering single regions only.
-OSMIUM="$(brew --prefix osmium-tool 2>/dev/null || true)/bin/osmium"
-if [ -x "$OSMIUM" ]; then
-  cp "$(python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$OSMIUM")" "$OUT/bin/osmium"
+OSM_TOOL="$CACHE/trailrt-osm/trailrt-osm"
+if [ -x "$OSM_TOOL" ]; then
+  cp "$OSM_TOOL" "$OUT/bin/trailrt-osm"
 else
-  echo "warning: osmium-tool not installed; the app will offer single regions only" >&2
-  echo "  brew install osmium-tool" >&2
+  echo "warning: trailrt-osm not built; the app will offer single regions only" >&2
+  echo "  scripts/build-osm-tool.sh" >&2
 fi
 
 chmod u+w "$OUT/valhalla_node.node" "$OUT/bin/"* 2>/dev/null || true

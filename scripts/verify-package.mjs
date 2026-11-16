@@ -15,7 +15,7 @@
  * synthetic extract:
  *
  * 1. checks the LuaJIT tools carry their entitlement;
- * 2. converts a hand-written .osm to .pbf with the bundled osmium;
+ * 2. converts a hand-written .osm to .pbf with the bundled trailrt-osm;
  * 3. builds tiles from it with the bundled valhalla_build_tiles, which parses
  *    ways and so calls into LuaJIT.
  *
@@ -23,7 +23,7 @@
  * the process survive and write a tile" is asserted.
  */
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -96,10 +96,15 @@ try {
   lines.push('</osm>', '');
   writeFileSync(join(work, 'synthetic.osm'), lines.join('\n'));
   const pbf = join(work, 'synthetic.osm.pbf');
-  const convert = spawnSync(join(root, 'bin', 'osmium'), ['cat', join(work, 'synthetic.osm'), '-o', pbf, '--overwrite'], {
+  // A merge of one input is a conversion: XML in, PBF out.
+  const convert = spawnSync(join(root, 'bin', 'trailrt-osm'), ['merge', pbf, join(work, 'synthetic.osm')], {
     encoding: 'utf8',
   });
-  check(convert.status === 0, `bundled osmium runs (status ${convert.status}, signal ${convert.signal})`);
+  check(convert.status === 0, `bundled trailrt-osm runs (status ${convert.status}, signal ${convert.signal})`);
+  check(
+    !existsSync(join(root, 'bin', 'osmium')),
+    'osmium-tool is not bundled (ADR 0023)',
+  );
 
   // 3. The tile build. Mirrors buildConfig() in src/main/routing/embedded.ts:
   // the template with this tile_dir, and the files we never ship removed.
