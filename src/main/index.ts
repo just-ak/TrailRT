@@ -194,11 +194,12 @@ async function start(): Promise<void> {
 async function runBackup(): Promise<void> {
   try {
     const current = ctx();
-    const { backupRetention } = settingsService.all(current.handle.db);
+    const { backupRetention, backupMaxGb } = settingsService.all(current.handle.db);
     await backupService.createBackup(
       current.handle,
       current.paths.backupsDir,
-      backupRetention,
+      { retention: backupRetention, maxBytes: backupMaxGb * 1024 ** 3 },
+      { databaseFile: current.paths.databaseFile },
     );
   } catch (cause) {
     // A backup that cannot be written must not interrupt the user's work; the

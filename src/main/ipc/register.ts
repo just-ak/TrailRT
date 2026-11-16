@@ -314,6 +314,8 @@ export function registerIpcHandlers(): void {
     libraryService.tree(ctx().handle.db, {
       includeArchived: req.includeArchived,
       sortKey: req.sortKey,
+      trackArrangement: req.trackArrangement,
+      trackSortDirection: req.trackSortDirection,
       ...(req.photos === undefined ? {} : { photos: photoFilter(req.photos) }),
       folderState: (id) => folderScanner()?.runtime(id)?.state ?? null,
     }),
@@ -394,11 +396,12 @@ export function registerIpcHandlers(): void {
 
   handleNoArgs(CHANNELS.backup.create, async () => {
     const current = ctx();
-    const retention = settingsService.all(current.handle.db).backupRetention;
+    const { backupRetention, backupMaxGb } = settingsService.all(current.handle.db);
     return backupService.createBackup(
       current.handle,
       current.paths.backupsDir,
-      retention,
+      { retention: backupRetention, maxBytes: backupMaxGb * 1024 ** 3 },
+      { databaseFile: current.paths.databaseFile },
     );
   });
 
@@ -420,13 +423,13 @@ export function registerIpcHandlers(): void {
 
   handle(CHANNELS.backup.restore, S.backupRestoreRequest, async (req) => {
     const current = ctx();
-    const retention = settingsService.all(current.handle.db).backupRetention;
+    const { backupRetention, backupMaxGb } = settingsService.all(current.handle.db);
     await backupService.restoreBackup({
       handle: current.handle,
       databaseFile: current.paths.databaseFile,
       backupsDir: current.paths.backupsDir,
       fileName: req.fileName,
-      retention,
+      limits: { retention: backupRetention, maxBytes: backupMaxGb * 1024 ** 3 },
     });
     reopenDatabase();
     // The restored database has its own folder rows (Phase 11 Requirement 10.2).
@@ -446,6 +449,10 @@ export function registerIpcHandlers(): void {
 
   handleNoArgs(CHANNELS.routes.listAll, () =>
     routeService.listAll(ctx().handle.db),
+  );
+
+  handle(CHANNELS.routes.search, S.routeSearchRequest, (req) =>
+    routeService.search(ctx().handle.db, req.query),
   );
 
   handle(CHANNELS.routes.get, S.routeGetRequest, (req) =>
@@ -802,6 +809,10 @@ export function registerIpcHandlers(): void {
 
   handle(CHANNELS.tracks.get, S.trackGetRequest, (req) =>
     trackService.get(ctx().handle.db, req.id),
+  );
+
+  handle(CHANNELS.tracks.bounds, S.trackBoundsRequest, (req) =>
+    trackService.bounds(ctx().handle.db, req.ids),
   );
 
   handle(CHANNELS.tracks.geometry, S.trackGeometryRequest, (req) =>

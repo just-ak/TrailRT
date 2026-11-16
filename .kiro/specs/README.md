@@ -157,7 +157,9 @@ The phase grew from ten tasks to twelve. The same day the owner asked for the
 trip list to stop jumping to the trip page on every click: selecting a trip
 now previews it, and opening is its own step. That became task 7, drawn in
 `docs/design/library-panel/trip-list-flow/` first, and the phase has
-thirteen.
+thirteen. On 16 November 2026 the owner asked for the search to take
+regular expressions and find routes, and for Move to Trip to reach any
+trip rather than the first eight; those are Requirements 20 and 21.
 
 Phase 15 is the Mac App Store, from the owner's direction on 16 November
 2026. Two changes came first. osmium-tool was replaced by TrailRT's own
@@ -210,3 +212,4 @@ DMG stays the primary channel.
 | 0022 | Items outside a trip are kept by one hidden holder        |
 | 0023 | libosmium replaces the bundled osmium-tool executable     |
 | 0024 | MIT licence; the Mac App Store becomes a target           |
+| 0025 | Imported files stored once; backups within a space limit  |

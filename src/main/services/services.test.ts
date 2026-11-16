@@ -303,6 +303,23 @@ describe('tripService', () => {
     expect(tripService.search(db, '')).toEqual([]);
   });
 
+  it('searches by pattern (Phase 14 Requirement 20)', () => {
+    newTrip('Alps 2024');
+    newTrip('Alps 2025');
+    newTrip('Day out in the Alps');
+    newTrip('North Wales');
+    newTrip('Scotland NC500');
+
+    const names = (pattern: string): string[] => tripService.search(db, pattern).map((t) => t.name);
+    expect(names('^alps')).toEqual(['Alps 2024', 'Alps 2025']);
+    expect(names('alps$')).toEqual(['Day out in the Alps']);
+    expect(names('20(24|26)')).toEqual(['Alps 2024']);
+    expect(names('wales|scotland')).toEqual(['North Wales', 'Scotland NC500']);
+    expect(names('nc[0-9]+')).toEqual(['Scotland NC500']);
+    // The counts still come back with each trip.
+    expect(tripService.search(db, '^North')[0]).toMatchObject({ routeCount: 0, trackCount: 0, waypointCount: 0 });
+  });
+
   it('reports zero child counts for an empty trip', () => {
     // Non-zero counts are covered in routesWaypoints.test.ts. Asserting only
     // the empty case here would pass even if the count query were broken —

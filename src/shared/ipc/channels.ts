@@ -52,6 +52,8 @@ export const CHANNELS = {
     delete: 'routes:delete',
     /** Phase 14: a new route from one route's or waypoint's end to another's start. */
     join: 'routes:join',
+    /** Phase 14 Requirement 20: by name pattern, across every trip. */
+    search: 'routes:search',
   },
   /**
    * Phase 11: folders on disk linked to a trip. Named for folders, not photos,
@@ -163,6 +165,8 @@ export const CHANNELS = {
     listAll: 'tracks:listAll',
     get: 'tracks:get',
     geometry: 'tracks:geometry',
+    /** Phase 14 Requirement 23: the box around several tracks, to show them on the map. */
+    bounds: 'tracks:bounds',
     update: 'tracks:update',
     move: 'tracks:move',
     reverse: 'tracks:reverse',

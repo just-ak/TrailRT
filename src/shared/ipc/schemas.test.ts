@@ -601,6 +601,25 @@ describe('Phase 10 itinerary schemas', () => {
   });
 });
 
+describe('Phase 14 library search schemas', () => {
+  it.each([
+    ['trips', S.tripSearchRequest],
+    ['routes', S.routeSearchRequest],
+    ['waypoints', S.waypointSearchRequest],
+  ])('takes a pattern for %s and refuses one that is not valid, saying why', (_kind, schema) => {
+    expect(schema.safeParse({ query: '^Day [0-9]' }).success).toBe(true);
+    expect(schema.safeParse({ query: 'peak' }).success).toBe(true);
+    const bad = schema.safeParse({ query: '(' });
+    expect(bad.success).toBe(false);
+    expect(bad.error?.issues[0]?.message).toMatch(/^Not a valid search pattern: Unterminated group/);
+    expect(schema.safeParse({ query: 'x'.repeat(201) }).success).toBe(false);
+  });
+
+  it('trims the pattern, as the field does', () => {
+    expect(S.routeSearchRequest.parse({ query: '  ^Day  ' })).toEqual({ query: '^Day' });
+  });
+});
+
 describe('Phase 10 places and search schemas', () => {
   const routeId = '0190c3ae-1f2b-7c4d-9e8f-000000000003';
   const base = {

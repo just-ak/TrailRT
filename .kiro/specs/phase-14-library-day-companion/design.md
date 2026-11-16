@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 21).
+  library's tens of thousands, which is the Photos section's case (task 31).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -647,13 +647,166 @@ persist; `MapView` already passes no waypoints to the layer when it is off.
 The button keeps one label, "Hide waypoints on the map", with `aria-pressed`
 true while they are hidden, the accent outline, and a crossed-out pin.
 
+### 5.13 Search by pattern, across routes too (Requirement 20)
+
+**One compiler, in `shared/search/namePattern.ts`.** `compileNamePattern(text)`
+trims the text and returns `{ ok: true, regex }` or `{ ok: false, message }`,
+where the message is the engine's own, without its `Invalid regular
+expression: /…/i:` prefix. The flag is `i` alone. `u` would reject escapes
+people type out of habit, such as `\-` and `\ `, and without it `i` still
+folds accented Latin letters. Both processes use it: the renderer to explain
+a bad pattern without a round trip, and the request schemas to refuse one.
+
+**Matching in SQLite, with a JavaScript engine.** `createDatabase` registers
+a deterministic `regexp(pattern, value)` function on the connection, which is
+what SQLite's `X REGEXP Y` calls. It compiles through `compileNamePattern` and
+keeps the last pattern compiled, because one query tests it against every row.
+The three repositories change `lower(name) LIKE …` to `name REGEXP ?`, so
+ordering, the join to the trip's name and the trip counts stay in SQL. The
+`LIKE` escaping goes, since a pattern's `%` and `_` are already literal.
+
+**Routes.** `routes:search` mirrors `waypoints:search`: `searchRoutes`
+returns `RouteWithTrip`, through `routeService.search`, its handler, the
+preload and `ApiSurface`. `tripSearchRequest`, `waypointSearchRequest` and
+the new `routeSearchRequest` share one `nameSearchRequest`, which refines the
+query with `compileNamePattern`.
+
+**The renderer.** `libraryStore.setSearch` compiles first. A bad pattern sets
+`searchError` and clears all three result lists before any request, so stale
+results are never shown under a new pattern; a good one runs the three
+searches in parallel behind the existing sequence guard. `SearchResults`
+shows the error in place of the count. Otherwise it shows trips, then routes,
+then waypoints, each with its line icon (Map, Route, MapPin) rather than an
+emoji (Requirement 10.3). An item outside a trip names its trip "Not in a
+trip" and, as a waypoint already did, opens its section instead of a trip
+page. The field reads "Search names (pattern)", and its hint gives the
+examples.
+
+**A pattern cannot be interrupted.** V8 has no time limit on a match, and a
+pattern such as `(a+)+$` can backtrack for seconds against a long run of one
+letter. The text is the user's own and names are at most 200 characters, so
+this is accepted rather than defended against; it is written down so it is
+not rediscovered as a bug.
+
+### 5.15 Search the list that is open (Requirement 20.5–20.7)
+
+**Narrowed in the renderer.** Every list in the left panel is drawn from a
+`TreeNode` root the renderer already holds, so a search here needs no request.
+`filterTree(root, regex)` in `libraryRoots.ts` returns the same root holding
+only matches and the rows that lead to them, with the ids of those rows to
+open and a count of matched objects. A row whose own name matches keeps all
+it holds, closed; a row kept for a match inside it is opened. The root keeps
+its id, so the list keeps its behaviour (the trip list's flow, drag, menus).
+Tracks become searchable this way, though task 21 gave them no channel.
+
+**`LibraryList` takes `openIds`.** A row is open when the user opened it or
+the search opened it. The search's set is not written into the user's own
+expansion state, so clearing the search leaves the tree as it was.
+
+**Where it applies.** `LeftPanel` compiles the text with `compileNamePattern`
+and narrows its `root`. On a trip's page, `TripPage` takes the pattern and
+shows that trip's objects root narrowed, whichever tab was open, because day
+cards and photos are not rows; the tabs return when the search is cleared.
+
+**The switch.** `libraryStore.searchScope` is `here` or `everywhere`, shown
+as a two-way switch under the field while there is text ("In Routes", "In
+this trip", "Everywhere"). Only `everywhere` sends the three `*:search`
+requests of §5.13, and shows `SearchResults`. Clearing the text resets the
+scope to `here`. An empty narrowed list says "Nothing in Routes matches." with
+a Search everywhere button. A bad pattern is explained by one `SearchProblem`
+in either scope.
+
+### 5.16 Tracks by name or by date (Requirement 22)
+
+**Built in the main process, arranged by a pure function.** The Tracks view
+is part of `libraryService.tree`, so the arrangement travels in the tree
+request (`trackArrangement`, `trackSortDirection`, both persisted settings)
+and `arrangeTracks` in `shared/library/trackGroups.ts` builds the rows. Name
+and Distance stay flat, items outside a trip first (ADR 0022); the Library
+options' "Sort objects by" becomes "Sort routes by".
+
+**Dating a track.** `startedAt` is the first timed point. The zone is
+`resolveTimeZone` at the track's first point, which `tracks.startPoint` reads
+through the `(track_id, segment_index, seq)` index, and only in the Date
+arrangement. An unknown zone falls back to `systemZone()` and the row's hint
+says so, as a stop's times do. A track with no times goes under No date.
+
+**The tree.** Year, month and day are `group` rows with stable ids
+(`view:tracks/year:2026/month:05/day:16`), so expansion survives a refresh, a
+count as detail, and the direction applies at every level. The first year,
+its first month and that month's days carry `defaultExpanded`, which
+`offerExpansion` honours once. A track's row reads its local start time and
+its trip.
+
+### 5.17 Dates from names, and tracks on the map (Requirements 22.7, 23)
+
+**Dates from names.** `dateFromName` in `shared/library/nameDate.ts` tries
+readers in order: year first, a named month after the day, a named month
+before it, then all-number dates day first with month first only when day
+first is impossible, then `yyyymmdd`. Each reader refuses a day the calendar
+does not have; a digit next to a match blocks it, so "Track 123456" and "Lap
+12-14" are not dates. `arrangeTracks` uses it only for a track with no
+`startedAt`, puts it under that day after the recorded tracks, and gives the
+row "date from name" and a hint naming the text read. Nothing is written.
+
+**The arrow.** `TreeRow` takes `onShow` and `showLabel`, drawn like the trip
+list's open arrow but visible on hover and focus as well as when selected,
+because a heading cannot be selected. `LibraryList` gives it to every row in
+the Tracks section that holds a track, collecting the ids beneath it; group
+rows carry `fullName` ("May 2026") for the label and the map.
+
+**On the map.** `mapFocusStore` holds the label, the tracks' metadata from
+`tracks:listAll` and their box from the new `tracks:bounds`, a min/max
+aggregate over `track_points` like a trip's. `MapView` draws them beside the
+trip's tracks, de-duplicated, fits once per request, and shows a strip at the
+top right with Clear. Nothing is persisted.
+
+### 5.18 Backups within a limit; imported files kept once (Requirements 24, 25)
+
+**Files once.** Migration 0011 adds `source_files` (hash, format, size,
+bytes) and rebuilds `track_sources` as a link with an index on each side. A
+trigger after a link is deleted removes the file when nothing else links to
+it, which also covers rows removed by a foreign key's cascade.
+`insertTrackSource` inserts the file with `ON CONFLICT DO NOTHING` and then the
+link; `findTrackSource` joins them. `COMPACT_AFTER` in the migration list makes
+`createDatabase` run `VACUUM` and truncate the WAL once after migration 12.
+
+**Backups.** `planPrune` walks the backups newest first and keeps one while
+the count and total size fit; the newest and any protected file are always
+kept. `createBackup` takes the limits and the database path: before writing it
+prunes as if the new backup, sized by the database and its WAL, were already
+the newest, but spares the newest existing one; it refuses when less than the
+backup plus 1 GB would be free (`statfsSync`); after writing it prunes again
+with the new file protected. `restoreBackup` protects the file it restores.
+`backupMaxGb` is a setting; `BackupUsage` in Settings lists the backups when
+it opens and states what is and is not backed up.
+
+### 5.14 Move to any trip from the right-click menu (Requirement 21)
+
+`TripPickerDialog` in `features/library/` takes the destinations, a title and
+`onPick`. It is a `Dialog` with a filter field and a `listbox` of `option`s
+underneath, which scrolls on its own so the filter stays in view. The filter
+goes through `compileNamePattern`, so one syntax works in both places, and a
+bad pattern says why rather than emptying the list without explanation. The
+highlighted option follows the arrow keys and the pointer, Return picks it,
+and Escape is the dialog's own cancel.
+
+`LibraryList` keeps `movePicker: BatchMember[] | null`. The single-item
+`moveTo` and the multi-selection menu both become one Move to Trip… item that
+sets it, so the eight- and nine-trip caps and the inline "→ trip" rows go,
+and so does the multi-selection header that moved to the first trip when
+clicked. Picking calls `moveBatchToTrip`, unchanged, so a move is still one
+undo step. The list is `moveDestinations(overview, looseTripId)` as before.
+It is not virtualised: a long list here is hundreds of trips, not the
+photos' tens of thousands.
+
 ## 6. Risks
 
 - **Scope.** The largest UI change since Phase 1. Mitigated by the order of
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 24).
+  checklist (task 32).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

@@ -7,7 +7,9 @@ import type {
   TripSortKey,
   TripWithCounts,
 } from '@shared/domain/types';
-import type { WaypointWithTrip } from '@shared/ipc/api';
+import type { RouteWithTrip, WaypointWithTrip } from '@shared/ipc/api';
+import { compileNamePattern } from '@shared/search/namePattern';
+import type { TrackArrangement } from '@shared/library/trackGroups';
 import type { TripOverview } from '@shared/domain/library';
 
 /** Matches the main process `ObjectSortKey`. Distance arrived with tracks. */
@@ -45,12 +47,25 @@ interface LibraryState {
    * one control that is wrong for half the tree.
    */
   objectSortKey: ObjectSortKey;
+  /** Phase 14 Requirement 22: the Tracks section's arrangement and direction. Persisted. */
+  trackArrangement: TrackArrangement;
+  trackSortDirection: SortDirection;
   /** Phase 11: the Photos view's Year and Trip filters (design §8.2). Not persisted. */
   photoFilter: PhotoFilter;
 
   search: string;
   searchResults: TripWithCounts[] | null;
+  /** Phase 14 Requirement 20: routes are searched too. */
+  routeResults: RouteWithTrip[] | null;
   waypointResults: WaypointWithTrip[] | null;
+  /** Why the search text is not a valid pattern, or null when it is. */
+  searchError: string | null;
+  /**
+   * Phase 14 Requirement 20.5–20.6: a search narrows the list that is open
+   * ('here'), or looks across the whole library ('everywhere'). Clearing the
+   * search returns it to 'here'.
+   */
+  searchScope: SearchScope;
 
   hydrate(settings: AppSettings): void;
   refresh(): Promise<void>;
@@ -59,12 +74,18 @@ interface LibraryState {
   isExpanded(id: string): boolean;
   setSort(key: TripSortKey, direction: SortDirection): void;
   setObjectSort(key: ObjectSortKey): void;
+  /** Starts a fresh arrangement in its natural direction: A to Z, newest first, longest first. */
+  setTrackArrangement(arrangement: TrackArrangement): void;
+  setTrackSortDirection(direction: SortDirection): void;
   setShowArchived(show: boolean): void;
   setPhotoFilter(filter: PhotoFilter): void;
   /** Opens these rows the first time they appear; later collapsing is respected. */
   offerExpansion(ids: readonly string[]): void;
   setSearch(query: string): Promise<void>;
+  setSearchScope(scope: SearchScope): Promise<void>;
 }
+
+export type SearchScope = 'here' | 'everywhere';
 
 /** A year, or photos with no date; and a trip. Absent means "all". */
 export interface PhotoFilter {
@@ -101,11 +122,16 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   sortDirection: DEFAULT_SETTINGS.tripSortDirection,
   showArchived: DEFAULT_SETTINGS.showArchivedTrips,
   objectSortKey: 'name',
+  trackArrangement: DEFAULT_SETTINGS.trackArrangement,
+  trackSortDirection: DEFAULT_SETTINGS.trackSortDirection,
   photoFilter: {},
 
   search: '',
   searchResults: null,
+  routeResults: null,
   waypointResults: null,
+  searchError: null,
+  searchScope: 'here',
 
   hydrate: (settings) => {
     set({
@@ -113,6 +139,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       sortKey: settings.tripSortKey,
       sortDirection: settings.tripSortDirection,
       showArchived: settings.showArchivedTrips,
+      trackArrangement: settings.trackArrangement,
+      trackSortDirection: settings.trackSortDirection,
     });
   },
 
@@ -124,6 +152,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
           api().library.tree({
             includeArchived: get().showArchived,
             sortKey: get().objectSortKey,
+            trackArrangement: get().trackArrangement,
+            trackSortDirection: get().trackSortDirection,
             photos: get().photoFilter,
           }),
         ),
@@ -184,6 +214,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     void get().refresh();
   },
 
+  setTrackArrangement: (trackArrangement) => {
+    const trackSortDirection: SortDirection = trackArrangement === 'name' ? 'asc' : 'desc';
+    set({ trackArrangement, trackSortDirection });
+    void callOr(api().settings.set({ key: 'trackArrangement', value: trackArrangement }), null);
+    void callOr(api().settings.set({ key: 'trackSortDirection', value: trackSortDirection }), null);
+    void get().refresh();
+  },
+
+  setTrackSortDirection: (trackSortDirection) => {
+    set({ trackSortDirection });
+    void callOr(api().settings.set({ key: 'trackSortDirection', value: trackSortDirection }), null);
+    void get().refresh();
+  },
+
   setShowArchived: (showArchived) => {
     set({ showArchived });
     void callOr(
@@ -210,18 +254,37 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   setSearch: async (query) => {
     set({ search: query });
     const trimmed = query.trim();
+    // Guard against an earlier request resolving after a later one. Bumped
+    // before every early return too, so a slow answer to an earlier pattern
+    // cannot land under an empty or invalid one.
+    const seq = ++searchSeq;
     if (trimmed.length === 0) {
-      set({ searchResults: null, waypointResults: null });
+      set({ searchResults: null, routeResults: null, waypointResults: null, searchError: null, searchScope: 'here' });
       return;
     }
-    // Guard against an earlier request resolving after a later one.
-    const seq = ++searchSeq;
-    const [trips, waypoints] = await Promise.all([
+    // Phase 14 Requirement 20.3: a bad pattern, often a half-typed one, says
+    // why and shows nothing, rather than results for some earlier pattern.
+    const compiled = compileNamePattern(trimmed);
+    if (!compiled.ok) {
+      set({ searchResults: [], routeResults: [], waypointResults: [], searchError: compiled.message });
+      return;
+    }
+    set({ searchError: null });
+    // The open list is narrowed in the renderer from what it already holds;
+    // only a search everywhere asks the main process.
+    if (get().searchScope !== 'everywhere') return;
+    const [trips, routes, waypoints] = await Promise.all([
       callOr(api().trips.search({ query: trimmed }), []),
+      callOr(api().routes.search({ query: trimmed }), []),
       callOr(api().waypoints.search({ query: trimmed }), []),
     ]);
     if (seq === searchSeq) {
-      set({ searchResults: trips, waypointResults: waypoints });
+      set({ searchResults: trips, routeResults: routes, waypointResults: waypoints, searchError: null });
     }
+  },
+
+  setSearchScope: async (searchScope) => {
+    set({ searchScope });
+    await get().setSearch(get().search);
   },
 }));

@@ -3,6 +3,7 @@ import { MAX_ITINERARY_STOPS, MAX_OTHER_MINUTES, MAX_STAY_DAYS, MAX_STOP_MINUTES
 import { POI_CATEGORY_IDS } from '../poi/categories';
 import { checkRoutingOrigin } from '../net/origin';
 import { isValidDate, isValidTime } from '../time/zoned';
+import { compileNamePattern } from '../search/namePattern';
 
 /**
  * Request schemas for every IPC channel. The main process validates against
@@ -55,6 +56,9 @@ export const libraryTreeRequest = z
      * objects that have one.
      */
     sortKey: z.enum(['name', 'distance', 'updatedAt']).default('name'),
+    /** Phase 14 Requirement 22: the Tracks section's own arrangement. */
+    trackArrangement: z.enum(['name', 'date', 'distance']).default('name'),
+    trackSortDirection: sortDirectionSchema.default('asc'),
     /** Phase 11: the Photos view's Year and Trip filters (design §8.2). */
     photos: z
       .object({
@@ -116,9 +120,25 @@ export const tripSetStatusRequest = z
 
 export const tripDeleteRequest = z.object({ id: idSchema }).strict();
 
-export const tripSearchRequest = z
-  .object({ query: z.string().trim().max(200) })
+/**
+ * Phase 14 Requirement 20: the library search's text is a pattern, refused
+ * here when it is not a valid one, so the main process never compiles a bad
+ * pattern and the renderer gets the engine's explanation back.
+ */
+export const nameSearchRequest = z
+  .object({
+    query: z
+      .string()
+      .trim()
+      .max(200)
+      .superRefine((query, ctx) => {
+        const compiled = compileNamePattern(query);
+        if (!compiled.ok) ctx.addIssue({ code: 'custom', message: `Not a valid search pattern: ${compiled.message}` });
+      }),
+  })
   .strict();
+
+export const tripSearchRequest = nameSearchRequest;
 
 // ---------------------------------------------------------------- folders
 
@@ -191,6 +211,12 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
     .object({
       key: z.literal('backupRetention'),
       value: z.number().int().min(1).max(100),
+    })
+    .strict(),
+  z
+    .object({
+      key: z.literal('backupMaxGb'),
+      value: z.number().finite().min(0.5).max(1000),
     })
     .strict(),
   z
@@ -271,6 +297,9 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
   z.object({ key: z.literal('librarySection'), value: z.enum(['trips', 'routes', 'tracks', 'waypoints', 'photos', 'imported']) }).strict(),
   z.object({ key: z.literal('openTripId'), value: idSchema.nullable() }).strict(),
   z.object({ key: z.literal('tripTab'), value: z.enum(['plan', 'objects', 'photos']) }).strict(),
+  // Phase 14 Requirement 22: how the Tracks section is arranged.
+  z.object({ key: z.literal('trackArrangement'), value: z.enum(['name', 'date', 'distance']) }).strict(),
+  z.object({ key: z.literal('trackSortDirection'), value: sortDirectionSchema }).strict(),
   z.object({ key: z.literal('routeAlternatives'), value: z.boolean() }).strict(),
   z.object({ key: z.literal('ukDefaultSpeedLimits'), value: z.boolean() }).strict(),
   z
@@ -439,9 +468,8 @@ export const waypointMoveToTripRequest = z
   .object({ id: idSchema, tripId: idSchema })
   .strict();
 
-export const waypointSearchRequest = z
-  .object({ query: z.string().trim().max(200) })
-  .strict();
+export const waypointSearchRequest = nameSearchRequest;
+export const routeSearchRequest = nameSearchRequest;
 
 /** Phase 14 Requirement 18.3: in `tripId`, or else the photo's own trip. */
 export const waypointFromPhotoRequest = z
@@ -477,6 +505,9 @@ export const trackWidthSchema = z.number().int().min(1).max(12).nullable();
 
 export const trackListForTripRequest = z.object({ tripId: idSchema }).strict();
 export const trackGetRequest = z.object({ id: idSchema }).strict();
+
+/** Phase 14 Requirement 23: the box around tracks shown on the map together, such as a year's. */
+export const trackBoundsRequest = z.object({ ids: z.array(idSchema).min(1).max(5000) }).strict();
 
 /**
  * Geometry for the map.

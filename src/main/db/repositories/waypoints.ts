@@ -53,16 +53,13 @@ export function findWaypoint(db: Db, id: string): Waypoint | null {
   return row ? rowToWaypoint(row) : null;
 }
 
-export function searchWaypoints(db: Db, query: string): WaypointWithTrip[] {
-  // Same escaping as the trip search: a literal '%' must not act as a wildcard,
-  // and SQLite only honours the escape character when told via ESCAPE.
-  const escaped = query.replace(/[\\%_]/g, (c) => `\\${c}`);
-  const pattern = `%${escaped.toLowerCase()}%`;
+/** By pattern, as `searchTrips` (Phase 14 Requirement 20). */
+export function searchWaypoints(db: Db, pattern: string): WaypointWithTrip[] {
   return db
     .select({ waypoint: waypoints, tripName: trips.name })
     .from(waypoints)
     .innerJoin(trips, eq(waypoints.tripId, trips.id))
-    .where(sql`lower(${waypoints.name}) LIKE ${pattern} ESCAPE '\\'`)
+    .where(sql`${waypoints.name} REGEXP ${pattern}`)
     .orderBy(asc(waypoints.name))
     .all()
     .map((r) => ({ ...rowToWaypoint(r.waypoint), tripName: r.tripName }));

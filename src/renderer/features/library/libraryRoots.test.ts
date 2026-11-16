@@ -3,7 +3,7 @@ import type { TripOverview } from '@shared/domain/library';
 import type { Photo } from '@shared/domain/linkedFolders';
 import type { TreeNode, TripGeometry } from '@shared/domain/types';
 import { weekend } from '@shared/itinerary/testViews';
-import { defaultOpen, findTrip, objectsRoot, photosByDay, planRoot, sectionRoot, tripListRoot, tripPageRoot } from './libraryRoots';
+import { defaultOpen, filterTree, findTrip, objectsRoot, photosByDay, planRoot, sectionRoot, tripListRoot, tripPageRoot } from './libraryRoots';
 
 const NONE = { routes: 0, tracks: 0, waypoints: 0, photos: 0, linkedFolders: 0 };
 const overview = (id: string, over: Partial<TripOverview> = {}): TripOverview => ({
@@ -171,5 +171,68 @@ describe('the trip page tabs', () => {
       ['2026-10-23', { count: 1, cameraTime: 0 }],
       ['2026-10-24', { count: 1, cameraTime: 1 }],
     ]);
+  });
+});
+
+const leaf = (id: string, kind: 'route' | 'track' | 'waypoint', name: string): TreeNode => ({ id, ref: { kind, id }, kind, name, children: [] });
+
+describe('filterTree (Phase 14 Requirement 20.5)', () => {
+  const routes: TreeNode = {
+    id: 'section:routes',
+    kind: 'root',
+    name: 'Routes',
+    children: [leaf('r1', 'route', 'Day 1: Buxton to Leek'), leaf('r2', 'route', 'Cat and Fiddle'), leaf('r3', 'route', 'Day 2: Leek to Ashbourne')],
+  };
+  const tripList: TreeNode = {
+    id: 'triplist',
+    kind: 'root',
+    name: 'Trips',
+    children: [
+      { id: 'group:2025', kind: 'group', name: '2025', children: [trip('Peak weekend', [leaf('trip:Peak weekend/route:a', 'route', 'Snake Pass')]), trip('Wales')] },
+      { id: 'folder:f', ref: { kind: 'folder', id: 'f' }, kind: 'folder', name: 'Scotland', children: [trip('NC500'), trip('Skye')] },
+    ],
+  };
+  const names = (node: TreeNode): string[] => node.children.flatMap((c) => [c.name, ...names(c)]);
+
+  it('narrows a flat section in place, keeping the root and its order', () => {
+    const found = filterTree(routes, /^day [0-9]/i);
+    expect(found.root.id).toBe('section:routes');
+    expect(found.root.children.map((c) => c.name)).toEqual(['Day 1: Buxton to Leek', 'Day 2: Leek to Ashbourne']);
+    expect(found.matches).toBe(2);
+    expect(found.open.size).toBe(0);
+  });
+
+  it('keeps a group only for a match inside it, and opens it so the match shows', () => {
+    const found = filterTree(tripList, /wales/i);
+    expect(names(found.root)).toEqual(['2025', 'Wales']);
+    expect([...found.open]).toEqual(['group:2025']);
+    expect(found.matches).toBe(1);
+  });
+
+  it('opens every row on the way down to a match', () => {
+    const found = filterTree(tripList, /snake/i);
+    expect(names(found.root)).toEqual(['2025', 'Peak weekend', 'Snake Pass']);
+    expect([...found.open].toSorted()).toEqual(['group:2025', 'trip:Peak weekend']);
+  });
+
+  it('keeps a matching folder or trip with everything in it, closed', () => {
+    const folder = filterTree(tripList, /^scot/i);
+    expect(names(folder.root)).toEqual(['Scotland', 'NC500', 'Skye']);
+    expect(folder.open.size).toBe(0);
+    const peak = filterTree(tripList, /^peak/i);
+    expect(names(peak.root)).toEqual(['2025', 'Peak weekend', 'Snake Pass']);
+    expect([...peak.open]).toEqual(['group:2025']);
+  });
+
+  it('leaves an empty root when nothing matches', () => {
+    const found = filterTree(routes, /alps/i);
+    expect(found.root.children).toEqual([]);
+    expect(found.matches).toBe(0);
+  });
+
+  it('does not change the tree it was given', () => {
+    const before = JSON.stringify(tripList);
+    filterTree(tripList, /snake/i);
+    expect(JSON.stringify(tripList)).toBe(before);
   });
 });

@@ -15,9 +15,9 @@ import { usePhotoStore } from "../../stores/photoStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useUiStore } from "../../stores/uiStore";
 import { linkFolderToTrip } from "../photos/photoActions";
-import { LibraryList } from "./LibraryList";
+import { LibraryList, NothingMatches } from "./LibraryList";
 import { PlanCards } from "./PlanCards";
-import { linkedFoldersRoot, objectsRoot, planRoot } from "./libraryRoots";
+import { filterTree, linkedFoldersRoot, objectsRoot, planRoot } from "./libraryRoots";
 
 /**
  * One trip in the left panel. Phase 14, Requirement 3.
@@ -29,7 +29,7 @@ import { linkedFoldersRoot, objectsRoot, planRoot } from "./libraryRoots";
  * drag and the menus are those of every other list. Nothing is nested more
  * than one level inside a day.
  */
-export function TripPage({ trip }: { trip: TreeNode }): ReactNode {
+export function TripPage({ trip, search = null }: { trip: TreeNode; search?: RegExp | null }): ReactNode {
   const tripId = trip.ref?.id ?? "";
   const tab = useNavStore((s) => s.tripTab);
   const view = useItineraryStore((s) => s.view);
@@ -63,6 +63,25 @@ export function TripPage({ trip }: { trip: TreeNode }): ReactNode {
     { id: "photos", label: "Photos", count: overview?.counts.photos ?? null },
   ];
   const dated = view !== null && view.itinerary.tripId === tripId;
+  // Phase 14 Requirement 20.5: a search on a trip's page narrows its routes,
+  // tracks and waypoints, whichever tab was open.
+  const narrowed = useMemo(() => (search === null ? null : filterTree(objects, search)), [objects, search]);
+
+  if (narrowed !== null) {
+    return (
+      <>
+        <TripHeader tripId={tripId} name={trip.name} />
+        <p className="shrink-0 px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+          Objects<span className="ml-1 font-normal normal-case tracking-normal">· matching</span>
+        </p>
+        {narrowed.root.children.length === 0 ? (
+          <NothingMatches where="this trip" />
+        ) : (
+          <LibraryList root={narrowed.root} openIds={narrowed.open} label={`${trip.name} objects`} />
+        )}
+      </>
+    );
+  }
 
   return (
     <>

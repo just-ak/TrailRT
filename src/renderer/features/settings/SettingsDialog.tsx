@@ -113,6 +113,42 @@ function MapRegionSection(): ReactNode {
   );
 }
 
+function size(bytes: number): string {
+  return bytes >= 1024 ** 3 ? `${(bytes / 1024 ** 3).toFixed(1)} GB` : `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
+}
+
+/**
+ * What the backups use now, and what is in them (Phase 14 Requirement 24).
+ * Read when Settings opens; the backups themselves change only on the hour.
+ */
+function BackupUsage({ maxGb }: { maxGb: number }): ReactNode {
+  const [backups, setBackups] = useState<{ count: number; bytes: number; newest: number } | null>(null);
+  useEffect(() => {
+    void callOr(api().backup.list(), []).then((list) =>
+      setBackups({ count: list.length, bytes: list.reduce((sum, b) => sum + b.byteSize, 0), newest: list[0]?.byteSize ?? 0 }),
+    );
+  }, []);
+  const hintClass = "text-[11px] text-[var(--color-text-muted)]";
+  const limit = maxGb * 1024 ** 3;
+  return (
+    <div className="mb-1 rounded-md bg-[var(--color-surface-sunken)] px-3 py-2" data-testid="backup-usage">
+      {backups !== null && (
+        <p className="text-[12px] text-[var(--color-text-primary)]">
+          {backups.count === 0
+            ? "No backups yet."
+            : `${backups.count} backup${backups.count === 1 ? "" : "s"} using ${size(backups.bytes)} of ${size(limit)}.`}
+          {backups.newest > limit && " One backup is larger than the limit, so only the newest is kept."}
+        </p>
+      )}
+      <p className={`${hintClass} mt-1`}>
+        Backups hold everything you made: trips, routes, tracks with their original files, waypoints, plans, linked
+        folders and settings. Map regions, terrain, place and postcode search and photo thumbnails are not backed up.
+        They are downloaded or rebuilt when needed.
+      </p>
+    </div>
+  );
+}
+
 export function SettingsDialog(): ReactNode {
   const settings = useSettingsStore((s) => s.settings);
   const update = useSettingsStore((s) => s.set);
@@ -318,6 +354,32 @@ export function SettingsDialog(): ReactNode {
           className={`${controlClass} w-20`}
         />
       </div>
+
+      <div className={rowClass}>
+        <div>
+          <p className={labelClass}>Backup space</p>
+          <p className={hintClass}>The oldest backups go first to stay within it. The newest is always kept.</p>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number"
+            aria-label="Backup space in GB"
+            min={0.5}
+            max={1000}
+            step={0.5}
+            value={settings.backupMaxGb}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              if (Number.isFinite(value) && value >= 0.5 && value <= 1000) {
+                void update({ key: "backupMaxGb", value });
+              }
+            }}
+            className={`${controlClass} w-20`}
+          />
+          <span className={hintClass}>GB</span>
+        </div>
+      </div>
+      <BackupUsage maxGb={settings.backupMaxGb} />
 
       <div className={rowClass}>
         <div>

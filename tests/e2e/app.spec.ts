@@ -339,15 +339,16 @@ test.describe('trip lifecycle', () => {
     // Self-contained: never rely on data another test happened to create.
     await createTripViaUi(page, 'Carpathian Ridge');
 
+    // Phase 14 Requirement 20.5: the trip list itself is narrowed.
     const search = page.getByLabel('Search trips');
     await search.fill('carpath');
     await expect(
-      page.getByRole('button', { name: /Carpathian Ridge/ }).first(),
+      page.getByRole('treeitem', { name: /Carpathian Ridge/ }),
     ).toBeVisible();
 
     // A term that matches nothing yields no results rather than everything.
     await search.fill('zzzznomatch');
-    await expect(page.getByText('0 matches')).toBeVisible();
+    await expect(page.getByText('Nothing in Trips matches.')).toBeVisible();
 
     await search.fill('');
     await expect(

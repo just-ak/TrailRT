@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import type { GeometrySource } from '@shared/domain/types';
 import type { Db } from '../client';
 import { encodeMetadata } from '../metadata';
-import { trackPoints, tracks, trackSources, trips } from '../schema';
+import { sourceFiles, trackPoints, tracks, trackSources, trips } from '../schema';
 
 /**
  * Data access for tracks.
@@ -84,6 +84,23 @@ export function listAllTracks(
     .orderBy(asc(trips.name), asc(tracks.name))
     .all()
     .map((r) => ({ ...rowToTrack(r.track), tripName: r.tripName }));
+}
+
+/**
+ * Where a track starts: its first point, by segment then sequence, which the
+ * unique `(track_id, segment_index, seq)` index answers without a scan.
+ * Phase 14 Requirement 22 dates a track in the zone at this point.
+ */
+export function startPoint(db: Db, trackId: string): { lat: number; lon: number } | null {
+  return (
+    db
+      .select({ lat: trackPoints.lat, lon: trackPoints.lon })
+      .from(trackPoints)
+      .where(eq(trackPoints.trackId, trackId))
+      .orderBy(asc(trackPoints.segmentIndex), asc(trackPoints.seq))
+      .limit(1)
+      .get() ?? null
+  );
 }
 
 export function findTrack(db: Db, id: string): TrackRow | null {
@@ -315,7 +332,12 @@ export function deleteTrack(db: Db, id: string): void {
 
 // ----------------------------------------------------------- source bytes
 
-/** Retains the imported file verbatim, so an edit can always be rolled back. */
+/**
+ * Retains the imported file verbatim, so an edit can always be rolled back.
+ *
+ * The file is stored once, by its hash: the second and later tracks read from
+ * the same file only link to it (ADR 0025).
+ */
 export function insertTrackSource(
   db: Db,
   values: {
@@ -326,13 +348,21 @@ export function insertTrackSource(
     now: number;
   },
 ): void {
+  db.insert(sourceFiles)
+    .values({
+      contentHash: values.contentHash,
+      format: values.format,
+      byteSize: values.bytes.byteLength,
+      bytes: Buffer.from(values.bytes),
+      createdAt: values.now,
+    })
+    .onConflictDoNothing({ target: sourceFiles.contentHash })
+    .run();
   db.insert(trackSources)
     .values({
       id: randomUUID(),
       trackId: values.trackId,
-      format: values.format,
       contentHash: values.contentHash,
-      originalBytes: Buffer.from(values.bytes),
       createdAt: values.now,
     })
     .run();
@@ -343,15 +373,16 @@ export function findTrackSource(
   trackId: string,
 ): { format: string; contentHash: string; bytes: Uint8Array } | null {
   const row = db
-    .select()
+    .select({ format: sourceFiles.format, contentHash: sourceFiles.contentHash, bytes: sourceFiles.bytes })
     .from(trackSources)
+    .innerJoin(sourceFiles, eq(sourceFiles.contentHash, trackSources.contentHash))
     .where(eq(trackSources.trackId, trackId))
     .get();
   if (row === undefined) return null;
   return {
     format: row.format,
     contentHash: row.contentHash,
-    bytes: new Uint8Array(row.originalBytes),
+    bytes: new Uint8Array(row.bytes),
   };
 }
 
@@ -415,6 +446,29 @@ export function trackBounds(
  * join silently compares the wrong columns. Joining the tables it knows about
  * keeps the qualification correct and the query checked.
  */
+/**
+ * The box around a set of tracks, across trips (Phase 14 Requirement 23):
+ * the same aggregate as a trip's, over the tracks asked for.
+ */
+export function trackBoundsForIds(
+  db: Db,
+  ids: readonly string[],
+): { minLat: number; minLon: number; maxLat: number; maxLon: number } | null {
+  if (ids.length === 0) return null;
+  const row = db
+    .select({
+      minLat: sql<number | null>`min(${trackPoints.lat})`,
+      minLon: sql<number | null>`min(${trackPoints.lon})`,
+      maxLat: sql<number | null>`max(${trackPoints.lat})`,
+      maxLon: sql<number | null>`max(${trackPoints.lon})`,
+    })
+    .from(trackPoints)
+    .where(inArray(trackPoints.trackId, [...ids]))
+    .get();
+  if (row === undefined || row.minLat === null || row.minLon === null || row.maxLat === null || row.maxLon === null) return null;
+  return { minLat: row.minLat, minLon: row.minLon, maxLat: row.maxLat, maxLon: row.maxLon };
+}
+
 export function trackBoundsForTrip(
   db: Db,
   tripId: string,

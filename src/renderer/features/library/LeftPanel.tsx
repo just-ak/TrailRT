@@ -1,6 +1,7 @@
 import { MapPin, MapPinOff, Plus, SlidersHorizontal, Upload } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { LibrarySection, TripSortKey } from "@shared/domain/types";
+import type { TrackArrangement } from "@shared/library/trackGroups";
 import { ContextMenu, type MenuItem } from "../../components/ContextMenu";
 import { IconButton } from "../../components/IconButton";
 import * as actions from "../../lib/actions";
@@ -12,10 +13,11 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
 import { linkFolderToSelectedTrip, linkLooseFolder } from "../photos/photoActions";
 import { PhotoViewFilters } from "../photos/PhotoViewFilters";
-import { LibraryList, SearchResults } from "./LibraryList";
+import { compileNamePattern } from "@shared/search/namePattern";
+import { LibraryList, NothingMatches, SearchProblem, SearchResults } from "./LibraryList";
 import { TripPage } from "./TripPage";
 import { today } from "../itinerary/viewModel";
-import { defaultOpen, findTrip, sectionRoot, tripListRoot, tripPageRoot } from "./libraryRoots";
+import { defaultOpen, filterTree, findTrip, sectionRoot, tripListRoot, tripPageRoot } from "./libraryRoots";
 
 /**
  * The left panel: one header row, then the rail's section. Phase 14,
@@ -76,36 +78,134 @@ export function LeftPanel(): ReactNode {
   useEffect(() => offerExpansion(defaultOpen(root)), [root, offerExpansion]);
 
   const searching = search.trim().length > 0;
+  const searchError = useLibraryStore((s) => s.searchError);
+  const scope = useLibraryStore((s) => s.searchScope);
+  // Phase 14 Requirement 20.5: a search narrows the list that is open.
+  const pattern = useMemo(() => (searching ? compileNamePattern(search) : null), [searching, search]);
+  const regex = pattern?.ok === true ? pattern.regex : null;
+  const narrowed = useMemo(() => (regex === null ? null : filterTree(root, regex)), [root, regex]);
+  const tripPage = section === "trips" && openTrip !== null;
+  const here = tripPage ? "this trip" : SECTION_TITLE[section];
 
   return (
     <div className="flex h-full min-w-0 flex-col" data-testid="left-panel">
       <Header />
-      {searching ? (
+      {searching && <SearchScopeSwitch here={here} />}
+      {searching && searchError !== null ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <SearchProblem message={searchError} />
+        </div>
+      ) : searching && scope === "everywhere" ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <SearchResults selectedKey={selectedKey} />
         </div>
-      ) : section === "trips" && openTrip !== null ? (
-        <TripPage trip={openTrip} />
+      ) : tripPage ? (
+        <TripPage trip={openTrip} search={regex} />
       ) : (
         <>
-          <p className="shrink-0 px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
-            {SECTION_TITLE[section]}
-          </p>
+          <div className="flex shrink-0 items-center gap-2 px-3 pt-2 pb-1">
+            <p className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
+              {SECTION_TITLE[section]}
+              {narrowed !== null && <span className="ml-1 font-normal normal-case tracking-normal">· matching</span>}
+            </p>
+            {section === "tracks" && <TrackArrangeControls />}
+          </div>
           {section === "photos" && <PhotoViewFilters depth={-1} />}
-          <LibraryList
-            root={root}
-            label={SECTION_TITLE[section]}
-            emptyText={
-              section === "trips"
-                ? "No trips yet. Add one with the + button, or import a file."
-                : root.hint ?? `No ${SECTION_TITLE[section].toLowerCase()} in the visible trips.`
-            }
-          />
+          {narrowed !== null && narrowed.root.children.length === 0 ? (
+            <NothingMatches where={SECTION_TITLE[section]} />
+          ) : (
+            <LibraryList
+              root={narrowed?.root ?? root}
+              label={SECTION_TITLE[section]}
+              {...(narrowed === null ? {} : { openIds: narrowed.open })}
+              emptyText={
+                section === "trips"
+                  ? "No trips yet. Add one with the + button, or import a file."
+                  : root.hint ?? `No ${SECTION_TITLE[section].toLowerCase()} in the visible trips.`
+              }
+            />
+          )}
         </>
       )}
     </div>
   );
 }
+
+const DIRECTION_LABEL: Record<TrackArrangement, Record<"asc" | "desc", string>> = {
+  name: { asc: "A to Z", desc: "Z to A" },
+  date: { asc: "Oldest first", desc: "Newest first" },
+  distance: { asc: "Shortest first", desc: "Longest first" },
+};
+
+/**
+ * The Tracks section's arrangement (Phase 14 Requirement 22): by name, by
+ * date as a tree of year › month › day, or by distance, and which way.
+ */
+function TrackArrangeControls(): ReactNode {
+  const arrangement = useLibraryStore((s) => s.trackArrangement);
+  const direction = useLibraryStore((s) => s.trackSortDirection);
+  const setArrangement = useLibraryStore((s) => s.setTrackArrangement);
+  const setDirection = useLibraryStore((s) => s.setTrackSortDirection);
+  const next = direction === "asc" ? "desc" : "asc";
+  const control =
+    "rounded border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-1.5 py-0.5 text-[11px] text-[var(--color-text-secondary)] outline-none focus-visible:border-[var(--color-accent)]";
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <select
+        id="trackArrangement"
+        aria-label="Arrange tracks by"
+        value={arrangement}
+        onChange={(event) => setArrangement(event.target.value as TrackArrangement)}
+        className={control}
+      >
+        <option value="name">Name</option>
+        <option value="date">Date</option>
+        <option value="distance">Distance</option>
+      </select>
+      <button
+        type="button"
+        aria-label={`Order: ${DIRECTION_LABEL[arrangement][direction]}. Change to ${DIRECTION_LABEL[arrangement][next]}`}
+        title={DIRECTION_LABEL[arrangement][next]}
+        onClick={() => setDirection(next)}
+        className={control}
+      >
+        {DIRECTION_LABEL[arrangement][direction]}
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Where a search looks (Phase 14 Requirement 20.6): the list that is open,
+ * or the whole library. Shown only while there is search text.
+ */
+function SearchScopeSwitch({ here }: { here: string }): ReactNode {
+  const scope = useLibraryStore((s) => s.searchScope);
+  const setScope = useLibraryStore((s) => s.setSearchScope);
+  const options: { id: "here" | "everywhere"; label: string }[] = [
+    { id: "here", label: `In ${here}` },
+    { id: "everywhere", label: "Everywhere" },
+  ];
+  return (
+    <div role="radiogroup" aria-label="Search in" className="mx-2 mt-1.5 flex shrink-0 rounded-md bg-[var(--color-surface-sunken)] p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          role="radio"
+          aria-checked={scope === option.id}
+          onClick={() => void setScope(option.id)}
+          className={`flex-1 truncate rounded px-2 py-0.5 text-[12px] ${
+            scope === option.id ? "bg-[var(--color-surface)] font-semibold text-[var(--color-text-primary)] shadow-sm" : "text-[var(--color-text-secondary)]"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 
 /** Search, Import, the library options, and More (Requirement 2.3). One row. */
 function Header(): ReactNode {
@@ -154,8 +254,12 @@ function Header(): ReactNode {
         <input
           type="search"
           value={search}
-          placeholder="Search trips and waypoints"
+          // Phase 14 Requirement 20.4: say it takes a pattern.
+          placeholder="Search names (pattern)"
           aria-label="Search trips"
+          aria-description="Searches trip, route and waypoint names. Takes a regular expression, ignoring case, such as ^Day [0-9] or wales|scotland."
+          title={"Searches trip, route and waypoint names.\nTakes a regular expression, ignoring case:\n^Day [0-9]   wales|scotland   20(24|25)"}
+          spellCheck={false}
           onChange={(event) => void setSearch(event.target.value)}
           className="min-w-0 flex-1 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] px-2 py-1 text-[13px] text-[var(--color-text-primary)] outline-none focus:border-[var(--color-accent)]"
         />
@@ -263,7 +367,7 @@ function Options({ onClose }: { onClose: () => void }): ReactNode {
       <div className="flex items-center gap-2">
         {/* Objects are sorted apart from trips: a trip has no distance. */}
         <label htmlFor="objectSortKey" className="w-24">
-          Sort objects by
+          Sort routes by
         </label>
         <select id="objectSortKey" value={objectSortKey} onChange={(e) => setObjectSort(e.target.value as ObjectSortKey)} className={control}>
           <option value="name">Name</option>

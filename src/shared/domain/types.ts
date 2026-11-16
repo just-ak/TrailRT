@@ -120,6 +120,8 @@ export interface TreeNode {
   glyph?: string;
   /** Phase 11: a longer explanation, shown when the row is hovered. */
   hint?: string;
+  /** Phase 14: the row's name in full where it is shown short, such as "May 2026" for May under 2026. */
+  fullName?: string;
   /** Phase 14: a group label in a list (Coming up, Ideas, a year), drawn as a heading. */
   heading?: boolean;
   children: TreeNode[];
@@ -207,10 +209,15 @@ export interface AppSettings {
   tripTab: TripTab;
   backupIntervalHours: number;
   backupRetention: number;
+  /** Phase 14 Requirement 24: the most space backups may use together, in GB. The newest is always kept. */
+  backupMaxGb: number;
   /** Used for route duration estimates. Nothing is estimated without it. */
   planningSpeedKmh: number;
   tripSortKey: TripSortKey;
   tripSortDirection: SortDirection;
+  /** Phase 14 Requirement 22: the Tracks section by name, by date as a tree, or by distance. */
+  trackArrangement: 'name' | 'date' | 'distance';
+  trackSortDirection: SortDirection;
   panelLayout: PanelLayout;
   windowGeometry: WindowGeometry | null;
   mapPosition: MapPosition;

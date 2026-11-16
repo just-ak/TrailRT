@@ -9,6 +9,7 @@ import tripRole from './0007_trip_role.sql?raw';
 import pointStops from './0008_point_stops.sql?raw';
 import routeEntries from './0009_route_entries.sql?raw';
 import dayEntries from './0010_day_entries.sql?raw';
+import sourceFiles from './0011_source_files.sql?raw';
 
 export interface Migration {
   /** Monotonic. Recorded in `schema_migrations` once applied. */
@@ -54,7 +55,13 @@ export const MIGRATIONS: readonly Migration[] = [
   { version: 10, name: '0009_route_entries', sql: routeEntries },
   // Phase 14: a day break as an entry, so days are added and removed. §5.8.
   { version: 11, name: '0010_day_entries', sql: dayEntries },
+  // Each imported file kept once, not once per track read from it. The bytes
+  // move to source_files; track_sources becomes a link. ADR 0025.
+  { version: 12, name: '0011_source_files', sql: sourceFiles },
 ];
+
+/** Migrations that free so much space the file should be compacted after them. */
+export const COMPACT_AFTER: ReadonlySet<number> = new Set([12]);
 
 /** drizzle-kit's statement separator. */
 export const STATEMENT_SEPARATOR = '--> statement-breakpoint';
