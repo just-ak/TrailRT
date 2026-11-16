@@ -143,10 +143,13 @@ export function LibraryList({
   root,
   label,
   emptyText,
+  openIds,
 }: {
   root: TreeNode;
   label: string;
   emptyText?: string;
+  /** Phase 14 Requirement 20.5: rows a search opens so its matches show, beside those the user opened. */
+  openIds?: ReadonlySet<string>;
 }): ReactNode {
   const { tree, loading, error, refresh, toggleExpanded, setExpanded } = useLibraryStore();
   const overview = useLibraryStore((s) => s.overview);
@@ -202,10 +205,10 @@ export function LibraryList({
     // the predicate's identity is stable, so depending on it would never
     // recompute this when a branch opened.
     () =>
-      flattenVisible(root, (path) => path === root.id || expanded.has(path))
+      flattenVisible(root, (path) => path === root.id || expanded.has(path) || openIds?.has(path) === true)
         .filter((row) => row.path !== root.id)
         .map((row) => ({ ...row, depth: row.depth - 1 })),
-    [root, expanded],
+    [root, expanded, openIds],
   );
 
   /**
@@ -1231,6 +1234,32 @@ export function LibraryList({
   );
 }
 
+/** Nothing in the open list matches: say so, and offer the whole library (Requirement 20.7). */
+export function NothingMatches({ where }: { where: string }): ReactNode {
+  const setScope = useLibraryStore((s) => s.setSearchScope);
+  return (
+    <div className="px-3 py-2 text-[12px] text-[var(--color-text-muted)]" data-testid="search-nothing-here">
+      <p>Nothing in {where} matches.</p>
+      <button type="button" className="mt-1 text-[var(--color-accent)] hover:underline" onClick={() => void setScope("everywhere")}>
+        Search everywhere
+      </button>
+    </div>
+  );
+}
+
+/** A search pattern that is not valid, explained (Phase 14 Requirement 20.3). */
+export function SearchProblem({ message }: { message: string }): ReactNode {
+  return (
+    <div role="alert" data-testid="search-error" className="px-3 py-2 text-[12px] text-[var(--color-text-secondary)]">
+      <p className="font-semibold text-[var(--color-danger)]">Not a valid pattern</p>
+      <p className="mt-0.5">{message}.</p>
+      <p className="mt-1 text-[var(--color-text-muted)]">
+        Search takes a regular expression. Put a backslash before ( ) [ ] . * + ? to match it as written.
+      </p>
+    </div>
+  );
+}
+
 /**
  * Flat search results across trips, routes and waypoints (Phase 14
  * Requirement 20). A pattern that is not valid explains itself in place of
@@ -1248,17 +1277,7 @@ export function SearchResults({
   const looseTripId = useLibraryStore((s) => s.looseTripId);
   const select = useSelectionStore((s) => s.select);
 
-  if (error !== null) {
-    return (
-      <div role="alert" data-testid="search-error" className="px-3 py-2 text-[12px] text-[var(--color-text-secondary)]">
-        <p className="font-semibold text-[var(--color-danger)]">Not a valid pattern</p>
-        <p className="mt-0.5">{error}.</p>
-        <p className="mt-1 text-[var(--color-text-muted)]">
-          Search takes a regular expression. Put a backslash before ( ) [ ] . * + ? to match it as written.
-        </p>
-      </div>
-    );
-  }
+  if (error !== null) return <SearchProblem message={error} />;
 
   const total = (trips?.length ?? 0) + (routes?.length ?? 0) + (waypoints?.length ?? 0);
   // ADR 0022: one outside a trip opens its section, never a trip page.

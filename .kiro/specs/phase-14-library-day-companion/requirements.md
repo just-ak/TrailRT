@@ -481,6 +481,24 @@ use regex".
 4. THE search field SHALL say that it takes a pattern, so the behaviour is
    discoverable rather than a surprise.
 
+Criteria 5 to 7 were added the same day, after task 21 was built, from the
+owner's next note: "The search does not appear to be working relevant to the
+section that is open in the menu". Task 21 searched the whole library from
+every section.
+
+5. THE search SHALL narrow the list that is open, in place: the trips in the
+   trip list, the routes, tracks, waypoints, photos or imported data in their
+   sections, and a trip's routes, tracks and waypoints on its page. A group or
+   folder holding a match SHALL open to show it, and one whose own name
+   matches SHALL keep everything in it. The narrowed rows SHALL be ordinary
+   rows: selected, opened and right-clicked as ever.
+6. WHILE there is search text, a switch SHALL offer In the open list or
+   Everywhere. Everywhere SHALL search trips, routes and waypoints across the
+   library as in criterion 1. Clearing the search SHALL return it to the open
+   list.
+7. WHEN nothing in the open list matches, it SHALL say so and offer to search
+   everywhere.
+
 ## Requirement 21: Move to any trip from the right-click menu
 
 Added 16 November 2026 from the owner's feedback: "Right click should be able

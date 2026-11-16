@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 26 here, against the new panels.
+after task 27 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -406,7 +406,28 @@ after task 26 here, against the new panels.
     unit, 186 end-to-end)
   - _Requirements: 21.1–21.4_
 
-- [ ] 23. The day and what is in it
+- [x] 23. Search the list that is open
+  - `filterTree` in `libraryRoots.ts`; `openIds` on `LibraryList`;
+    `searchScope` and `setSearchScope` in `libraryStore`, with requests sent
+    only for Everywhere; the switch, the empty state and `SearchProblem` in
+    `LeftPanel`; a trip's page narrows its objects (design §5.15)
+  - Unit tests: a flat list narrows in place; a group or folder is kept and
+    opened only for a match inside it; a matching one keeps all it holds;
+    nothing matching leaves an empty root; the tree given is unchanged
+  - End-to-end: Routes, Waypoints, the trip list and a trip's page each
+    narrow their own list; nothing here offers everywhere, which finds it;
+    the switch goes both ways and resets when the search is cleared; a bad
+    pattern is explained in both scopes
+  - Done: as above. `libraryRoots.test.ts` covers the flat list, the group
+    and folder kept and opened for a match inside, the matching folder kept
+    whole, the empty root and the unchanged input; `search.spec.ts` narrows
+    Routes, Waypoints, the trip list and a trip's page, offers and runs the
+    search everywhere, resets the switch, and explains `day (` in both
+    scopes; `app.spec.ts` narrows the trip list. `npm run verify` passes
+    (2,097 unit, 190 end-to-end)
+  - _Requirements: 20.5–20.7_
+
+- [ ] 24. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -414,19 +435,19 @@ after task 26 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 24. The left panel as drawn
+- [ ] 25. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 25. The Photos section
+- [ ] 26. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 26. End-to-end and verification pass
+- [ ] 27. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

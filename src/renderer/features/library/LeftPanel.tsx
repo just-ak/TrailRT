@@ -12,10 +12,11 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
 import { linkFolderToSelectedTrip, linkLooseFolder } from "../photos/photoActions";
 import { PhotoViewFilters } from "../photos/PhotoViewFilters";
-import { LibraryList, SearchResults } from "./LibraryList";
+import { compileNamePattern } from "@shared/search/namePattern";
+import { LibraryList, NothingMatches, SearchProblem, SearchResults } from "./LibraryList";
 import { TripPage } from "./TripPage";
 import { today } from "../itinerary/viewModel";
-import { defaultOpen, findTrip, sectionRoot, tripListRoot, tripPageRoot } from "./libraryRoots";
+import { defaultOpen, filterTree, findTrip, sectionRoot, tripListRoot, tripPageRoot } from "./libraryRoots";
 
 /**
  * The left panel: one header row, then the rail's section. Phase 14,
@@ -76,36 +77,87 @@ export function LeftPanel(): ReactNode {
   useEffect(() => offerExpansion(defaultOpen(root)), [root, offerExpansion]);
 
   const searching = search.trim().length > 0;
+  const searchError = useLibraryStore((s) => s.searchError);
+  const scope = useLibraryStore((s) => s.searchScope);
+  // Phase 14 Requirement 20.5: a search narrows the list that is open.
+  const pattern = useMemo(() => (searching ? compileNamePattern(search) : null), [searching, search]);
+  const regex = pattern?.ok === true ? pattern.regex : null;
+  const narrowed = useMemo(() => (regex === null ? null : filterTree(root, regex)), [root, regex]);
+  const tripPage = section === "trips" && openTrip !== null;
+  const here = tripPage ? "this trip" : SECTION_TITLE[section];
 
   return (
     <div className="flex h-full min-w-0 flex-col" data-testid="left-panel">
       <Header />
-      {searching ? (
+      {searching && <SearchScopeSwitch here={here} />}
+      {searching && searchError !== null ? (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <SearchProblem message={searchError} />
+        </div>
+      ) : searching && scope === "everywhere" ? (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <SearchResults selectedKey={selectedKey} />
         </div>
-      ) : section === "trips" && openTrip !== null ? (
-        <TripPage trip={openTrip} />
+      ) : tripPage ? (
+        <TripPage trip={openTrip} search={regex} />
       ) : (
         <>
           <p className="shrink-0 px-3 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
             {SECTION_TITLE[section]}
+            {narrowed !== null && <span className="ml-1 font-normal normal-case tracking-normal">· matching</span>}
           </p>
           {section === "photos" && <PhotoViewFilters depth={-1} />}
-          <LibraryList
-            root={root}
-            label={SECTION_TITLE[section]}
-            emptyText={
-              section === "trips"
-                ? "No trips yet. Add one with the + button, or import a file."
-                : root.hint ?? `No ${SECTION_TITLE[section].toLowerCase()} in the visible trips.`
-            }
-          />
+          {narrowed !== null && narrowed.root.children.length === 0 ? (
+            <NothingMatches where={SECTION_TITLE[section]} />
+          ) : (
+            <LibraryList
+              root={narrowed?.root ?? root}
+              label={SECTION_TITLE[section]}
+              {...(narrowed === null ? {} : { openIds: narrowed.open })}
+              emptyText={
+                section === "trips"
+                  ? "No trips yet. Add one with the + button, or import a file."
+                  : root.hint ?? `No ${SECTION_TITLE[section].toLowerCase()} in the visible trips.`
+              }
+            />
+          )}
         </>
       )}
     </div>
   );
 }
+
+/**
+ * Where a search looks (Phase 14 Requirement 20.6): the list that is open,
+ * or the whole library. Shown only while there is search text.
+ */
+function SearchScopeSwitch({ here }: { here: string }): ReactNode {
+  const scope = useLibraryStore((s) => s.searchScope);
+  const setScope = useLibraryStore((s) => s.setSearchScope);
+  const options: { id: "here" | "everywhere"; label: string }[] = [
+    { id: "here", label: `In ${here}` },
+    { id: "everywhere", label: "Everywhere" },
+  ];
+  return (
+    <div role="radiogroup" aria-label="Search in" className="mx-2 mt-1.5 flex shrink-0 rounded-md bg-[var(--color-surface-sunken)] p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          role="radio"
+          aria-checked={scope === option.id}
+          onClick={() => void setScope(option.id)}
+          className={`flex-1 truncate rounded px-2 py-0.5 text-[12px] ${
+            scope === option.id ? "bg-[var(--color-surface)] font-semibold text-[var(--color-text-primary)] shadow-sm" : "text-[var(--color-text-secondary)]"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 
 /** Search, Import, the library options, and More (Requirement 2.3). One row. */
 function Header(): ReactNode {

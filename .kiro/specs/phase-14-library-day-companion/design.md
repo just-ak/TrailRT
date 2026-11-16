@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 25).
+  library's tens of thousands, which is the Photos section's case (task 26).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -688,6 +688,34 @@ letter. The text is the user's own and names are at most 200 characters, so
 this is accepted rather than defended against; it is written down so it is
 not rediscovered as a bug.
 
+### 5.15 Search the list that is open (Requirement 20.5–20.7)
+
+**Narrowed in the renderer.** Every list in the left panel is drawn from a
+`TreeNode` root the renderer already holds, so a search here needs no request.
+`filterTree(root, regex)` in `libraryRoots.ts` returns the same root holding
+only matches and the rows that lead to them, with the ids of those rows to
+open and a count of matched objects. A row whose own name matches keeps all
+it holds, closed; a row kept for a match inside it is opened. The root keeps
+its id, so the list keeps its behaviour (the trip list's flow, drag, menus).
+Tracks become searchable this way, though task 21 gave them no channel.
+
+**`LibraryList` takes `openIds`.** A row is open when the user opened it or
+the search opened it. The search's set is not written into the user's own
+expansion state, so clearing the search leaves the tree as it was.
+
+**Where it applies.** `LeftPanel` compiles the text with `compileNamePattern`
+and narrows its `root`. On a trip's page, `TripPage` takes the pattern and
+shows that trip's objects root narrowed, whichever tab was open, because day
+cards and photos are not rows; the tabs return when the search is cleared.
+
+**The switch.** `libraryStore.searchScope` is `here` or `everywhere`, shown
+as a two-way switch under the field while there is text ("In Routes", "In
+this trip", "Everywhere"). Only `everywhere` sends the three `*:search`
+requests of §5.13, and shows `SearchResults`. Clearing the text resets the
+scope to `here`. An empty narrowed list says "Nothing in Routes matches." with
+a Search everywhere button. A bad pattern is explained by one `SearchProblem`
+in either scope.
+
 ### 5.14 Move to any trip from the right-click menu (Requirement 21)
 
 `TripPickerDialog` in `features/library/` takes the destinations, a title and
@@ -713,7 +741,7 @@ photos' tens of thousands.
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 26).
+  checklist (task 27).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

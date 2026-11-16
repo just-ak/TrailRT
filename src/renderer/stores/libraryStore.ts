@@ -56,6 +56,12 @@ interface LibraryState {
   waypointResults: WaypointWithTrip[] | null;
   /** Why the search text is not a valid pattern, or null when it is. */
   searchError: string | null;
+  /**
+   * Phase 14 Requirement 20.5–20.6: a search narrows the list that is open
+   * ('here'), or looks across the whole library ('everywhere'). Clearing the
+   * search returns it to 'here'.
+   */
+  searchScope: SearchScope;
 
   hydrate(settings: AppSettings): void;
   refresh(): Promise<void>;
@@ -69,7 +75,10 @@ interface LibraryState {
   /** Opens these rows the first time they appear; later collapsing is respected. */
   offerExpansion(ids: readonly string[]): void;
   setSearch(query: string): Promise<void>;
+  setSearchScope(scope: SearchScope): Promise<void>;
 }
+
+export type SearchScope = 'here' | 'everywhere';
 
 /** A year, or photos with no date; and a trip. Absent means "all". */
 export interface PhotoFilter {
@@ -113,6 +122,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   routeResults: null,
   waypointResults: null,
   searchError: null,
+  searchScope: 'here',
 
   hydrate: (settings) => {
     set({
@@ -222,7 +232,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     // cannot land under an empty or invalid one.
     const seq = ++searchSeq;
     if (trimmed.length === 0) {
-      set({ searchResults: null, routeResults: null, waypointResults: null, searchError: null });
+      set({ searchResults: null, routeResults: null, waypointResults: null, searchError: null, searchScope: 'here' });
       return;
     }
     // Phase 14 Requirement 20.3: a bad pattern, often a half-typed one, says
@@ -232,6 +242,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       set({ searchResults: [], routeResults: [], waypointResults: [], searchError: compiled.message });
       return;
     }
+    set({ searchError: null });
+    // The open list is narrowed in the renderer from what it already holds;
+    // only a search everywhere asks the main process.
+    if (get().searchScope !== 'everywhere') return;
     const [trips, routes, waypoints] = await Promise.all([
       callOr(api().trips.search({ query: trimmed }), []),
       callOr(api().routes.search({ query: trimmed }), []),
@@ -240,5 +254,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     if (seq === searchSeq) {
       set({ searchResults: trips, routeResults: routes, waypointResults: waypoints, searchError: null });
     }
+  },
+
+  setSearchScope: async (searchScope) => {
+    set({ searchScope });
+    await get().setSearch(get().search);
   },
 }));
