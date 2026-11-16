@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TrailRT — Route planning for the Mac, offline</title>
+  <meta name="description" content="Plan rides and road trips on your Mac. Road routing built in, elevation and twistiness profiles, places along the way, and your photos on the map. Free, private, no account.">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="TrailRT — Route planning for the Mac, offline">
+  <meta property="og:description" content="Road routing built in. Elevation and twistiness. Places along the way. Free, private, no account.">
+  <meta property="og:image" content="https://trailrt.pages.dev/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="TrailRT home">
+      <img src="icon.svg" alt="" width="32" height="32">
+      <span>TrailRT</span>
+    </a>
+    <nav aria-label="Page">
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href="#support">Support</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">For macOS · Free</p>
+        <h1>Plan the ride.<br><span class="grad">Keep the map.</span></h1>
+        <p class="lede">
+          TrailRT plans routes, rides and road trips on your Mac. Road routing is
+          built in, so once a region is downloaded it works offline. There's no
+          account, no subscription and nothing watching where you go.
+        </p>
+        <div class="cta-row">
+          <span class="store-pill" aria-label="Coming soon to the Mac App Store">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Coming soon to the Mac App Store
+          </span>
+          <a class="btn btn-ghost" href="https://github.com/just-ak/TrailRT/releases/latest">Download the preview</a>
+        </div>
+        <p class="fineprint">Apple silicon (M1 or later) · macOS 13.3 or later · MIT licensed</p>
+      </div>
+
+      <figure class="hero-art" aria-label="Illustration: a route from Macclesfield to Buxton over the Cat and Fiddle, with its elevation profile">
+        <svg viewBox="0 0 640 520" role="img" aria-hidden="true">
+          <defs>
+            <linearGradient id="route" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0" stop-color="#34d399"/>
+              <stop offset="1" stop-color="#60a5fa"/>
+            </linearGradient>
+            <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#34d399" stop-opacity=".45"/>
+              <stop offset="1" stop-color="#34d399" stop-opacity="0"/>
+            </linearGradient>
+            <clipPath id="card"><rect width="640" height="520" rx="22"/></clipPath>
+          </defs>
+          <g clip-path="url(#card)">
+            <rect width="640" height="520" fill="#111c31"/>
+            <!-- terrain -->
+            <g fill="none" stroke="#ffffff" stroke-opacity=".06" stroke-width="2">
+              <path d="M-20 90 C 120 40, 220 150, 360 100 S 560 40, 680 90"/>
+              <path d="M-20 130 C 110 90, 230 190, 370 140 S 560 80, 680 130"/>
+              <path d="M-20 175 C 130 140, 240 230, 380 185 S 560 120, 680 170"/>
+              <path d="M260 210 C 300 190, 360 200, 380 230 S 340 290, 300 280 S 230 240, 260 210 Z"/>
+              <path d="M280 222 C 305 210, 345 216, 356 236 S 330 272, 305 266 S 262 240, 280 222 Z"/>
+              <path d="M-20 300 C 140 270, 250 340, 400 300 S 580 250, 680 290"/>
+              <path d="M-20 345 C 150 320, 260 385, 410 345 S 580 300, 680 335"/>
+            </g>
+            <!-- other roads -->
+            <g fill="none" stroke="#94a3b8" stroke-opacity=".28" stroke-width="3" stroke-linecap="round">
+              <path d="M150 -10 C 170 90, 130 170, 96 250"/>
+              <path d="M-10 318 C 120 296, 210 340, 320 316 S 520 270, 650 292"/>
+              <path d="M548 98 C 520 190, 600 260, 560 380"/>
+              <path d="M96 250 C 70 290, 40 320, -10 340"/>
+            </g>
+            <!-- the route -->
+            <path d="M96 250 C 150 230, 170 180, 220 176 C 270 172, 262 128, 312 120 C 360 112, 372 168, 420 160 C 470 152, 480 104, 548 98"
+                  fill="none" stroke="#0b1220" stroke-width="15" stroke-linecap="round" stroke-opacity=".6"/>
+            <path d="M96 250 C 150 230, 170 180, 220 176 C 270 172, 262 128, 312 120 C 360 112, 372 168, 420 160 C 470 152, 480 104, 548 98"
+                  fill="none" stroke="url(#route)" stroke-width="8" stroke-linecap="round"/>
+            <!-- control points -->
+            <g fill="#0b1220" stroke="#e2e8f0" stroke-width="3">
+              <circle cx="220" cy="176" r="6"/>
+              <circle cx="312" cy="120" r="6"/>
+              <circle cx="420" cy="160" r="6"/>
+            </g>
+            <!-- start / end -->
+            <circle cx="96" cy="250" r="11" fill="#0b1220"/><circle cx="96" cy="250" r="7" fill="#34d399"/>
+            <g transform="translate(548 98)">
+              <path d="M0 -36 C 18 -36, 30 -23, 30 -7 C 30 13, 8 30, 0 42 C -8 30, -30 13, -30 -7 C -30 -23, -18 -36, 0 -36 Z" fill="#f8fafc"/>
+              <circle cx="0" cy="-8" r="11" fill="#1e293b"/>
+            </g>
+            <!-- place along the way -->
+            <g transform="translate(312 120)">
+              <rect x="-16" y="-52" width="32" height="32" rx="9" fill="#1e293b" stroke="#60a5fa" stroke-width="2"/>
+              <path d="M-6 -44 h8 v16 h-8 z M2 -40 l5 3 v8" fill="none" stroke="#e2e8f0" stroke-width="2" stroke-linejoin="round"/>
+            </g>
+            <!-- labels -->
+            <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" fill="#cbd5e1">
+              <text x="96" y="282" text-anchor="middle">Macclesfield</text>
+              <text x="548" y="160" text-anchor="middle">Buxton</text>
+              <text x="312" y="56" text-anchor="middle" fill="#93c5fd" font-size="12">Cat and Fiddle</text>
+            </g>
+
+            <!-- profile panel -->
+            <rect x="0" y="372" width="640" height="148" fill="#0b1220"/>
+            <line x1="0" y1="372" x2="640" y2="372" stroke="#ffffff" stroke-opacity=".08"/>
+            <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="12" fill="#94a3b8">
+              <text x="28" y="398">Elevation</text>
+              <text x="612" y="398" text-anchor="end">Road class · speed limit · twistiness</text>
+            </g>
+            <path d="M28 488 C 80 486, 110 470, 150 452 C 200 430, 230 424, 270 416 C 300 410, 330 412, 360 428 C 400 448, 430 440, 470 446 C 520 452, 560 448, 612 452 L 612 492 L 28 492 Z" fill="url(#fill)"/>
+            <path d="M28 488 C 80 486, 110 470, 150 452 C 200 430, 230 424, 270 416 C 300 410, 330 412, 360 428 C 400 448, 430 440, 470 446 C 520 452, 560 448, 612 452"
+                  fill="none" stroke="#34d399" stroke-width="2.5"/>
+            <g>
+              <rect x="28" y="500" width="150" height="6" rx="3" fill="#60a5fa"/>
+              <rect x="182" y="500" width="250" height="6" rx="3" fill="#f59e0b"/>
+              <rect x="436" y="500" width="176" height="6" rx="3" fill="#60a5fa"/>
+            </g>
+          </g>
+        </svg>
+        <figcaption>Illustration, not to scale</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- Promise strip -->
+  <section class="strip" aria-label="At a glance">
+    <div class="wrap strip-grid">
+      <p><strong>Offline routing</strong><span>Road routing runs on your Mac</span></p>
+      <p><strong>No account</strong><span>Open it and start planning</span></p>
+      <p><strong>No tracking</strong><span>No analytics, no ads</span></p>
+      <p><strong>Free</strong><span>No subscription, no paid tiers</span></p>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="section">
+    <div class="wrap">
+      <h2>Everything a ride needs, on your Mac</h2>
+      <p class="section-lede">
+        Built for people who plan trips on a big screen before they go, and who
+        miss BaseCamp's simplicity but not its age.
+      </p>
+
+      <div class="cards">
+        <article class="card">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19c3-1 3-6 7-7s4-6 7-7"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="5" r="2"/></svg>
+          <h3>Routes that follow the roads</h3>
+          <p>Click where you want to go and the route follows the roads as you build it. You can choose between up to three alternatives, then shape the route by dragging its line or its points. Every change can be undone.</p>
+        </article>
+
+        <article class="card">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20l5-9 4 5 3-4 6 8z"/><path d="M3 20h18"/></svg>
+          <h3>Know the road before you ride it</h3>
+          <p>One profile shows elevation, road class, posted speed limits and a twistiness score along the whole route. Where a limit is assumed rather than posted, the profile labels it as assumed.</p>
+        </article>
+
+        <article class="card">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+          <h3>Road trips, day by day</h3>
+          <p>Plan a trip as dated stops lasting hours or days, and TrailRT plans the drives in between. A day-by-day view shows where you'll be and when.</p>
+        </article>
+
+        <article class="card">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <h3>Fuel, beds and food along the way</h3>
+          <p>Find hotels, fuel, cafés and more along your route, and add them to the trip as stops. Place and UK postcode search work with no connection.</p>
+        </article>
+
+        <article class="card">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-8 8"/></svg>
+          <h3>Your photos, where you took them</h3>
+          <p>Link a trip's folder and its photos appear on the map where they were taken. TrailRT reads the folder and never moves, copies or changes your files.</p>
+        </article>
+
+        <article class="card">
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M9 14h6M9 17h4"/></svg>
+          <h3>Bring the files you have</h3>
+          <p>Imports GPX, KML, KMZ, TCX, FIT and CSV. Exports GPX, KML, KMZ and CSV. Imported tracks are kept exactly as recorded, never quietly smoothed or resampled.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Maps band -->
+  <section class="band">
+    <div class="wrap band-grid">
+      <div>
+        <h2>Download a region once. Route it anywhere, offline.</h2>
+        <p>
+          The routing engine is built into the app. In the UK, pick the counties
+          you ride in from a map. Elsewhere, choose a published region that
+          covers where you're going. TrailRT downloads OpenStreetMap data for
+          those regions and builds the routing graph on your Mac. After that,
+          routing works without a connection.
+        </p>
+      </div>
+      <ul class="ticks">
+        <li>Several neighbouring regions combine into one routing graph</li>
+        <li>Terrain heights download with the region</li>
+        <li>OpenStreetMap and OpenTopoMap base maps</li>
+        <li>Send a destination to Waze when it's time to go</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Good to know -->
+  <section class="section">
+    <div class="wrap">
+      <h2>Good to know</h2>
+      <p class="section-lede">What TrailRT doesn't do yet.</p>
+      <dl class="facts">
+        <div><dt>Apple silicon only</dt><dd>Needs an M1 Mac or later, running macOS 13.3 or later. Intel Macs aren't supported.</dd></div>
+        <div><dt>UK first</dt><dd>The county picker and postcode search are UK-only. Routing and places work anywhere a region has been downloaded.</dd></div>
+        <div><dt>Garmin devices</dt><dd>Exchange routes with a Garmin device as GPX files. Sending directly to a device, and reading GDB and IMG files, aren't supported.</dd></div>
+        <div><dt>Map tiles need a connection</dt><dd>The base map is downloaded as you browse. Routing, profiles and search work offline once a region is downloaded.</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Privacy -->
+  <section id="privacy" class="section section-alt">
+    <div class="wrap prose">
+      <h2>Privacy policy</h2>
+      <p class="updated">Last updated 16 November 2026</p>
+
+      <p><strong>TrailRT does not collect any data about you.</strong> There's no account, no analytics, no advertising, no crash reporting and no tracking of any kind. Your trips, routes, tracks, waypoints and settings are stored only on your Mac.</p>
+
+      <h3>What stays on your Mac</h3>
+      <p>Everything you create or import stays in TrailRT's data folder on your Mac. When you link a photo folder, TrailRT reads the photos in place to show them on the map. It doesn't upload, copy or change them.</p>
+
+      <h3>When TrailRT connects to the internet</h3>
+      <p>TrailRT only goes online to fetch map data, and only when you ask for it. Each request goes straight from your Mac to the service named below. Like any web request, it reveals your IP address and what was requested to that service, and that service's own privacy policy applies. Nothing about you or your trips is sent with these requests.</p>
+      <ul>
+        <li><strong>Base map tiles</strong> from OpenStreetMap or OpenTopoMap, whichever you choose, for the area you're viewing.</li>
+        <li><strong>Map regions</strong> from Geofabrik, when you download a region.</li>
+        <li><strong>Terrain heights</strong> from the Terrain Tiles dataset on Amazon Web Services, when you download a region.</li>
+        <li><strong>UK postcode data</strong> from Ordnance Survey, when you turn on postcode search in Settings.</li>
+        <li><strong>A routing server of your own</strong>, only if you set one up in Settings. TrailRT asks your permission first and names the server.</li>
+      </ul>
+      <p>When you send a destination to Waze, TrailRT opens a Waze link containing that destination, and Waze's privacy policy applies from there.</p>
+
+      <h3>This website</h3>
+      <p>This site uses no cookies, analytics or third-party scripts. It's hosted on Cloudflare Pages, which processes standard request logs as the host.</p>
+
+      <h3>Children</h3>
+      <p>TrailRT doesn't knowingly collect data from anyone, including children.</p>
+
+      <h3>Changes</h3>
+      <p>If TrailRT ever starts collecting data, this policy and the App Store privacy details will be updated before the version that does so is released.</p>
+
+      <h3>Contact</h3>
+      <p>Questions about privacy can be raised on the project's <a href="https://github.com/just-ak/TrailRT/issues">issue tracker</a>.</p>
+    </div>
+  </section>
+
+  <!-- Support -->
+  <section id="support" class="section">
+    <div class="wrap prose">
+      <h2>Support</h2>
+      <p>Found a problem or have an idea? Open an issue on <a href="https://github.com/just-ak/TrailRT/issues">GitHub</a> with what you did, what you expected, and your macOS version.</p>
+
+      <details>
+        <summary>Does TrailRT need an internet connection?</summary>
+        <p>Only to download map regions and to show the base map as you browse. Routing, elevation profiles, place search and postcode search all work offline once their data is on your Mac.</p>
+      </details>
+      <details>
+        <summary>Will it work with my Garmin?</summary>
+        <p>Export your route as GPX and copy it to the device, or import it with Garmin's own tools. TrailRT doesn't send routes to a device directly.</p>
+      </details>
+      <details>
+        <summary>Where is my data?</summary>
+        <p>In TrailRT's data folder on your Mac, and nowhere else. TrailRT also keeps its own backups there.</p>
+      </details>
+      <details>
+        <summary>Is it really free?</summary>
+        <p>Yes. No subscription, no in-app purchases, no ads, and no paid features. TrailRT is open source under the MIT licence.</p>
+      </details>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap footer-inner">
+    <div class="brand brand-small">
+      <img src="icon.svg" alt="" width="24" height="24">
+      <span>TrailRT</span>
+    </div>
+    <p>© 2026 TrailRT contributors · <a href="https://github.com/just-ak/TrailRT">Source code</a> · MIT licence</p>
+    <p class="legal">
+      Map data © OpenStreetMap contributors. Garmin and BaseCamp are trademarks of
+      Garmin Ltd. or its subsidiaries. Mac and Mac App Store are trademarks of Apple
+      Inc. TrailRT is not affiliated with or endorsed by Garmin or Apple.
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="t" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#60a5fa"/></linearGradient>
+    <radialGradient id="g1" cx="0.85" cy="0.1" r="0.6"><stop offset="0" stop-color="#60a5fa" stop-opacity=".22"/><stop offset="1" stop-color="#60a5fa" stop-opacity="0"/></radialGradient>
+    <radialGradient id="g2" cx="0.05" cy="0.95" r="0.6"><stop offset="0" stop-color="#34d399" stop-opacity=".16"/><stop offset="1" stop-color="#34d399" stop-opacity="0"/></radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="#0b1220"/>
+  <rect width="1200" height="630" fill="url(#g1)"/>
+  <rect width="1200" height="630" fill="url(#g2)"/>
+  <g fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="3">
+    <path d="M-20 470 C 220 400, 380 540, 640 470 S 1000 380, 1220 440"/>
+    <path d="M-20 540 C 240 480, 420 610, 680 540 S 1020 460, 1220 510"/>
+  </g>
+  <path d="M640 520 C 700 420, 760 430, 800 360 C 840 290, 760 250, 820 180 C 870 120, 980 140, 1040 110" fill="none" stroke="url(#t)" stroke-width="22" stroke-linecap="round"/>
+  <circle cx="640" cy="520" r="20" fill="#0b1220"/><circle cx="640" cy="520" r="13" fill="#34d399"/>
+  <g transform="translate(1060 100)"><path d="M0 -60 C 33 -60, 58 -35, 58 -3 C 58 37, 14 70, 0 92 C -14 70, -58 37, -58 -3 C -58 -35, -33 -60, 0 -60 Z" fill="#f8fafc"/><circle cx="0" cy="-5" r="22" fill="#1e293b"/></g>
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif">
+    <text x="80" y="150" font-size="34" font-weight="700" fill="#e2e8f0">TrailRT</text>
+    <text x="80" y="270" font-size="74" font-weight="800" fill="#ffffff" letter-spacing="-2">Plan the ride.</text>
+    <text x="80" y="356" font-size="74" font-weight="800" fill="url(#t)" letter-spacing="-2">Keep the map.</text>
+    <text x="80" y="430" font-size="28" fill="#a8b3c4">Offline route planning for the Mac. Free, private, no account.</text>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+{
+  "name": "trailrt-website",
+  "private": true,
+  "description": "The TrailRT one-page website, deployed to Cloudflare Pages. Not part of the app.",
+  "license": "MIT",
+  "scripts": {
+    "preview": "npx --yes wrangler@4.163.0 pages dev",
+    "deploy": "npx --yes wrangler@4.163.0 pages deploy"
+  }
+}
