@@ -165,6 +165,8 @@ export const CHANNELS = {
     listAll: 'tracks:listAll',
     get: 'tracks:get',
     geometry: 'tracks:geometry',
+    /** Phase 14 Requirement 23: the box around several tracks, to show them on the map. */
+    bounds: 'tracks:bounds',
     update: 'tracks:update',
     move: 'tracks:move',
     reverse: 'tracks:reverse',

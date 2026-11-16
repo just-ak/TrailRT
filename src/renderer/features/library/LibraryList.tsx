@@ -26,6 +26,7 @@ import {
 import { useUiStore } from "../../stores/uiStore";
 import { TreeRow, type ClickModifiers } from "./TreeRow";
 import { TripPickerDialog } from "./TripPickerDialog";
+import { useMapFocusStore } from "../../stores/mapFocusStore";
 import { useNavStore } from "../../stores/navStore";
 import { OBJECTS_ROOT, PLAN_ROOT, TRIP_LIST_ROOT, TRIP_PAGE_ROOT } from "./libraryRoots";
 import {
@@ -67,6 +68,15 @@ function moveDestinations(
   looseTripId: string | null,
 ): { id: string; name: string }[] {
   return [...(looseTripId === null ? [] : [{ id: looseTripId, name: "Not in a trip" }]), ...overview];
+}
+
+/** The Tracks section's root, from `sectionRoot`. */
+const TRACKS_ROOT = "section:tracks";
+
+/** Every track in a row and under it. */
+function trackIdsIn(node: TreeNode): string[] {
+  if (node.ref?.kind === "track") return [node.ref.id];
+  return node.children.flatMap(trackIdsIn);
 }
 
 /**
@@ -562,6 +572,23 @@ export function LibraryList({
         }
       })();
     };
+
+  // Phase 14 Requirement 23: in the Tracks section, a track's arrow, or a
+  // year's, month's or day's, shows those tracks on the map. A track's also
+  // selects it, as clicking the row does.
+  const showOnMap = (node: TreeNode): { onShow?: () => void; showLabel?: string } => {
+    if (root.id !== TRACKS_ROOT) return {};
+    const ids = trackIdsIn(node);
+    if (ids.length === 0) return {};
+    const shown = node.fullName ?? node.name;
+    return {
+      showLabel: `Show ${shown} on the map`,
+      onShow: () => {
+        if (node.ref?.kind === "track") void select(node.ref);
+        void useMapFocusStore.getState().showTracks(ids, shown);
+      },
+    };
+  };
 
   // -------------------------------------------------------- context menu
 
@@ -1086,6 +1113,7 @@ export function LibraryList({
         {...(isTripList && row.ref?.kind === "trip"
           ? { onOpen: () => useNavStore.getState().openTrip(row.node.ref?.id ?? "") }
           : {})}
+        {...showOnMap(row.node)}
         onFocusRow={() => setFocusPath(row.path)}
         onSelect={(modifiers) => handleRowClick(row.node, modifiers)}
         onContextMenu={(event) => {

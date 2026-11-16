@@ -172,6 +172,7 @@ const api: TrailRtApi = {
     listForTrip: (req) => call(CHANNELS.tracks.listForTrip, req),
     listAll: () => call(CHANNELS.tracks.listAll),
     get: (req) => call(CHANNELS.tracks.get, req),
+    bounds: (req) => call(CHANNELS.tracks.bounds, req),
     geometry: (req) => call(CHANNELS.tracks.geometry, req),
     update: (req) => call(CHANNELS.tracks.update, req),
     move: (req) => call(CHANNELS.tracks.move, req),

@@ -810,6 +810,10 @@ export function registerIpcHandlers(): void {
     trackService.get(ctx().handle.db, req.id),
   );
 
+  handle(CHANNELS.tracks.bounds, S.trackBoundsRequest, (req) =>
+    trackService.bounds(ctx().handle.db, req.ids),
+  );
+
   handle(CHANNELS.tracks.geometry, S.trackGeometryRequest, (req) =>
     trackService.geometryFor(ctx().handle.db, req.id, req.zoom),
   );

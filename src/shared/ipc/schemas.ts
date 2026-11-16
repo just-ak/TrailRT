@@ -500,6 +500,9 @@ export const trackWidthSchema = z.number().int().min(1).max(12).nullable();
 export const trackListForTripRequest = z.object({ tripId: idSchema }).strict();
 export const trackGetRequest = z.object({ id: idSchema }).strict();
 
+/** Phase 14 Requirement 23: the box around tracks shown on the map together, such as a year's. */
+export const trackBoundsRequest = z.object({ ids: z.array(idSchema).min(1).max(5000) }).strict();
+
 /**
  * Geometry for the map.
  *

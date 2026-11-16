@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 27).
+  library's tens of thousands, which is the Photos section's case (task 29).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -738,6 +738,29 @@ its first month and that month's days carry `defaultExpanded`, which
 `offerExpansion` honours once. A track's row reads its local start time and
 its trip.
 
+### 5.17 Dates from names, and tracks on the map (Requirements 22.7, 23)
+
+**Dates from names.** `dateFromName` in `shared/library/nameDate.ts` tries
+readers in order: year first, a named month after the day, a named month
+before it, then all-number dates day first with month first only when day
+first is impossible, then `yyyymmdd`. Each reader refuses a day the calendar
+does not have; a digit next to a match blocks it, so "Track 123456" and "Lap
+12-14" are not dates. `arrangeTracks` uses it only for a track with no
+`startedAt`, puts it under that day after the recorded tracks, and gives the
+row "date from name" and a hint naming the text read. Nothing is written.
+
+**The arrow.** `TreeRow` takes `onShow` and `showLabel`, drawn like the trip
+list's open arrow but visible on hover and focus as well as when selected,
+because a heading cannot be selected. `LibraryList` gives it to every row in
+the Tracks section that holds a track, collecting the ids beneath it; group
+rows carry `fullName` ("May 2026") for the label and the map.
+
+**On the map.** `mapFocusStore` holds the label, the tracks' metadata from
+`tracks:listAll` and their box from the new `tracks:bounds`, a min/max
+aggregate over `track_points` like a trip's. `MapView` draws them beside the
+trip's tracks, de-duplicated, fits once per request, and shows a strip at the
+top right with Clear. Nothing is persisted.
+
 ### 5.14 Move to any trip from the right-click menu (Requirement 21)
 
 `TripPickerDialog` in `features/library/` takes the destinations, a title and
@@ -763,7 +786,7 @@ photos' tens of thousands.
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 28).
+  checklist (task 30).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

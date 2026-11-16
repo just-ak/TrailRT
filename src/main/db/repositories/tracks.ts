@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { asc, eq, sql } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 import type { GeometrySource } from '@shared/domain/types';
 import type { Db } from '../client';
 import { encodeMetadata } from '../metadata';
@@ -432,6 +432,29 @@ export function trackBounds(
  * join silently compares the wrong columns. Joining the tables it knows about
  * keeps the qualification correct and the query checked.
  */
+/**
+ * The box around a set of tracks, across trips (Phase 14 Requirement 23):
+ * the same aggregate as a trip's, over the tracks asked for.
+ */
+export function trackBoundsForIds(
+  db: Db,
+  ids: readonly string[],
+): { minLat: number; minLon: number; maxLat: number; maxLon: number } | null {
+  if (ids.length === 0) return null;
+  const row = db
+    .select({
+      minLat: sql<number | null>`min(${trackPoints.lat})`,
+      minLon: sql<number | null>`min(${trackPoints.lon})`,
+      maxLat: sql<number | null>`max(${trackPoints.lat})`,
+      maxLon: sql<number | null>`max(${trackPoints.lon})`,
+    })
+    .from(trackPoints)
+    .where(inArray(trackPoints.trackId, [...ids]))
+    .get();
+  if (row === undefined || row.minLat === null || row.minLon === null || row.maxLat === null || row.maxLon === null) return null;
+  return { minLat: row.minLat, minLon: row.minLon, maxLat: row.maxLat, maxLon: row.maxLon };
+}
+
 export function trackBoundsForTrip(
   db: Db,
   tripId: string,

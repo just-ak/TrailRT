@@ -120,6 +120,8 @@ export interface TreeNode {
   glyph?: string;
   /** Phase 11: a longer explanation, shown when the row is hovered. */
   hint?: string;
+  /** Phase 14: the row's name in full where it is shown short, such as "May 2026" for May under 2026. */
+  fullName?: string;
   /** Phase 14: a group label in a list (Coming up, Ideas, a year), drawn as a heading. */
   heading?: boolean;
   children: TreeNode[];

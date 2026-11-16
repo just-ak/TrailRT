@@ -111,6 +111,54 @@ describe('arrangeTracks by date', () => {
   });
 });
 
+describe('arrangeTracks with dates read from names (Requirement 22.7)', () => {
+  const named: TrackListItem[] = [
+    track('Morning loop', { startedAt: at('2025-05-16T08:10:00Z') }),
+    track('Ride 16-05-25'),
+    track('Dovedale 2025-05-16'),
+    track('Peak loop 3 May 2025'),
+    track('No clock'),
+  ];
+
+  it('places a track with no times under the day in its name, after the recorded ones, marked as such', () => {
+    expect(outline(arrangeTracks(named, options()))).toEqual([
+      '2025 (4 tracks)',
+      '  May (4 tracks)',
+      '    Fri 16 May (3 tracks)',
+      '      Morning loop (09:10 · Peak 2025)',
+      '      Dovedale 2025-05-16 (date from name · Peak 2025)',
+      '      Ride 16-05-25 (date from name · Peak 2025)',
+      '    Sat 3 May (1 track)',
+      '      Peak loop 3 May 2025 (date from name · Peak 2025)',
+      'No date (1 track)',
+      '  No clock (Peak 2025)',
+    ]);
+  });
+
+  it('says which text the date came from', () => {
+    const [year] = arrangeTracks(named, options());
+    const ride = year?.children[0]?.children[0]?.children.find((n) => n.name === 'Ride 16-05-25');
+    expect(ride?.hint).toBe('No times were recorded. Dated from “16-05-25” in its name, read day first.');
+  });
+
+  it('keeps those dated from their names after the recorded ones whichever way the day runs', () => {
+    const [year] = arrangeTracks(named, options({ direction: 'asc' }));
+    const may = year?.children[0];
+    expect(may?.children.map((d) => d.name)).toEqual(['Sat 3 May', 'Fri 16 May']);
+    expect(may?.children[1]?.children[0]?.name).toBe('Morning loop');
+  });
+});
+
+describe('arrangeTracks full names', () => {
+  it('names each heading in full for the map and the arrow', () => {
+    const [year] = arrangeTracks(TRACKS, options());
+    expect(year?.fullName).toBe('2025');
+    expect(year?.children[0]?.fullName).toBe('June 2025');
+    expect(year?.children[0]?.children[0]?.fullName).toBe('Sun 1 June 2025');
+    expect(arrangeTracks(TRACKS, options()).at(-1)?.fullName).toBe('Tracks with no date');
+  });
+});
+
 describe('arrangeTracks as a flat list', () => {
   it('by name, A to Z or Z to A, with items outside a trip first', () => {
     const az = arrangeTracks(TRACKS, options({ arrangement: 'name', direction: 'asc' })).map((n) => n.name);

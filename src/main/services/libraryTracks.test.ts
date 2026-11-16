@@ -8,6 +8,7 @@ import type { ParsedTrackPoint } from '@shared/io/types';
 import { systemZone, utcToWallClock } from '@shared/time/zoned';
 import { createDatabase, type Db, type DbHandle } from '../db/client';
 import * as libraryService from './libraryService';
+import * as trackRepo from '../db/repositories/tracks';
 import * as trackService from './trackService';
 import * as tripService from './tripService';
 
@@ -101,5 +102,22 @@ describe('the Tracks section by date', () => {
     const byDistance = tracksView({ includeArchived: true, trackArrangement: 'distance', trackSortDirection: 'desc' }).children;
     expect(byDistance.at(-1)?.name).toBe('Far away');
     expect(byDistance[0]?.detail).toMatch(/km · Peak 2025$/);
+  });
+});
+
+describe('the box around several tracks (Requirement 23)', () => {
+  it('spans every point of the tracks asked for, and nothing else', () => {
+    newTrack('A', [point(BUXTON, null), point(LEEK, null)]);
+    newTrack('B', [point({ lat: 0, lon: 0 }, null), point({ lat: 0.5, lon: 0.5 }, null)]);
+    const ids = trackService.listAll(db).map((t) => [t.name, t.id] as const);
+    const id = (name: string): string => ids.find(([n]) => n === name)?.[1] ?? '';
+    expect(trackRepo.trackBoundsForIds(db, [id('A')])).toEqual({
+      minLat: Math.min(BUXTON.lat, LEEK.lat),
+      maxLat: Math.max(BUXTON.lat, LEEK.lat),
+      minLon: Math.min(BUXTON.lon, LEEK.lon),
+      maxLon: Math.max(BUXTON.lon, LEEK.lon),
+    });
+    expect(trackRepo.trackBoundsForIds(db, [id('A'), id('B')])).toMatchObject({ minLat: 0, minLon: Math.min(BUXTON.lon, LEEK.lon), maxLon: 0.5 });
+    expect(trackRepo.trackBoundsForIds(db, [])).toBeNull();
   });
 });

@@ -541,6 +541,35 @@ be sortable/group by either name or date year/month/day. (Tree Style)".
 6. THE search (Requirement 20.5) SHALL narrow the tree, opening the way to a
    match.
 
+Criterion 7 was added the same day from the owner's next note: "Tracks that
+don't have a date, most probably have the date in the name, look for
+dd-mm-yy, dd-day-yyyy etc." It amends criterion 4.
+
+7. A TRACK with no times whose name holds a date (16-05-25, 16/05/2025,
+   16 May 2025, 16th-May-25, 2025-05-16, 20250516, May 16, 2025) SHALL be
+   placed under that day, after the day's recorded tracks, marked as dated
+   from its name and saying which text was read. Numbers SHALL be read day
+   first; month first only where day first is not a date. The date SHALL NOT
+   be written into the track, whose times stay missing. A track with neither
+   stays under No date.
+
+## Requirement 23: Show tracks on the map from the list
+
+Added 16 November 2026 from the owner's feedback: "Tracks when clicking on a
+single track, or a year/month/day should be shown on the map when clicking on
+the detail arrow (which we don't have yet)".
+
+1. IN the Tracks section, every track row and every year, month and day row
+   SHALL have an arrow that shows those tracks on the map and fits the map to
+   them. It SHALL appear on hover and focus, and stay while a track's row is
+   selected.
+2. THE tracks SHALL be shown whichever trips they belong to, beside what the
+   map already shows, and even with the Tracks layer hidden, since they were
+   asked for.
+3. THE map SHALL say what it is showing ("May 2026 · 3 tracks") with a way to
+   clear it. A new request SHALL replace the last.
+4. A TRACK's arrow SHALL also select the track, as clicking its row does.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its

@@ -1,4 +1,5 @@
 import type {
+  Bounds,
   AppSettings,
   BatchAssessment,
   BatchOutcome,
@@ -288,6 +289,7 @@ export interface TrailRtApi {
     ): Promise<Result<Track[]>>;
     listAll(): Promise<Result<TrackWithTrip[]>>;
     get(req: Req<typeof S.trackGetRequest>): Promise<Result<TrackWithPoints>>;
+    bounds(req: Req<typeof S.trackBoundsRequest>): Promise<Result<Bounds | null>>;
     /** Simplified or exact, depending on zoom. The response says which. */
     geometry(
       req: Req<typeof S.trackGeometryRequest>,

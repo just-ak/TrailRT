@@ -25,6 +25,7 @@ import { api, callOr, describeError } from "../../lib/client";
 import * as actions from "../../lib/actions";
 import { useEditorStore } from "../../stores/editorStore";
 import { useGeometryStore } from "../../stores/geometryStore";
+import { useMapFocusStore } from "../../stores/mapFocusStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
@@ -259,9 +260,23 @@ export function MapView(): ReactNode {
   const visibleRoutes = visibility.routes
     ? (geometry?.routes ?? NO_ROUTES)
     : NO_ROUTES;
-  const visibleTracks = visibility.tracks
+  const tripTracks = visibility.tracks
     ? (geometry?.tracks ?? NO_TRACKS)
     : NO_TRACKS;
+  // Phase 14 Requirement 23: tracks asked for by their arrow are drawn beside
+  // the open trip's, even with the Tracks layer off, because they were asked for.
+  const focus = useMapFocusStore((s) => s.focus);
+  const fitSeq = useMapFocusStore((s) => s.fitSeq);
+  const visibleTracks = useMemo(() => {
+    if (focus === null || focus.tracks.length === 0) return tripTracks;
+    const ids = new Set(tripTracks.map((t) => t.id));
+    return [...tripTracks, ...focus.tracks.filter((t) => !ids.has(t.id))];
+  }, [tripTracks, focus]);
+  useEffect(() => {
+    if (fitSeq === 0) return;
+    const shown = useMapFocusStore.getState().focus;
+    if (shown !== null && !fitTo(shown.bounds)) showToast("Those tracks have no points to show.", "error");
+  }, [fitSeq, showToast]);
   const visibleWaypoints = visibility.waypoints
     ? (geometry?.waypoints ?? NO_WAYPOINTS)
     : NO_WAYPOINTS;
@@ -1361,6 +1376,26 @@ export function MapView(): ReactNode {
         >
           The custom tile source has no URL yet, so no map tiles are being
           drawn. Add one in Settings, or pick a different base map.
+        </div>
+      )}
+
+      {focus !== null && (
+        <div
+          role="status"
+          data-testid="map-focus"
+          className="absolute top-3 right-16 z-[500] flex max-w-[50%] items-center gap-2 rounded-md border border-[var(--color-border-subtle)] bg-[var(--color-surface)] py-1 pr-1 pl-3 text-[12px] text-[var(--color-text-secondary)] shadow-md"
+        >
+          <span className="truncate">
+            On the map: <span className="font-semibold text-[var(--color-text-primary)]">{focus.label}</span>
+            {focus.tracks.length > 1 && ` · ${focus.tracks.length} tracks`}
+          </span>
+          <button
+            type="button"
+            onClick={() => useMapFocusStore.getState().clear()}
+            className="shrink-0 rounded px-2 py-0.5 text-[12px] text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)]"
+          >
+            Clear
+          </button>
         </div>
       )}
 

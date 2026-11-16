@@ -1,4 +1,7 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { ASHBOURNE, LEEK } from '@fixtures/places';
 import { expect, test, type Page } from '@playwright/test';
 import { cleanup, close, launch, makeUserDataDir, type Harness } from './helpers';
 
@@ -9,7 +12,9 @@ import { cleanup, close, launch, makeUserDataDir, type Harness } from './helpers
  *
  * The fixtures: Peak District ride (16 May 2026, Buxton), Legacy Track
  * (2 May 2026, Zürich), Extended Track (2 September 2026) and Untimed Track,
- * which has no times at all.
+ * which has no times at all. Dovedale 16-05-26 is written here: no times, but
+ * a date in its name (Requirement 22.7). Tasks 25 and 26 add it and the
+ * arrows that show tracks on the map (Requirement 23).
  */
 
 const FIXTURES = resolve('test-data');
@@ -22,8 +27,16 @@ const FILES = [
 
 let userDataDir: string;
 let harness: Harness;
+let scratch: string;
 
 test.beforeAll(async () => {
+  scratch = mkdtempSync(join(tmpdir(), 'trailrt-named-'));
+  const named = join(scratch, 'dovedale.gpx');
+  writeFileSync(
+    named,
+    `<?xml version="1.0"?><gpx version="1.1" creator="TrailRT tests" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Dovedale 16-05-26</name><trkseg><trkpt lat="${LEEK.lat}" lon="${LEEK.lon}"></trkpt><trkpt lat="${ASHBOURNE.lat}" lon="${ASHBOURNE.lon}"></trkpt></trkseg></trk></gpx>`,
+  );
+  FILES.push(named);
   userDataDir = makeUserDataDir();
   harness = await launch(userDataDir);
   const { app, page } = harness;
@@ -41,6 +54,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await close(harness);
   cleanup(userDataDir);
+  rmSync(scratch, { recursive: true, force: true });
 });
 
 async function showTracks(page: Page): Promise<void> {
@@ -70,7 +84,7 @@ test('starts as a flat list by name, A to Z', async () => {
   await expect(arrange(page)).toHaveValue('name');
   await expect(order(page)).toHaveText('A to Z');
   await expect(row(page, /Extended Track/)).toBeVisible();
-  expect(await rowNames(page)).toEqual(['Extended Track', 'Legacy Track', 'Peak District ride', 'Untimed Track']);
+  expect(await rowNames(page)).toEqual(['Dovedale 16-05-26', 'Extended Track', 'Legacy Track', 'Peak District ride', 'Untimed Track']);
 });
 
 test('by date: year › month › day, newest first, the latest month open, undated last', async () => {
@@ -138,6 +152,44 @@ test('by distance, longest first, with each length shown', async () => {
   await expect(order(page)).toHaveText('Longest first');
   await expect(row(page, /^2026/)).toHaveCount(0);
   await expect(row(page, /Peak District ride/)).toContainText(/km/);
+});
+
+test('a track with no times but a date in its name sits under that day, after the recorded ones', async () => {
+  const { page } = harness;
+  await showTracks(page);
+  await arrange(page).selectOption('date');
+  await openRow(page, /^May/);
+  await openRow(page, /16 May/);
+  const dovedale = row(page, /Dovedale 16-05-26/);
+  await expect(dovedale).toContainText('date from name');
+  await expect(dovedale).toHaveAttribute('title', /Dated from “16-05-26” in its name/);
+  const names = await rowNames(page);
+  expect(names.indexOf('Peak District ride')).toBeLessThan(names.indexOf('Dovedale 16-05-26'));
+  // Untimed Track has no date anywhere, so it stays under No date.
+  expect(names.at(-1)).toMatch(/^No date/);
+});
+
+test("a month's arrow shows its tracks on the map, until cleared", async () => {
+  const { page } = harness;
+  await showTracks(page);
+  await row(page, /^May/).hover();
+  await page.getByRole('button', { name: 'Show May 2026 on the map' }).click();
+  const strip = page.getByTestId('map-focus');
+  await expect(strip).toContainText('May 2026');
+  // Peak District ride, Legacy Track and Dovedale 16-05-26.
+  await expect(strip).toContainText('3 tracks');
+  await strip.getByRole('button', { name: 'Clear' }).click();
+  await expect(strip).toHaveCount(0);
+});
+
+test("a track's arrow shows it on the map and selects it", async () => {
+  const { page } = harness;
+  await showTracks(page);
+  await row(page, /Extended Track/).hover();
+  await page.getByRole('button', { name: 'Show Extended Track on the map' }).click();
+  await expect(page.getByTestId('map-focus')).toContainText('Extended Track');
+  await expect(page.getByTestId('object-card')).toContainText('Extended Track');
+  await page.getByTestId('map-focus').getByRole('button', { name: 'Clear' }).click();
 });
 
 test('the arrangement and its direction survive a restart', async () => {

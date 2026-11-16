@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 28 here, against the new panels.
+after task 30 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -447,7 +447,36 @@ after task 28 here, against the new panels.
     run verify` passes (2,111 unit, 197 end-to-end)
   - _Requirements: 22.1–22.6_
 
-- [ ] 25. The day and what is in it
+- [x] 25. Dates read from track names
+  - `shared/library/nameDate.ts`: `dateFromName`; `arrangeTracks` places a
+    track with no times under the day in its name, after the recorded ones,
+    with "date from name" and a hint (design §5.17)
+  - Unit tests: each form day first, ambiguous dates never month first,
+    month first only when day first is impossible, named months either
+    side, year first and `yyyymmdd`, the century of a two-digit year, leap
+    days, the text read, and names with no date; the tree places and orders
+    them
+  - End-to-end: a generated track with no times named Dovedale 16-05-26
+    sits under Sat 16 May after the recorded track, with its hint
+  - Done: as above. `nameDate.test.ts` (36 cases) and `trackGroups.test.ts`
+    cover the reading and the placing; `tracks-arrange.spec.ts` imports the
+    generated track. `npm run verify` passes (2,152 unit, 200 end-to-end)
+  - _Requirements: 22.7_
+
+- [x] 26. Show tracks on the map from the list
+  - `onShow` on `TreeRow`; the Tracks section's rows in `LibraryList`;
+    `fullName` on date rows; `tracks:bounds`; `mapFocusStore`; `MapView`
+    draws, fits and labels them (design §5.17)
+  - Unit tests: the box spans exactly the tracks asked for
+  - End-to-end: a month's arrow shows its three tracks with the strip, and
+    Clear removes it; a track's arrow shows and selects it
+  - Done: as above. `libraryTracks.test.ts` checks the box over real points;
+    `tracks-arrange.spec.ts` shows May 2026's three tracks across two trips,
+    clears them, and shows and selects one track. `npm run verify` passes
+    (2,152 unit, 200 end-to-end)
+  - _Requirements: 23.1–23.4_
+
+- [ ] 27. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -455,19 +484,19 @@ after task 28 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 26. The left panel as drawn
+- [ ] 28. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 27. The Photos section
+- [ ] 29. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 28. End-to-end and verification pass
+- [ ] 30. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

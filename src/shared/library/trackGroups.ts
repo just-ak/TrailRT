@@ -1,5 +1,6 @@
 import type { SortDirection, TreeNode } from '../domain/types';
 import { isoWeekday, utcToWallClock } from '../time/zoned';
+import { dateFromName } from './nameDate';
 
 /**
  * The Tracks section's arrangements (Phase 14 Requirement 22): a flat list by
@@ -86,11 +87,14 @@ export function arrangeTracks(items: readonly TrackListItem[], options: ArrangeO
 
 interface Dated {
   item: TrackListItem;
-  at: number;
+  /** The recorded start, or null for a date read from the name. */
+  at: number | null;
   date: string;
-  time: string;
+  time: string | null;
   /** True when dated in the computer's zone because the track's own is unknown. */
   assumed: boolean;
+  /** The text of the name the date was read from (Requirement 22.7). */
+  fromName: string | null;
 }
 
 /**
@@ -105,14 +109,26 @@ function byDate(items: readonly TrackListItem[], options: ArrangeOptions, sign: 
   const undated: TrackListItem[] = [];
   for (const item of items) {
     if (item.startedAt === null) {
-      undated.push(item);
+      // Requirement 22.7: no times, but perhaps a date in the name. Shown as
+      // such, and never written into the track.
+      const named = dateFromName(item.name);
+      if (named === null) undated.push(item);
+      else dated.push({ item, at: null, date: named.date, time: null, assumed: false, fromName: named.text });
       continue;
     }
     const zone = item.zone ?? options.fallbackZone;
     const wall = utcToWallClock(item.startedAt, zone);
-    dated.push({ item, at: item.startedAt, date: wall.date, time: wall.time, assumed: item.zone === null });
+    dated.push({ item, at: item.startedAt, date: wall.date, time: wall.time, assumed: item.zone === null, fromName: null });
   }
-  dated.sort((a, b) => (a.at - b.at) * sign || byName(a.item, b.item));
+  // By day in the chosen direction; within a day, recorded starts in that
+  // direction, then those dated from their names, which have no time, by name.
+  dated.sort(
+    (a, b) =>
+      (a.date < b.date ? -1 : a.date > b.date ? 1 : 0) * sign ||
+      (a.at === null ? 1 : 0) - (b.at === null ? 1 : 0) ||
+      (a.at !== null && b.at !== null ? (a.at - b.at) * sign : 0) ||
+      byName(a.item, b.item),
+  );
 
   const years: TreeNode[] = [];
   // `as`, so the checker does not narrow these to null for the whole loop.
@@ -123,25 +139,30 @@ function byDate(items: readonly TrackListItem[], options: ArrangeOptions, sign: 
     const [y = '', m = '', d = ''] = entry.date.split('-');
     const yearId = `${options.path}/year:${y}`;
     if (year?.id !== yearId) {
-      year = { id: yearId, kind: 'group', name: y, children: [] };
+      year = { id: yearId, kind: 'group', name: y, fullName: y, children: [] };
       years.push(year);
       month = null;
     }
     const monthId = `${yearId}/month:${m}`;
     if (month?.id !== monthId) {
-      month = { id: monthId, kind: 'group', name: MONTHS[Number(m) - 1] ?? m, children: [] };
+      month = { id: monthId, kind: 'group', name: MONTHS[Number(m) - 1] ?? m, fullName: `${MONTHS[Number(m) - 1] ?? m} ${y}`, children: [] };
       year.children.push(month);
       day = null;
     }
     const dayId = `${monthId}/day:${d}`;
     if (day?.id !== dayId) {
-      day = { id: dayId, kind: 'group', name: `${WEEKDAYS[isoWeekday(entry.date)] ?? ''} ${Number(d)} ${MONTHS[Number(m) - 1] ?? m}`.trim(), children: [] };
+      const dayName = `${WEEKDAYS[isoWeekday(entry.date)] ?? ''} ${Number(d)} ${MONTHS[Number(m) - 1] ?? m}`.trim();
+      day = { id: dayId, kind: 'group', name: dayName, fullName: `${dayName} ${y}`, children: [] };
       month.children.push(day);
     }
-    const hint = entry.assumed
-      ? `Dated in this computer's time zone (${options.fallbackZone}): TrailRT does not know the zone where this track starts.`
-      : undefined;
-    day.children.push(trackRow(entry.item, `${dayId}/track:${entry.item.id}`, `${entry.time} · ${entry.item.tripName}`, hint));
+    const hint =
+      entry.fromName !== null
+        ? `No times were recorded. Dated from “${entry.fromName}” in its name, read day first.`
+        : entry.assumed
+          ? `Dated in this computer's time zone (${options.fallbackZone}): TrailRT does not know the zone where this track starts.`
+          : undefined;
+    const when = entry.time ?? 'date from name';
+    day.children.push(trackRow(entry.item, `${dayId}/track:${entry.item.id}`, `${when} · ${entry.item.tripName}`, hint));
   }
 
   // Counts on every heading. The newest (or oldest) year, its first month and
@@ -169,8 +190,9 @@ function byDate(items: readonly TrackListItem[], options: ArrangeOptions, sign: 
       id: `${options.path}/undated`,
       kind: 'group',
       name: 'No date',
+      fullName: 'Tracks with no date',
       detail: count(undated.length),
-      hint: 'These recordings have no times, so they have no date.',
+      hint: 'These recordings have no times, and no date TrailRT can read in their names.',
       children: undated.toSorted(byName).map((item) => trackRow(item, `${options.path}/undated/track:${item.id}`, item.tripName)),
     });
   }

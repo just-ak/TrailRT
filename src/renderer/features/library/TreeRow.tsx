@@ -31,6 +31,14 @@ interface Props {
    * opens rather than expands, and the selected row shows an arrow that opens.
    */
   onOpen?: () => void;
+  /**
+   * Phase 14 Requirement 23: an arrow that shows the row on the map, for a
+   * track or a year, month or day of tracks. Shown on hover and focus, and
+   * always while the row is selected, since a heading cannot be selected.
+   */
+  onShow?: () => void;
+  /** The arrow's accessible name, such as "Show May 2026 on the map". */
+  showLabel?: string;
   onSelect: (modifiers: ClickModifiers) => void;
   onContextMenu: (event: React.MouseEvent) => void;
   onRenameCommit: (name: string) => void;
@@ -102,6 +110,8 @@ export function TreeRow({
   twoLine = false,
   onToggle,
   onOpen,
+  onShow,
+  showLabel,
   onSelect,
   onContextMenu,
   onRenameCommit,
@@ -255,6 +265,25 @@ export function TreeRow({
             </span>
           )}
         </span>
+      )}
+      {onShow !== undefined && !renaming && (
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label={showLabel ?? `Show ${node.name} on the map`}
+          title="Show on the map"
+          data-testid="show-on-map"
+          onClick={(event) => {
+            event.stopPropagation();
+            onShow();
+          }}
+          onDoubleClick={(event) => event.stopPropagation()}
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--color-accent)] hover:bg-[var(--color-surface)] focus-visible:opacity-100 ${
+            selected ? "bg-[var(--color-surface)] opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100"
+          }`}
+        >
+          <ChevronRight size={15} aria-hidden="true" />
+        </button>
       )}
       {onOpen !== undefined && selected && !renaming && (
         <button
