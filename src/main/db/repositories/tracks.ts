@@ -86,6 +86,23 @@ export function listAllTracks(
     .map((r) => ({ ...rowToTrack(r.track), tripName: r.tripName }));
 }
 
+/**
+ * Where a track starts: its first point, by segment then sequence, which the
+ * unique `(track_id, segment_index, seq)` index answers without a scan.
+ * Phase 14 Requirement 22 dates a track in the zone at this point.
+ */
+export function startPoint(db: Db, trackId: string): { lat: number; lon: number } | null {
+  return (
+    db
+      .select({ lat: trackPoints.lat, lon: trackPoints.lon })
+      .from(trackPoints)
+      .where(eq(trackPoints.trackId, trackId))
+      .orderBy(asc(trackPoints.segmentIndex), asc(trackPoints.seq))
+      .limit(1)
+      .get() ?? null
+  );
+}
+
 export function findTrack(db: Db, id: string): TrackRow | null {
   const row = db.select().from(tracks).where(eq(tracks.id, id)).get();
   return row ? rowToTrack(row) : null;

@@ -518,6 +518,29 @@ to pick from a long list of trips."
    (Requirement 9.5). Choosing Move to Trip… SHALL NOT itself move anything:
    the multi-selection's version moved to the first trip in the list.
 
+## Requirement 22: Tracks by name or by date
+
+Added 16 November 2026 from the owner's feedback: "Tracks list, this should
+be sortable/group by either name or date year/month/day. (Tree Style)".
+
+1. THE Tracks section SHALL offer to arrange its tracks by Name, as a flat
+   list, or by Date, as a tree of year, month and day holding the tracks
+   recorded then. Distance, which the library options offered before, SHALL
+   stay as a third arrangement.
+2. EACH arrangement SHALL run either way: A to Z or Z to A, newest or oldest
+   first, longest or shortest first. Choosing Date SHALL start newest first.
+   The arrangement and its direction SHALL survive a restart.
+3. A TRACK SHALL be dated by its first timed point, in the time zone where it
+   starts. Where TrailRT does not know that zone, the computer's SHALL be used
+   and the track SHALL say so (ADR 0019 §3).
+4. A RECORDING with no times SHALL be listed under No date, last, and SHALL
+   NOT be given a date.
+5. EVERY year, month and day SHALL show how many tracks it holds. The newest
+   year, its newest month and that month's days SHALL be open the first time,
+   so the latest tracks show at once; later collapsing is respected.
+6. THE search (Requirement 20.5) SHALL narrow the tree, opening the way to a
+   match.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its

@@ -1,6 +1,7 @@
 import type {
   Folder,
   Route,
+  SortDirection,
   TreeNode,
   TripWithCounts,
   ViewId,
@@ -18,6 +19,9 @@ import * as trackRepo from '../db/repositories/tracks';
 import * as waypointRepo from '../db/repositories/waypoints';
 import { itineraryTreeChildren, tripSummary, type PhotoDays } from '@shared/itinerary/treeSummary';
 import type { ItineraryView } from '@shared/domain/itinerary';
+import { arrangeTracks, type TrackArrangement } from '@shared/library/trackGroups';
+import { resolveTimeZone } from '@shared/time/timeZones';
+import { systemZone } from '@shared/time/zoned';
 import * as folderService from './folderService';
 import * as itineraryService from './itineraryService';
 import * as settingsService from './settingsService';
@@ -299,6 +303,9 @@ export function tree(
   options: {
     includeArchived: boolean;
     sortKey?: ObjectSortKey;
+    /** Phase 14 Requirement 22: the Tracks section by name, date or distance. */
+    trackArrangement?: TrackArrangement;
+    trackSortDirection?: SortDirection;
     /** Phase 11: narrows the Photos view. */
     photos?: PhotoViewFilter;
     /** Phase 11: a linked folder's runtime state, from the scanner. */
@@ -436,18 +443,31 @@ export function tree(
           detail: route.tripName,
         }));
     } else if (view.id === 'tracks') {
-      node.children = allTracks
-        .filter((track) => visibleTripIds.has(track.tripId))
-        .toSorted((a, b) =>
-          looseFirst(a, b) ||
-          (sortKey === 'distance'
-            ? byDistance(a.distanceM, b.distanceM, 1)
-            : a.name.localeCompare(b.name)),
-        )
-        .map((track) => ({
-          ...trackNode(track, 'view:tracks'),
-          detail: track.tripName,
-        }));
+      // Phase 14 Requirement 22: its own arrangement, rather than the
+      // routes' sort. The start point is looked up only to date a track.
+      const arrangement = options.trackArrangement ?? 'name';
+      node.children = arrangeTracks(
+        allTracks
+          .filter((track) => visibleTripIds.has(track.tripId))
+          .map((track) => {
+            const start = arrangement === 'date' && track.startedAt !== null ? trackRepo.startPoint(db, track.id) : null;
+            return {
+              id: track.id,
+              name: track.name,
+              tripName: track.tripName,
+              loose: track.tripId === looseId,
+              distanceM: track.distanceM,
+              startedAt: track.startedAt,
+              zone: start === null ? null : resolveTimeZone(start),
+            };
+          }),
+        {
+          arrangement,
+          direction: options.trackSortDirection ?? 'asc',
+          fallbackZone: systemZone(),
+          path: 'view:tracks',
+        },
+      );
     } else if (view.id === 'waypoints') {
       node.children = allWaypoints
         .filter((waypoint) => visibleTripIds.has(waypoint.tripId))

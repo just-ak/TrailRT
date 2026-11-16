@@ -33,6 +33,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   planningSpeedKmh: 4.5,
   tripSortKey: 'updatedAt',
   tripSortDirection: 'desc',
+  trackArrangement: 'name',
+  trackSortDirection: 'asc',
   panelLayout: {
     libraryWidth: 280,
     propertiesWidth: 320,

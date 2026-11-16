@@ -211,6 +211,9 @@ export interface AppSettings {
   planningSpeedKmh: number;
   tripSortKey: TripSortKey;
   tripSortDirection: SortDirection;
+  /** Phase 14 Requirement 22: the Tracks section by name, by date as a tree, or by distance. */
+  trackArrangement: 'name' | 'date' | 'distance';
+  trackSortDirection: SortDirection;
   panelLayout: PanelLayout;
   windowGeometry: WindowGeometry | null;
   mapPosition: MapPosition;

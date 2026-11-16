@@ -314,6 +314,8 @@ export function registerIpcHandlers(): void {
     libraryService.tree(ctx().handle.db, {
       includeArchived: req.includeArchived,
       sortKey: req.sortKey,
+      trackArrangement: req.trackArrangement,
+      trackSortDirection: req.trackSortDirection,
       ...(req.photos === undefined ? {} : { photos: photoFilter(req.photos) }),
       folderState: (id) => folderScanner()?.runtime(id)?.state ?? null,
     }),

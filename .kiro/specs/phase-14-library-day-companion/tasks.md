@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 27 here, against the new panels.
+after task 28 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -427,7 +427,27 @@ after task 27 here, against the new panels.
     (2,097 unit, 190 end-to-end)
   - _Requirements: 20.5–20.7_
 
-- [ ] 24. The day and what is in it
+- [x] 24. Tracks by name or by date
+  - `shared/library/trackGroups.ts`: `arrangeTracks`; `tracks.startPoint`;
+    `trackArrangement` and `trackSortDirection` in settings, the tree request
+    and `libraryService.tree`; the Arrange control and direction in the
+    Tracks heading; "Sort routes by" in the library options (design §5.16)
+  - Unit tests: year › month › day with counts, either way, No date last;
+    dated in the start's zone, the computer's when unknown with the note;
+    the first year, month and days open; unique ids; name and distance
+    either way; through the database, the start point's zone is used
+  - End-to-end: flat by name; the date tree newest first and turned round;
+    the note on a track in an unknown zone; search inside the tree; by
+    distance; the choice survives a restart
+  - Done: as above. `trackGroups.test.ts` covers the tree, both directions,
+    the start's zone across midnight, the computer's zone with its note, No
+    date, what opens, unique ids, and name and distance either way;
+    `libraryTracks.test.ts` dates real tracks from their first point through
+    the database; `tracks-arrange.spec.ts` covers the seven cases above. `npm
+    run verify` passes (2,111 unit, 197 end-to-end)
+  - _Requirements: 22.1–22.6_
+
+- [ ] 25. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -435,19 +455,19 @@ after task 27 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 25. The left panel as drawn
+- [ ] 26. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 26. The Photos section
+- [ ] 27. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 27. End-to-end and verification pass
+- [ ] 28. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

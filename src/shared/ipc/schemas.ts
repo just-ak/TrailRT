@@ -56,6 +56,9 @@ export const libraryTreeRequest = z
      * objects that have one.
      */
     sortKey: z.enum(['name', 'distance', 'updatedAt']).default('name'),
+    /** Phase 14 Requirement 22: the Tracks section's own arrangement. */
+    trackArrangement: z.enum(['name', 'date', 'distance']).default('name'),
+    trackSortDirection: sortDirectionSchema.default('asc'),
     /** Phase 11: the Photos view's Year and Trip filters (design §8.2). */
     photos: z
       .object({
@@ -288,6 +291,9 @@ export const settingsSetRequest = z.discriminatedUnion('key', [
   z.object({ key: z.literal('librarySection'), value: z.enum(['trips', 'routes', 'tracks', 'waypoints', 'photos', 'imported']) }).strict(),
   z.object({ key: z.literal('openTripId'), value: idSchema.nullable() }).strict(),
   z.object({ key: z.literal('tripTab'), value: z.enum(['plan', 'objects', 'photos']) }).strict(),
+  // Phase 14 Requirement 22: how the Tracks section is arranged.
+  z.object({ key: z.literal('trackArrangement'), value: z.enum(['name', 'date', 'distance']) }).strict(),
+  z.object({ key: z.literal('trackSortDirection'), value: sortDirectionSchema }).strict(),
   z.object({ key: z.literal('routeAlternatives'), value: z.boolean() }).strict(),
   z.object({ key: z.literal('ukDefaultSpeedLimits'), value: z.boolean() }).strict(),
   z

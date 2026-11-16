@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 26).
+  library's tens of thousands, which is the Photos section's case (task 27).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -716,6 +716,28 @@ scope to `here`. An empty narrowed list says "Nothing in Routes matches." with
 a Search everywhere button. A bad pattern is explained by one `SearchProblem`
 in either scope.
 
+### 5.16 Tracks by name or by date (Requirement 22)
+
+**Built in the main process, arranged by a pure function.** The Tracks view
+is part of `libraryService.tree`, so the arrangement travels in the tree
+request (`trackArrangement`, `trackSortDirection`, both persisted settings)
+and `arrangeTracks` in `shared/library/trackGroups.ts` builds the rows. Name
+and Distance stay flat, items outside a trip first (ADR 0022); the Library
+options' "Sort objects by" becomes "Sort routes by".
+
+**Dating a track.** `startedAt` is the first timed point. The zone is
+`resolveTimeZone` at the track's first point, which `tracks.startPoint` reads
+through the `(track_id, segment_index, seq)` index, and only in the Date
+arrangement. An unknown zone falls back to `systemZone()` and the row's hint
+says so, as a stop's times do. A track with no times goes under No date.
+
+**The tree.** Year, month and day are `group` rows with stable ids
+(`view:tracks/year:2026/month:05/day:16`), so expansion survives a refresh, a
+count as detail, and the direction applies at every level. The first year,
+its first month and that month's days carry `defaultExpanded`, which
+`offerExpansion` honours once. A track's row reads its local start time and
+its trip.
+
 ### 5.14 Move to any trip from the right-click menu (Requirement 21)
 
 `TripPickerDialog` in `features/library/` takes the destinations, a title and
@@ -741,7 +763,7 @@ photos' tens of thousands.
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 27).
+  checklist (task 28).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

@@ -9,6 +9,7 @@ import type {
 } from '@shared/domain/types';
 import type { RouteWithTrip, WaypointWithTrip } from '@shared/ipc/api';
 import { compileNamePattern } from '@shared/search/namePattern';
+import type { TrackArrangement } from '@shared/library/trackGroups';
 import type { TripOverview } from '@shared/domain/library';
 
 /** Matches the main process `ObjectSortKey`. Distance arrived with tracks. */
@@ -46,6 +47,9 @@ interface LibraryState {
    * one control that is wrong for half the tree.
    */
   objectSortKey: ObjectSortKey;
+  /** Phase 14 Requirement 22: the Tracks section's arrangement and direction. Persisted. */
+  trackArrangement: TrackArrangement;
+  trackSortDirection: SortDirection;
   /** Phase 11: the Photos view's Year and Trip filters (design §8.2). Not persisted. */
   photoFilter: PhotoFilter;
 
@@ -70,6 +74,9 @@ interface LibraryState {
   isExpanded(id: string): boolean;
   setSort(key: TripSortKey, direction: SortDirection): void;
   setObjectSort(key: ObjectSortKey): void;
+  /** Starts a fresh arrangement in its natural direction: A to Z, newest first, longest first. */
+  setTrackArrangement(arrangement: TrackArrangement): void;
+  setTrackSortDirection(direction: SortDirection): void;
   setShowArchived(show: boolean): void;
   setPhotoFilter(filter: PhotoFilter): void;
   /** Opens these rows the first time they appear; later collapsing is respected. */
@@ -115,6 +122,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
   sortDirection: DEFAULT_SETTINGS.tripSortDirection,
   showArchived: DEFAULT_SETTINGS.showArchivedTrips,
   objectSortKey: 'name',
+  trackArrangement: DEFAULT_SETTINGS.trackArrangement,
+  trackSortDirection: DEFAULT_SETTINGS.trackSortDirection,
   photoFilter: {},
 
   search: '',
@@ -130,6 +139,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
       sortKey: settings.tripSortKey,
       sortDirection: settings.tripSortDirection,
       showArchived: settings.showArchivedTrips,
+      trackArrangement: settings.trackArrangement,
+      trackSortDirection: settings.trackSortDirection,
     });
   },
 
@@ -141,6 +152,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
           api().library.tree({
             includeArchived: get().showArchived,
             sortKey: get().objectSortKey,
+            trackArrangement: get().trackArrangement,
+            trackSortDirection: get().trackSortDirection,
             photos: get().photoFilter,
           }),
         ),
@@ -198,6 +211,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
   setObjectSort: (objectSortKey) => {
     set({ objectSortKey });
+    void get().refresh();
+  },
+
+  setTrackArrangement: (trackArrangement) => {
+    const trackSortDirection: SortDirection = trackArrangement === 'name' ? 'asc' : 'desc';
+    set({ trackArrangement, trackSortDirection });
+    void callOr(api().settings.set({ key: 'trackArrangement', value: trackArrangement }), null);
+    void callOr(api().settings.set({ key: 'trackSortDirection', value: trackSortDirection }), null);
+    void get().refresh();
+  },
+
+  setTrackSortDirection: (trackSortDirection) => {
+    set({ trackSortDirection });
+    void callOr(api().settings.set({ key: 'trackSortDirection', value: trackSortDirection }), null);
     void get().refresh();
   },
 
