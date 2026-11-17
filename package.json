@@ -1,6 +1,6 @@
 {
   "name": "trailrt",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "A modern desktop replacement for Garmin BaseCamp. Local-first trip, route, track and waypoint planning.",
   "license": "MIT",
