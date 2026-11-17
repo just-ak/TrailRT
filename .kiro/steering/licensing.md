@@ -63,11 +63,11 @@ not an inconvenience.
    as the source it was built from. There is no Developer ID yet, so builds are
    **ad-hoc signed** and notarisation is configured but disabled. See ADR 0009,
    and document the Gatekeeper consequence honestly rather than hiding it.
-   `.github/workflows/publish-dmg.yml` publishes the committed DMG as release
-   `v<version>` once `scripts/check-dmg.mjs` has checked it, whenever a DMG
-   under `downloads/` changes on `main`. It does not build the DMG, because
-   the bundled Valhalla is compiled locally (ADR 0013). A published release is
-   never replaced: a new DMG needs a new version in `package.json`.
+   Version numbers come from semantic-release (ADR 0026):
+   `npm run release:prepare` works out the version, packages the DMG and
+   commits both; pushing that commit runs `.github/workflows/release.yml`,
+   which checks the DMG and publishes release `v<version>`. CI does not build
+   the DMG, because the bundled Valhalla is compiled locally (ADR 0013).
 2. **The Mac App Store**, permitted by ADR 0024 and not available yet. Phase 15
    holds the requirements: Apple Developer Program membership, the App
    Sandbox, an `mas` build target, the geos licence question, and App Review.

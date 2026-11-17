@@ -1,0 +1,82 @@
+# Release: semantic-release tags and publishes the DMG committed under
+# downloads/, once it has been checked. The website's download button links to
+# releases/latest. ADR 0026.
+#
+# The version comes from the commit messages since the last tag (fix: a patch,
+# feat: a minor, BREAKING CHANGE: a major), and the DMG is built on the
+# owner's Mac, because the bundled Valhalla is compiled there (ADR 0013). So a
+# release starts locally:
+#
+#   npm run release:prepare   # works out the version, packages the DMG, commits both
+#   git push                  # runs this workflow
+#
+# Here semantic-release works the version out again and refuses to go on if
+# it is not the one the DMG was built as (scripts/release-verify.mjs), checks
+# the DMG on an Apple silicon runner (scripts/check-dmg.mjs), then tags the
+# commit and publishes the release with notes made from the commits, the DMG
+# and its checksum. release.config.mjs holds the rules.
+
+name: Release
+
+on:
+  push:
+    branches: [main]
+    # The release commit adds the DMG; nothing else starts a release.
+    paths: ['downloads/*.dmg']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Work out the version and check the DMG without publishing
+        type: boolean
+        default: false
+
+permissions:
+  # Pushes the tag and creates the release.
+  contents: write
+  # @just-ak/kiro-spec-handbook is installed from GitHub Packages.
+  packages: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    # Explicit, so pipelines fail on any stage (bash -eo pipefail).
+    shell: bash
+
+jobs:
+  release:
+    # Apple silicon: the DMG is arm64 only, and the checks run its tools.
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # semantic-release reads every commit since the last tag.
+          fetch-depth: 0
+          # Only the DMG being released is needed from Git LFS, fetched below.
+          lfs: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          # Sends only the @just-ak scope to GitHub Packages.
+          registry-url: https://npm.pkg.github.com
+          scope: '@just-ak'
+
+      - name: Fetch the DMG for package.json's version from Git LFS
+        run: git lfs pull --include "downloads/TrailRT-$(node -p "require('./package.json').version")-arm64.dmg"
+
+      - name: Install the release tools
+        # --ignore-scripts: semantic-release needs neither Electron's binary
+        # nor the native rebuild that postinstall does.
+        run: npm ci --ignore-scripts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release
+        run: npx --no-install semantic-release ${{ inputs.dry_run && '--dry-run' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

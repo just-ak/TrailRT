@@ -2,6 +2,8 @@ node_modules/
 out/
 dist/
 release/
+# semantic-release stages the DMG and its checksum here for upload (scripts/release-verify.mjs).
+release-assets/
 coverage/
 .vite/
 *.tsbuildinfo

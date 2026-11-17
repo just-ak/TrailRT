@@ -271,20 +271,27 @@ switched on if a Developer ID becomes available. See
 
 ## Publishing a release
 
-1. Set the new version in `package.json`. A published version is never
-   replaced, so every new DMG needs one.
-2. Run `npm run package`. It builds the app, checks that the packaged app can
-   build a routing graph, and copies the DMG into `downloads/`.
-3. Commit the DMG with the source it was built from, and push to `main`.
+Version numbers come from the commit messages, through
+[semantic-release](https://semantic-release.gitbook.io): since the last
+release, a `fix:` makes a patch release, a `feat:` a minor one, and a
+breaking change a major one. `chore:`, `ci:` and `docs:` make none. See
+[ADR 0026](docs/adr/0026-semantic-release.md).
 
-`.github/workflows/publish-dmg.yml` then checks the DMG again on an Apple
-silicon runner (`scripts/check-dmg.mjs`: not an LFS pointer, the right
-version, arm64, a valid signature, and a routing graph built with the shipped
-tools) and publishes it as release `v<version>` with its SHA-256. The
-website's download button links to the latest release. To check a DMG without
-publishing it, run the workflow from the Actions tab with **Dry run** ticked,
-or run `node scripts/check-dmg.mjs downloads/TrailRT-<version>-arm64.dmg`
-locally.
+1. On `main`, clean and up to date, run `npm run release:prepare`. It works
+   out the next version, sets it in `package.json`, runs `npm run package`
+   (which builds the app and checks the packaged app can build a routing
+   graph), and commits the version and the DMG together as
+   `chore(release): <version>`.
+2. Push. `.github/workflows/release.yml` works the version out again on an
+   Apple silicon runner and stops if it differs from the DMG's. It then checks
+   the DMG (`scripts/check-dmg.mjs`: not an LFS pointer, the right version,
+   arm64, a valid signature, a routing graph built with the shipped tools).
+   Last, it tags the commit and publishes the GitHub release, with notes made
+   from the commits, the DMG and its SHA-256.
+
+The website's download button links to the latest release. To see what
+would be released without publishing it, run the workflow from the Actions
+tab with **Dry run** ticked.
 
 ## Known limitations
 

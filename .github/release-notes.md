@@ -13,13 +13,11 @@ Road routing and postcode search work offline once their data is downloaded. The
 
 ## Check the download
 
-SHA-256 of {{FILE}}:
+The SHA-256 of {{FILE}} is in {{FILE}}.sha256, attached below. With both in the same folder:
 
 ```
-{{SHA256}}
+shasum -a 256 -c {{FILE}}.sha256
 ```
-
-With the `.sha256` file in the same folder: `shasum -a 256 -c {{FILE}}.sha256`
 
 ## Source
 
