@@ -239,7 +239,9 @@ and App Review, which is Phase 15.
 TrailRT needs a Mac with Apple silicon (M1 or later) running macOS 13.3 or
 later. Intel Macs are not supported; see ADR 0013.
 
-To download it from GitHub, open
+Download the DMG from the
+[latest release](https://github.com/just-ak/TrailRT/releases/latest), which
+also has its SHA-256. Or open
 [`downloads/TrailRT-0.1.0-arm64.dmg`](downloads/TrailRT-0.1.0-arm64.dmg) and
 click **Download**. The file is stored with Git LFS, so a `git clone` without
 [Git LFS](https://git-lfs.com) installed gets a small text pointer instead of
@@ -266,6 +268,23 @@ Building from source avoids the prompt entirely, since locally built bundles are
 not quarantined. Notarisation is already configured in the build and will be
 switched on if a Developer ID becomes available. See
 [ADR 0009](docs/adr/0009-unsigned-distribution-until-developer-id.md).
+
+## Publishing a release
+
+1. Set the new version in `package.json`. A published version is never
+   replaced, so every new DMG needs one.
+2. Run `npm run package`. It builds the app, checks that the packaged app can
+   build a routing graph, and copies the DMG into `downloads/`.
+3. Commit the DMG with the source it was built from, and push to `main`.
+
+`.github/workflows/publish-dmg.yml` then checks the DMG again on an Apple
+silicon runner (`scripts/check-dmg.mjs`: not an LFS pointer, the right
+version, arm64, a valid signature, and a routing graph built with the shipped
+tools) and publishes it as release `v<version>` with its SHA-256. The
+website's download button links to the latest release. To check a DMG without
+publishing it, run the workflow from the Actions tab with **Dry run** ticked,
+or run `node scripts/check-dmg.mjs downloads/TrailRT-<version>-arm64.dmg`
+locally.
 
 ## Known limitations
 

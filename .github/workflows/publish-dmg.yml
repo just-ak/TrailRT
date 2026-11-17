@@ -1,0 +1,128 @@
+# Publishes the DMG committed under downloads/ as a GitHub release, once it
+# has been checked. The website's download button links to releases/latest.
+#
+# It does not build the DMG. The bundled Valhalla routing engine is compiled
+# from source on the owner's Mac and is not in the repository (ADR 0013), so a
+# release is made with `npm run package`, which builds, verifies and copies
+# the DMG into downloads/, and the DMG is committed with the source it was
+# built from (licensing.md, Distribution channels). This workflow publishes
+# that file and nothing else.
+#
+# A published release is never replaced. Running again for the same DMG does
+# nothing; a different DMG under a version already published fails, and the
+# fix is to bump the version in package.json and package again.
+
+name: Publish the DMG
+
+on:
+  push:
+    branches: [main]
+    paths: ['downloads/*.dmg']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Check the DMG without publishing it
+        type: boolean
+        default: false
+
+permissions:
+  # Creates the tag and the release.
+  contents: write
+
+concurrency:
+  group: publish-dmg
+  cancel-in-progress: false
+
+defaults:
+  run:
+    # Explicit, so pipelines fail on any stage (bash -eo pipefail).
+    shell: bash
+
+jobs:
+  publish:
+    # Apple silicon: the DMG is arm64 only, and the checks run its tools.
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Only the DMG is needed from Git LFS, fetched below.
+          lfs: false
+
+      - name: Fetch the DMG from Git LFS
+        run: git lfs pull --include "downloads/*.dmg"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - name: Find the DMG for this version
+        id: dmg
+        run: |
+          version=$(node -p "require('./package.json').version")
+          file="downloads/TrailRT-${version}-arm64.dmg"
+          if [ ! -f "$file" ]; then
+            echo "::error::package.json says ${version}, but there is no ${file}. Run npm run package and commit the DMG it makes."
+            exit 1
+          fi
+          {
+            echo "version=${version}"
+            echo "file=${file}"
+            echo "name=$(basename "$file")"
+            echo "tag=v${version}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check the DMG
+        id: check
+        run: |
+          node scripts/check-dmg.mjs "${{ steps.dmg.outputs.file }}" "${{ steps.dmg.outputs.version }}" | tee check.log
+          echo "sha256=$(tail -n 1 check.log)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the release
+        # Only from main, and not on a dry run: a run from another branch checks only.
+        if: github.ref == 'refs/heads/main' && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.dmg.outputs.version }}
+          FILE: ${{ steps.dmg.outputs.file }}
+          NAME: ${{ steps.dmg.outputs.name }}
+          TAG: ${{ steps.dmg.outputs.tag }}
+          SHA256: ${{ steps.check.outputs.sha256 }}
+        run: |
+          # The checksum in shasum's format, so `shasum -a 256 -c` checks a download.
+          printf '%s  %s\n' "$SHA256" "$NAME" > "${FILE}.sha256"
+
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            published=$(gh release download "$TAG" --pattern '*.sha256' --output - 2> /dev/null | awk '{print $1}' || true)
+            if [ "$published" = "$SHA256" ]; then
+              echo "${TAG} is already published with this DMG. Nothing to do."
+              echo "### ${TAG} was already published with this DMG" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            echo "::error::${TAG} is already published with a different DMG (or none with a checksum). A published release is never replaced: bump the version in package.json, run npm run package, and commit the new DMG."
+            exit 1
+          fi
+
+          sed -e "s/{{VERSION}}/${VERSION}/g" -e "s/{{SHA256}}/${SHA256}/g" -e "s/{{FILE}}/${NAME}/g" \
+            .github/release-notes.md > release-notes.md
+          gh release create "$TAG" "$FILE" "${FILE}.sha256" \
+            --target "$GITHUB_SHA" \
+            --title "TrailRT ${VERSION}" \
+            --notes-file release-notes.md \
+            --latest
+
+          {
+            echo "### Published TrailRT ${VERSION}"
+            echo
+            echo "- Release: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${TAG}"
+            echo "- ${NAME}, SHA-256 \`${SHA256}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary of a check without publishing
+        if: github.ref != 'refs/heads/main' || inputs.dry_run
+        run: |
+          {
+            echo "### Checked ${{ steps.dmg.outputs.name }}, not published"
+            echo
+            echo "SHA-256 \`${{ steps.check.outputs.sha256 }}\`. Publishing happens only from main, and not on a dry run."
+          } >> "$GITHUB_STEP_SUMMARY"
