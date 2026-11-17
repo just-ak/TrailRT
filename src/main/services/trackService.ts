@@ -192,6 +192,11 @@ export function listForTrip(db: Db, tripId: string): Track[] {
   });
 }
 
+/** Phase 14 Requirement 23: the box around these tracks, or null when they have no points. */
+export function bounds(db: Db, ids: readonly string[]): Bounds | null {
+  return repo.trackBoundsForIds(db, ids);
+}
+
 export function listAll(db: Db): (Track & { tripName: string })[] {
   return repo.listAllTracks(db).map((row) => ({
     ...toTrack(

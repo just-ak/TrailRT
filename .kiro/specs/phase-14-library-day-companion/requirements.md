@@ -463,6 +463,145 @@ circumstances". Asked what it should hide, the owner chose the map.
    without them is never a surprise. The lists in the left panel SHALL be
    unchanged.
 
+## Requirement 20: Search by pattern, across routes too
+
+Added 16 November 2026 from the owner's feedback: "Search trips/routes should
+use regex".
+
+1. THE left panel's search SHALL match the names of trips, routes and
+   waypoints. Routes were not searched before.
+2. THE search text SHALL be a regular expression, matched anywhere in the
+   name and ignoring case, so plain text still finds what it did (`peak`
+   finds "Peak District Weekend"), and `^Day [0-9]`, `wales|scotland` and
+   `20(24|25)` work as patterns. Items outside a trip SHALL be found too and
+   shown as "Not in a trip", never as a trip (Requirement 9.7).
+3. A PATTERN that is not valid, often one half typed such as `(`, SHALL say
+   what is wrong in place of the results, and SHALL NOT show results from
+   an earlier pattern as if they matched this one.
+4. THE search field SHALL say that it takes a pattern, so the behaviour is
+   discoverable rather than a surprise.
+
+Criteria 5 to 7 were added the same day, after task 21 was built, from the
+owner's next note: "The search does not appear to be working relevant to the
+section that is open in the menu". Task 21 searched the whole library from
+every section.
+
+5. THE search SHALL narrow the list that is open, in place: the trips in the
+   trip list, the routes, tracks, waypoints, photos or imported data in their
+   sections, and a trip's routes, tracks and waypoints on its page. A group or
+   folder holding a match SHALL open to show it, and one whose own name
+   matches SHALL keep everything in it. The narrowed rows SHALL be ordinary
+   rows: selected, opened and right-clicked as ever.
+6. WHILE there is search text, a switch SHALL offer In the open list or
+   Everywhere. Everywhere SHALL search trips, routes and waypoints across the
+   library as in criterion 1. Clearing the search SHALL return it to the open
+   list.
+7. WHEN nothing in the open list matches, it SHALL say so and offer to search
+   everywhere.
+
+## Requirement 21: Move to any trip from the right-click menu
+
+Added 16 November 2026 from the owner's feedback: "Right click should be able
+to pick from a long list of trips."
+
+1. A ROUTE, track or waypoint's right-click menu, and a multi-selection's,
+   SHALL offer Move to Trip…, which opens a list of every trip, with "Not in
+   a trip" first. The menu listed only the first eight or nine before, so
+   most trips could not be reached.
+2. THE list SHALL scroll, and SHALL have a filter at the top that takes the
+   same patterns as the search (Requirement 20), with the focus in it when
+   the list opens.
+3. THE list SHALL work from the keyboard: the arrow keys move through the
+   trips shown, Return moves to the one highlighted, and Escape closes the
+   list without moving anything.
+4. A MOVE SHALL be one undo step, through the batch path, as before
+   (Requirement 9.5). Choosing Move to Trip… SHALL NOT itself move anything:
+   the multi-selection's version moved to the first trip in the list.
+
+## Requirement 22: Tracks by name or by date
+
+Added 16 November 2026 from the owner's feedback: "Tracks list, this should
+be sortable/group by either name or date year/month/day. (Tree Style)".
+
+1. THE Tracks section SHALL offer to arrange its tracks by Name, as a flat
+   list, or by Date, as a tree of year, month and day holding the tracks
+   recorded then. Distance, which the library options offered before, SHALL
+   stay as a third arrangement.
+2. EACH arrangement SHALL run either way: A to Z or Z to A, newest or oldest
+   first, longest or shortest first. Choosing Date SHALL start newest first.
+   The arrangement and its direction SHALL survive a restart.
+3. A TRACK SHALL be dated by its first timed point, in the time zone where it
+   starts. Where TrailRT does not know that zone, the computer's SHALL be used
+   and the track SHALL say so (ADR 0019 §3).
+4. A RECORDING with no times SHALL be listed under No date, last, and SHALL
+   NOT be given a date.
+5. EVERY year, month and day SHALL show how many tracks it holds. The newest
+   year, its newest month and that month's days SHALL be open the first time,
+   so the latest tracks show at once; later collapsing is respected.
+6. THE search (Requirement 20.5) SHALL narrow the tree, opening the way to a
+   match.
+
+Criterion 7 was added the same day from the owner's next note: "Tracks that
+don't have a date, most probably have the date in the name, look for
+dd-mm-yy, dd-day-yyyy etc." It amends criterion 4.
+
+7. A TRACK with no times whose name holds a date (16-05-25, 16/05/2025,
+   16 May 2025, 16th-May-25, 2025-05-16, 20250516, May 16, 2025) SHALL be
+   placed under that day, after the day's recorded tracks, marked as dated
+   from its name and saying which text was read. Numbers SHALL be read day
+   first; month first only where day first is not a date. The date SHALL NOT
+   be written into the track, whose times stay missing. A track with neither
+   stays under No date.
+
+## Requirement 23: Show tracks on the map from the list
+
+Added 16 November 2026 from the owner's feedback: "Tracks when clicking on a
+single track, or a year/month/day should be shown on the map when clicking on
+the detail arrow (which we don't have yet)".
+
+1. IN the Tracks section, every track row and every year, month and day row
+   SHALL have an arrow that shows those tracks on the map and fits the map to
+   them. It SHALL appear on hover and focus, and stay while a track's row is
+   selected.
+2. THE tracks SHALL be shown whichever trips they belong to, beside what the
+   map already shows, and even with the Tracks layer hidden, since they were
+   asked for.
+3. THE map SHALL say what it is showing ("May 2026 · 3 tracks") with a way to
+   clear it. A new request SHALL replace the last.
+4. A TRACK's arrow SHALL also select the track, as clicking its row does.
+
+## Requirement 24: A space limit on backups
+
+Added 16 November 2026 from the owner's feedback, after their disk filled:
+"Lets add a max backup space, 2GB as default, make it rolling", and "we need
+to separate user data backup, and offline backup of maps which we shouldn't
+backup". ADR 0025.
+
+1. BACKUPS SHALL be kept within a space limit, 2 GB by default and set in
+   Settings, as well as the existing count. The oldest SHALL be removed first,
+   whichever limit is reached.
+2. THE newest backup SHALL always be kept, even when it alone is over the
+   limit, and Settings SHALL say when that is so.
+3. A BACKUP SHALL NOT be written when it would leave the disk with less than
+   1 GB free; it SHALL say why instead.
+4. A RESTORE's safety copy SHALL NOT remove the backup being restored, and a
+   backup SHALL NOT be removed by its own clean-up.
+5. SETTINGS SHALL show how much space the backups use against the limit, and
+   say what a backup holds: everything the user made, and not map regions,
+   terrain, place and postcode search or photo thumbnails, which are
+   downloaded or rebuilt and are never backed up.
+
+## Requirement 25: Each imported file kept once
+
+Found while measuring the owner's library for Requirement 24. ADR 0025.
+
+1. AN imported file's original bytes SHALL be stored once, however many tracks
+   were read from it, and every track SHALL still reach its original byte for
+   byte.
+2. A file SHALL be removed when the last track read from it is removed.
+3. AN existing library SHALL be upgraded in place: the copies collapsed and the
+   database compacted, with nothing lost.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its
@@ -475,6 +614,8 @@ circumstances". Asked what it should hide, the owner chose the map.
   moves to the trip page's Photos tab and the Photos section.
 - **Phase 2 and 3: every route, track and waypoint belongs to a trip.**
   Requirement 9 lets them stand outside one. ADR 0022.
+- **Phase 3: original files.** Kept once per file rather than once per track
+  (Requirement 25, ADR 0025). What is kept is unchanged.
 - **Phase 11 Requirement 1: a folder is linked to a trip.** A folder can now
   be linked outside any trip too (Requirement 9.2).
 

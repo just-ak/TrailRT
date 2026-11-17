@@ -237,3 +237,38 @@ export function linkedFoldersRoot(trip: TreeNode): TreeNode {
   const group = trip.children.find((c) => c.id.endsWith('/linked-folders'));
   return { id: `folders:${trip.id}`, kind: 'root', name: 'Linked folders', children: group?.children ?? [] };
 }
+
+// ------------------------------------------------------------ search
+
+export interface FilteredTree {
+  /** The same root, holding only what matches and what leads to it. */
+  root: TreeNode;
+  /** Rows kept only because something inside them matched: open them, so the match shows. */
+  open: ReadonlySet<string>;
+  /** Objects and trips whose own name matched. Headings and folders are not counted. */
+  matches: number;
+}
+
+/**
+ * The open list, narrowed to what a search pattern matches (Phase 14
+ * Requirement 20.5). A row whose name matches is kept with everything under
+ * it, closed, so a matching folder or year still holds all its trips. A row
+ * that does not match is kept only for a match inside it, and is opened. The
+ * root is always kept, so the list keeps its identity and behaviour.
+ */
+export function filterTree(root: TreeNode, pattern: RegExp): FilteredTree {
+  const open = new Set<string>();
+  let matches = 0;
+  const walk = (node: TreeNode): TreeNode | null => {
+    if (pattern.test(node.name)) {
+      if (node.ref !== undefined) matches += 1;
+      return node;
+    }
+    const children = node.children.map(walk).filter((c): c is TreeNode => c !== null);
+    if (children.length === 0) return null;
+    open.add(node.id);
+    return { ...node, children };
+  };
+  const children = root.children.map(walk).filter((c): c is TreeNode => c !== null);
+  return { root: { ...root, children }, open, matches };
+}

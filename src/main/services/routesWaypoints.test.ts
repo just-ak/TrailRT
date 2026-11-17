@@ -69,6 +69,30 @@ const newWaypoint = (overrides: Partial<{ name: string; lat: number; lon: number
 // ------------------------------------------------------------------- routes
 
 describe('routeService', () => {
+  it('searches route names by pattern, across trips, with each trip named (Phase 14 Requirement 20)', () => {
+    newRoute([], 'Day 1: Buxton to Leek');
+    newRoute([], 'Day 2: Leek to Ashbourne');
+    newRoute([], 'Cat and Fiddle');
+    const otherTrip = tripService.create(db, { name: 'Other', folderId: null, description: null, notes: null }).result.id;
+    routeService.create(db, { tripId: otherTrip, name: 'Day 3: Home', colour: null, points: [] });
+
+    const found = routeService.search(db, '^day [0-9]:');
+    expect(found.map((r) => [r.name, r.tripName])).toEqual([
+      ['Day 1: Buxton to Leek', 'Trip'],
+      ['Day 2: Leek to Ashbourne', 'Trip'],
+      ['Day 3: Home', 'Other'],
+    ]);
+    expect(routeService.search(db, 'fiddle').map((r) => r.name)).toEqual(['Cat and Fiddle']);
+    expect(routeService.search(db, 'leek$').map((r) => r.name)).toEqual(['Day 1: Buxton to Leek']);
+    expect(routeService.search(db, '')).toEqual([]);
+  });
+
+  it('refuses a pattern that is not valid rather than matching it some other way', () => {
+    newRoute([], 'Route (2)');
+    expect(() => routeService.search(db, '(')).toThrow(/Not a valid search pattern: Unterminated group/);
+    expect(routeService.search(db, '\\(2\\)').map((r) => r.name)).toEqual(['Route (2)']);
+  });
+
   it('creates an empty route, which is valid while being drawn', () => {
     const route = newRoute([]);
     expect(route.pointCount).toBe(0);
@@ -342,6 +366,14 @@ describe('waypointService', () => {
     expect(waypointService.search(db, 'monte')).toHaveLength(1);
     expect(waypointService.search(db, '%').map((w) => w.name)).toEqual(['100% full']);
     expect(waypointService.search(db, '')).toEqual([]);
+  });
+
+  it('searches by pattern (Phase 14 Requirement 20)', () => {
+    newWaypoint({ name: 'Hut 1' });
+    newWaypoint({ name: 'Hut 12' });
+    newWaypoint({ name: 'Fuel at Hut 1' });
+    expect(waypointService.search(db, '^hut [0-9]$').map((w) => w.name)).toEqual(['Hut 1']);
+    expect(waypointService.search(db, '^hut').map((w) => w.name)).toEqual(['Hut 1', 'Hut 12']);
   });
 
   it('drops the group when moved to another trip', () => {

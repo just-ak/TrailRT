@@ -67,6 +67,12 @@ export function listAll(db: Db): RouteWithTrip[] {
   return repo.listAllRoutes(db);
 }
 
+/** Phase 14 Requirement 20: by pattern, across every trip and outside one. */
+export function search(db: Db, pattern: string): RouteWithTrip[] {
+  if (pattern.length === 0) return [];
+  return repo.searchRoutes(db, pattern);
+}
+
 export function get(db: Db, id: string): RouteWithPoints {
   const route = repo.findRouteWithPoints(db, id);
   if (route === null) throw notFound('That route');

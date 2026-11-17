@@ -1,3 +1,4 @@
+import { Map as MapIcon, MapPin, Route as RouteIcon } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -24,6 +25,8 @@ import {
 } from "../../stores/selectionStore";
 import { useUiStore } from "../../stores/uiStore";
 import { TreeRow, type ClickModifiers } from "./TreeRow";
+import { TripPickerDialog } from "./TripPickerDialog";
+import { useMapFocusStore } from "../../stores/mapFocusStore";
 import { useNavStore } from "../../stores/navStore";
 import { OBJECTS_ROOT, PLAN_ROOT, TRIP_LIST_ROOT, TRIP_PAGE_ROOT } from "./libraryRoots";
 import {
@@ -65,6 +68,15 @@ function moveDestinations(
   looseTripId: string | null,
 ): { id: string; name: string }[] {
   return [...(looseTripId === null ? [] : [{ id: looseTripId, name: "Not in a trip" }]), ...overview];
+}
+
+/** The Tracks section's root, from `sectionRoot`. */
+const TRACKS_ROOT = "section:tracks";
+
+/** Every track in a row and under it. */
+function trackIdsIn(node: TreeNode): string[] {
+  if (node.ref?.kind === "track") return [node.ref.id];
+  return node.children.flatMap(trackIdsIn);
 }
 
 /**
@@ -141,10 +153,13 @@ export function LibraryList({
   root,
   label,
   emptyText,
+  openIds,
 }: {
   root: TreeNode;
   label: string;
   emptyText?: string;
+  /** Phase 14 Requirement 20.5: rows a search opens so its matches show, beside those the user opened. */
+  openIds?: ReadonlySet<string>;
 }): ReactNode {
   const { tree, loading, error, refresh, toggleExpanded, setExpanded } = useLibraryStore();
   const overview = useLibraryStore((s) => s.overview);
@@ -170,6 +185,10 @@ export function LibraryList({
     inSelection: boolean;
   } | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
+  /** Phase 14 Requirement 21: what Move to Trip… is moving, while its list is open. */
+  const [movePicker, setMovePicker] = useState<BatchMember[] | null>(null);
+  // Stable: Dialog reopens itself when its onClose changes.
+  const closeMovePicker = useCallback(() => setMovePicker(null), []);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   /** Which row holds the roving tab stop. A path, not a selection key. */
   const [focusPath, setFocusPath] = useState<string | null>(null);
@@ -196,10 +215,10 @@ export function LibraryList({
     // the predicate's identity is stable, so depending on it would never
     // recompute this when a branch opened.
     () =>
-      flattenVisible(root, (path) => path === root.id || expanded.has(path))
+      flattenVisible(root, (path) => path === root.id || expanded.has(path) || openIds?.has(path) === true)
         .filter((row) => row.path !== root.id)
         .map((row) => ({ ...row, depth: row.depth - 1 })),
-    [root, expanded],
+    [root, expanded, openIds],
   );
 
   /**
@@ -554,20 +573,31 @@ export function LibraryList({
       })();
     };
 
+  // Phase 14 Requirement 23: in the Tracks section, a track's arrow, or a
+  // year's, month's or day's, shows those tracks on the map. A track's also
+  // selects it, as clicking the row does.
+  const showOnMap = (node: TreeNode): { onShow?: () => void; showLabel?: string } => {
+    if (root.id !== TRACKS_ROOT) return {};
+    const ids = trackIdsIn(node);
+    if (ids.length === 0) return {};
+    const shown = node.fullName ?? node.name;
+    return {
+      showLabel: `Show ${shown} on the map`,
+      onShow: () => {
+        if (node.ref?.kind === "track") void select(node.ref);
+        void useMapFocusStore.getState().showTracks(ids, shown);
+      },
+    };
+  };
+
   // -------------------------------------------------------- context menu
 
   // Phase 14 Requirement 9.5: one item moves in or out of a trip from its
-  // own menu, through the batch path so it is one undo step.
-  const moveTo = (member: BatchMember): MenuItem[] => {
-    const destinations = moveDestinations(overview, looseTripId);
-    return [
-      { label: "Move to", separatorBefore: true, disabled: true },
-      ...destinations.slice(0, 9).map<MenuItem>((trip) => ({
-        label: `   → ${trip.name}`,
-        onSelect: () => void moveBatchToTrip([member], trip.id),
-      })),
-    ];
-  };
+  // own menu, through the batch path so it is one undo step. Requirement 21:
+  // through a list of every trip, which the menu itself cannot hold.
+  const moveTo = (member: BatchMember): MenuItem[] => [
+    { label: "Move to Trip…", separatorBefore: true, onSelect: () => setMovePicker([member]) },
+  ];
 
   const menuItems = (node: TreeNode, batch: BatchMember[]): MenuItem[] => {
     const ref = node.ref;
@@ -580,9 +610,9 @@ export function LibraryList({
      * multi-object property editing is explicitly out of scope for this phase.
      */
     if (batch.length > 1) {
-      // Every visible trip, from the overview: on a trip page no trip rows are
-      // drawn. ADR 0022: "Not in a trip" comes first.
-      const trips = moveDestinations(overview, looseTripId).map((trip) => ({ node: { name: trip.name, ref: { kind: "trip" as const, id: trip.id } } }));
+      // Every trip, from the overview: on a trip page no trip rows are drawn.
+      // ADR 0022: "Not in a trip" comes first.
+      const destinations = moveDestinations(overview, looseTripId);
       // Requirement 13.5: two routes or waypoints can be joined by a new route,
       // from the first one's end to the second one's start, in list order.
       const [joinFrom, joinTo] = batch;
@@ -609,24 +639,14 @@ export function LibraryList({
         { label: describeSelection(batch), disabled: true },
         ...join,
         {
-          label: "Move to Trip",
+          // Requirement 21: a list of every trip, rather than the first eight
+          // inline. Choosing this moves nothing until a trip is picked.
+          label: "Move to Trip…",
           separatorBefore: true,
-          // A submenu would be better; the menu component is flat, so the
-          // destination list is shown inline and capped to keep it usable.
-          disabled: trips.length === 0,
-          disabledReason: "There are no other trips to move these into.",
-          onSelect: () => {
-            const first = trips[0]?.node.ref?.id;
-            if (first !== undefined) void moveBatchToTrip(batch, first);
-          },
+          disabled: destinations.length === 0,
+          disabledReason: "There are no trips to move these into.",
+          onSelect: () => setMovePicker(batch),
         },
-        ...trips.slice(0, 8).map<MenuItem>((row) => ({
-          label: `   → ${row.node.name}`,
-          onSelect: () => {
-            const tripId = row.node.ref?.id;
-            if (tripId !== undefined) void moveBatchToTrip(batch, tripId);
-          },
-        })),
         {
           label: `Delete ${batch.length} Objects…`,
           danger: true,
@@ -1093,6 +1113,7 @@ export function LibraryList({
         {...(isTripList && row.ref?.kind === "trip"
           ? { onOpen: () => useNavStore.getState().openTrip(row.node.ref?.id ?? "") }
           : {})}
+        {...showOnMap(row.node)}
         onFocusRow={() => setFocusPath(row.path)}
         onSelect={(modifiers) => handleRowClick(row.node, modifiers)}
         onContextMenu={(event) => {
@@ -1224,24 +1245,84 @@ export function LibraryList({
           onClose={() => setMenu(null)}
         />
       )}
+
+      {movePicker !== null && (
+        <TripPickerDialog
+          title={movePicker.length === 1 ? `Move the ${movePicker[0]?.kind ?? "object"} to a trip` : `Move ${describeSelection(movePicker).replace(/ selected$/, "")} to a trip`}
+          destinations={moveDestinations(overview, looseTripId)}
+          onClose={closeMovePicker}
+          onPick={(tripId) => {
+            const members = movePicker;
+            closeMovePicker();
+            void moveBatchToTrip(members, tripId);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-/** Flat search results across trips and waypoints. */
+/** Nothing in the open list matches: say so, and offer the whole library (Requirement 20.7). */
+export function NothingMatches({ where }: { where: string }): ReactNode {
+  const setScope = useLibraryStore((s) => s.setSearchScope);
+  return (
+    <div className="px-3 py-2 text-[12px] text-[var(--color-text-muted)]" data-testid="search-nothing-here">
+      <p>Nothing in {where} matches.</p>
+      <button type="button" className="mt-1 text-[var(--color-accent)] hover:underline" onClick={() => void setScope("everywhere")}>
+        Search everywhere
+      </button>
+    </div>
+  );
+}
+
+/** A search pattern that is not valid, explained (Phase 14 Requirement 20.3). */
+export function SearchProblem({ message }: { message: string }): ReactNode {
+  return (
+    <div role="alert" data-testid="search-error" className="px-3 py-2 text-[12px] text-[var(--color-text-secondary)]">
+      <p className="font-semibold text-[var(--color-danger)]">Not a valid pattern</p>
+      <p className="mt-0.5">{message}.</p>
+      <p className="mt-1 text-[var(--color-text-muted)]">
+        Search takes a regular expression. Put a backslash before ( ) [ ] . * + ? to match it as written.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * Flat search results across trips, routes and waypoints (Phase 14
+ * Requirement 20). A pattern that is not valid explains itself in place of
+ * the count, with no results under it.
+ */
 export function SearchResults({
   selectedKey,
 }: {
   selectedKey: string | null;
 }): ReactNode {
   const trips = useLibraryStore((s) => s.searchResults);
+  const routes = useLibraryStore((s) => s.routeResults);
   const waypoints = useLibraryStore((s) => s.waypointResults);
+  const error = useLibraryStore((s) => s.searchError);
+  const looseTripId = useLibraryStore((s) => s.looseTripId);
   const select = useSelectionStore((s) => s.select);
 
-  const total = (trips?.length ?? 0) + (waypoints?.length ?? 0);
+  if (error !== null) return <SearchProblem message={error} />;
+
+  const total = (trips?.length ?? 0) + (routes?.length ?? 0) + (waypoints?.length ?? 0);
+  // ADR 0022: one outside a trip opens its section, never a trip page.
+  const reveal = (tripId: string, section: "routes" | "waypoints"): void => {
+    void useLibraryStore.getState().setSearch("");
+    if (tripId === looseTripId) useNavStore.getState().setSection(section);
+    else useNavStore.getState().openTrip(tripId);
+  };
+  const tripName = (tripId: string, name: string): string => (tripId === looseTripId ? "Not in a trip" : name);
+  const rowClass = (key: string): string =>
+    `flex w-full min-w-0 items-center gap-1.5 overflow-hidden px-3 py-1 text-left text-[13px] ${
+      selectedKey === key ? "bg-[var(--color-accent)] text-white" : "hover:bg-[var(--color-surface-sunken)]"
+    }`;
+  const iconClass = "shrink-0 opacity-70";
 
   return (
-    <div>
+    <div data-testid="search-results">
       <p className="px-3 py-1 text-[11px] font-semibold tracking-wide text-[var(--color-text-muted)] uppercase">
         {total} match{total === 1 ? "" : "es"}
       </p>
@@ -1255,13 +1336,26 @@ export function SearchResults({
             void useLibraryStore.getState().setSearch("");
             useNavStore.getState().openTrip(trip.id);
           }}
-          className={`block w-full truncate px-3 py-1 text-left text-[13px] ${
-            selectedKey === `trip:${trip.id}`
-              ? "bg-[var(--color-accent)] text-white"
-              : "hover:bg-[var(--color-surface-sunken)]"
-          }`}
+          className={rowClass(`trip:${trip.id}`)}
         >
-          🗺️ {trip.name}
+          <MapIcon size={14} aria-hidden="true" className={iconClass} />
+          <span className="truncate">{trip.name}</span>
+        </button>
+      ))}
+
+      {(routes ?? []).map((route) => (
+        <button
+          key={`route:${route.id}`}
+          type="button"
+          onClick={() => {
+            reveal(route.tripId, "routes");
+            void select({ kind: "route", id: route.id });
+          }}
+          className={rowClass(`route:${route.id}`)}
+        >
+          <RouteIcon size={14} aria-hidden="true" className={iconClass} />
+          <span className="min-w-0 shrink-0 truncate" style={{ maxWidth: "70%" }}>{route.name}</span>
+          <span className="min-w-[4rem] max-w-[45%] shrink truncate text-[11px] text-[var(--color-text-muted)]">{tripName(route.tripId, route.tripName)}</span>
         </button>
       ))}
 
@@ -1270,22 +1364,14 @@ export function SearchResults({
           key={`waypoint:${waypoint.id}`}
           type="button"
           onClick={() => {
-            void useLibraryStore.getState().setSearch("");
-            // ADR 0022: one outside a trip opens no trip page; it shows in the Waypoints section.
-            if (waypoint.tripId === useLibraryStore.getState().looseTripId) useNavStore.getState().setSection("waypoints");
-            else useNavStore.getState().openTrip(waypoint.tripId);
+            reveal(waypoint.tripId, "waypoints");
             void select({ kind: "waypoint", id: waypoint.id });
           }}
-          className={`block w-full truncate px-3 py-1 text-left text-[13px] ${
-            selectedKey === `waypoint:${waypoint.id}`
-              ? "bg-[var(--color-accent)] text-white"
-              : "hover:bg-[var(--color-surface-sunken)]"
-          }`}
+          className={rowClass(`waypoint:${waypoint.id}`)}
         >
-          🔖 {waypoint.name}
-          <span className="ml-1.5 text-[11px] text-[var(--color-text-muted)]">
-            {waypoint.tripName}
-          </span>
+          <MapPin size={14} aria-hidden="true" className={iconClass} />
+          <span className="min-w-0 shrink-0 truncate" style={{ maxWidth: "70%" }}>{waypoint.name}</span>
+          <span className="min-w-[4rem] max-w-[45%] shrink truncate text-[11px] text-[var(--color-text-muted)]">{tripName(waypoint.tripId, waypoint.tripName)}</span>
         </button>
       ))}
     </div>

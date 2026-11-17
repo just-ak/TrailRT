@@ -56,7 +56,10 @@ test('moves into a trip and back out, each one undo step', async () => {
   const { page } = harness;
   await showRoutes(page);
   await row(page).click({ button: 'right' });
-  await page.getByRole('menuitem', { name: '→ Peak loop' }).click();
+  // Requirement 21: through Move to Trip…'s list, not a row in the menu.
+  await page.getByRole('menuitem', { name: 'Move to Trip…' }).click();
+  await page.keyboard.type('peak');
+  await page.keyboard.press('Enter');
   await expect(row(page)).toContainText('Peak loop');
 
   await page.evaluate(() => window.trailrt.undo.undo());

@@ -55,6 +55,18 @@ export function listAllRoutes(db: Db): RouteWithTrip[] {
     .map((r) => ({ ...rowToRoute(r.route), tripName: r.tripName }));
 }
 
+/** By pattern, as `searchTrips` (Phase 14 Requirement 20). Routes outside a trip are included. */
+export function searchRoutes(db: Db, pattern: string): RouteWithTrip[] {
+  return db
+    .select({ route: routes, tripName: trips.name })
+    .from(routes)
+    .innerJoin(trips, eq(routes.tripId, trips.id))
+    .where(sql`${routes.name} REGEXP ${pattern}`)
+    .orderBy(asc(routes.name), asc(trips.name))
+    .all()
+    .map((r) => ({ ...rowToRoute(r.route), tripName: r.tripName }));
+}
+
 export function findRoute(db: Db, id: string): Route | null {
   const row = db.select().from(routes).where(eq(routes.id, id)).get();
   return row ? rowToRoute(row) : null;

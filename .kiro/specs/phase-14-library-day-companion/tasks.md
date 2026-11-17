@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 24 here, against the new panels.
+after task 32 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -365,7 +365,151 @@ after task 24 here, against the new panels.
     (2,056 unit, 175 end-to-end)
   - _Requirements: 19.1–19.3_
 
-- [ ] 21. The day and what is in it
+- [x] 21. Search by pattern, across routes too
+  - `shared/search/namePattern.ts`: `compileNamePattern`; the `regexp`
+    function on the connection in `db/client.ts`; `REGEXP` in place of
+    `LIKE` in `searchTrips` and `searchWaypoints`; new `searchRoutes`,
+    `routeService.search` and `routes:search` through the handler, preload
+    and `ApiSurface`; one shared `nameSearchRequest` (design §5.13)
+  - `libraryStore`: `routeResults`, `searchError`; `SearchResults` with
+    routes, line icons and the error; the field's label and hint
+  - Unit tests: plain text still matches; anchors, alternation and groups
+    work; case is ignored; a bad pattern gives the engine's message and is
+    refused by the schema; the repositories match by pattern, and routes and
+    items outside a trip are found
+  - End-to-end: a pattern finds a route and a trip; a half-typed pattern
+    explains itself and shows no results
+  - Done: as above. `namePattern.test.ts` covers plain text, anchors,
+    alternation, groups, literal `%` and `_`, accents and the engine's
+    messages; the service tests search trips, routes and waypoints by
+    pattern, across trips and outside one, and refuse `(`;
+    `schemas.test.ts` refuses a bad pattern for all three; `search.spec.ts`
+    finds trips and routes by pattern, opens a route in its trip or its
+    section, and explains `peak (`. `npm run verify` passes (2,091 unit,
+    186 end-to-end)
+  - _Requirements: 20.1–20.4_
+
+- [x] 22. Move to any trip from the right-click menu
+  - `TripPickerDialog`; Move to Trip… on a route's, track's and waypoint's
+    menu and on a multi-selection's, replacing the capped inline lists
+    (design §5.14)
+  - Unit tests: the filter narrows by pattern and explains a bad one; the
+    arrow keys and Return pick the highlighted trip
+  - End-to-end: an item moves to a trip beyond the old cap, picked through
+    the filter by keyboard, and one undo moves it back
+  - Done: as above. `tripPicker.test.ts` covers the filter, a bad pattern
+    and the highlight's keys over 43 trips; `trip-picker.spec.ts` lists all
+    18 destinations with the focus in the filter, moves to the last trip by
+    filter and Return, moves a multi-selection by the arrow keys only once
+    a trip is picked, picks with the pointer, and undoes each in one step;
+    `loose.spec.ts` moves through the list. `npm run verify` passes (2,091
+    unit, 186 end-to-end)
+  - _Requirements: 21.1–21.4_
+
+- [x] 23. Search the list that is open
+  - `filterTree` in `libraryRoots.ts`; `openIds` on `LibraryList`;
+    `searchScope` and `setSearchScope` in `libraryStore`, with requests sent
+    only for Everywhere; the switch, the empty state and `SearchProblem` in
+    `LeftPanel`; a trip's page narrows its objects (design §5.15)
+  - Unit tests: a flat list narrows in place; a group or folder is kept and
+    opened only for a match inside it; a matching one keeps all it holds;
+    nothing matching leaves an empty root; the tree given is unchanged
+  - End-to-end: Routes, Waypoints, the trip list and a trip's page each
+    narrow their own list; nothing here offers everywhere, which finds it;
+    the switch goes both ways and resets when the search is cleared; a bad
+    pattern is explained in both scopes
+  - Done: as above. `libraryRoots.test.ts` covers the flat list, the group
+    and folder kept and opened for a match inside, the matching folder kept
+    whole, the empty root and the unchanged input; `search.spec.ts` narrows
+    Routes, Waypoints, the trip list and a trip's page, offers and runs the
+    search everywhere, resets the switch, and explains `day (` in both
+    scopes; `app.spec.ts` narrows the trip list. `npm run verify` passes
+    (2,097 unit, 190 end-to-end)
+  - _Requirements: 20.5–20.7_
+
+- [x] 24. Tracks by name or by date
+  - `shared/library/trackGroups.ts`: `arrangeTracks`; `tracks.startPoint`;
+    `trackArrangement` and `trackSortDirection` in settings, the tree request
+    and `libraryService.tree`; the Arrange control and direction in the
+    Tracks heading; "Sort routes by" in the library options (design §5.16)
+  - Unit tests: year › month › day with counts, either way, No date last;
+    dated in the start's zone, the computer's when unknown with the note;
+    the first year, month and days open; unique ids; name and distance
+    either way; through the database, the start point's zone is used
+  - End-to-end: flat by name; the date tree newest first and turned round;
+    the note on a track in an unknown zone; search inside the tree; by
+    distance; the choice survives a restart
+  - Done: as above. `trackGroups.test.ts` covers the tree, both directions,
+    the start's zone across midnight, the computer's zone with its note, No
+    date, what opens, unique ids, and name and distance either way;
+    `libraryTracks.test.ts` dates real tracks from their first point through
+    the database; `tracks-arrange.spec.ts` covers the seven cases above. `npm
+    run verify` passes (2,111 unit, 197 end-to-end)
+  - _Requirements: 22.1–22.6_
+
+- [x] 25. Dates read from track names
+  - `shared/library/nameDate.ts`: `dateFromName`; `arrangeTracks` places a
+    track with no times under the day in its name, after the recorded ones,
+    with "date from name" and a hint (design §5.17)
+  - Unit tests: each form day first, ambiguous dates never month first,
+    month first only when day first is impossible, named months either
+    side, year first and `yyyymmdd`, the century of a two-digit year, leap
+    days, the text read, and names with no date; the tree places and orders
+    them
+  - End-to-end: a generated track with no times named Dovedale 16-05-26
+    sits under Sat 16 May after the recorded track, with its hint
+  - Done: as above. `nameDate.test.ts` (36 cases) and `trackGroups.test.ts`
+    cover the reading and the placing; `tracks-arrange.spec.ts` imports the
+    generated track. `npm run verify` passes (2,152 unit, 200 end-to-end)
+  - _Requirements: 22.7_
+
+- [x] 26. Show tracks on the map from the list
+  - `onShow` on `TreeRow`; the Tracks section's rows in `LibraryList`;
+    `fullName` on date rows; `tracks:bounds`; `mapFocusStore`; `MapView`
+    draws, fits and labels them (design §5.17)
+  - Unit tests: the box spans exactly the tracks asked for
+  - End-to-end: a month's arrow shows its three tracks with the strip, and
+    Clear removes it; a track's arrow shows and selects it
+  - Done: as above. `libraryTracks.test.ts` checks the box over real points;
+    `tracks-arrange.spec.ts` shows May 2026's three tracks across two trips,
+    clears them, and shows and selects one track. `npm run verify` passes
+    (2,152 unit, 200 end-to-end)
+  - _Requirements: 23.1–23.4_
+
+- [x] 27. Each imported file kept once
+  - Migration 0011: `source_files`, `track_sources` as a link, the trigger;
+    `insertTrackSource` and `findTrackSource`; `COMPACT_AFTER` and the
+    `VACUUM` in `createDatabase`; ADR 0025 (design §5.18)
+  - Unit tests: an old-format database upgrades with one copy per file, every
+    track's own bytes, and a smaller file with no free pages; an empty one
+    upgrades; new imports share a file; the file goes with its last track,
+    and with a trip's cascade
+  - Trial: the migration on a clone of the owner's database
+  - Done: as above. `sourceFiles.test.ts` covers the upgrade, the empty
+    upgrade, sharing and both ways a file goes. On a clone of the owner's
+    12.4 GB database the migration and `VACUUM` took 9 seconds and left
+    140 MB, with all 685 tracks reaching their originals, all five files
+    matching their hashes and `integrity_check` ok. `npm run verify` passes
+    (2,166 unit, 203 end-to-end)
+  - _Requirements: 25.1–25.3_
+
+- [x] 28. A space limit on backups
+  - `planPrune`, the limits and protection in `createBackup` and
+    `restoreBackup`, the free-space check; `backupMaxGb`; `BackupUsage` in
+    Settings (design §5.18)
+  - Unit tests: oldest first within space and count, the stricter limit,
+    the newest always kept, protected files kept; on disk, a backup rolls,
+    an oversized one is the only one kept, a new one survives its own clean-up
+    whatever the dates, and a restore keeps its source
+  - End-to-end: 2 GB to start with and what is not backed up; a backup in
+    the usage; a changed limit kept across a restart
+  - Done: as above. `backupService.test.ts` (10 cases) found and covers a
+    backup removed by its own clean-up when a nearby file was dated in the
+    future; `backups.spec.ts` covers Settings. `npm run verify` passes
+    (2,166 unit, 203 end-to-end)
+  - _Requirements: 24.1–24.5_
+
+- [ ] 29. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -373,19 +517,19 @@ after task 24 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 22. The left panel as drawn
+- [ ] 30. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 23. The Photos section
+- [ ] 31. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 24. End-to-end and verification pass
+- [ ] 32. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

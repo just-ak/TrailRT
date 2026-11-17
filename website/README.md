@@ -1,7 +1,8 @@
 # TrailRT website
 
 The one-page site for TrailRT, served by a Cloudflare Worker as static assets
-and deployed with Wrangler. It is also the page given to App Store Connect for
+and deployed with Wrangler. A few lines of Worker code serve the promo video
+with byte ranges; everything else is static. It is also the page given to App Store Connect for
 the marketing, support and privacy policy URLs.
 
 ## Kept away from the app
@@ -11,8 +12,8 @@ This folder is deliberately separate from the application:
 - **Nothing here reaches the app.** `electron-builder.yml` packages only `out/`,
   `package.json` and `LICENSE`. The app's lint, typecheck and tests cover `src/`
   and `tests/` only, and the root licence check reads the root `node_modules/`.
-- **No dependencies.** Plain HTML and CSS with no build step, no scripts, and no
-  fonts or assets from other hosts. Wrangler runs through `npx` at a pinned
+- **No dependencies.** Plain HTML and CSS with no build step, no scripts in the
+  page, and no fonts or assets from other hosts. Wrangler runs through `npx` at a pinned
   version and is never added to the app's `package.json`.
 - **Its own `package.json` and `wrangler.toml`.** Run every command from this
   folder, not from the repository root.
@@ -25,10 +26,14 @@ This folder is deliberately separate from the application:
 | --- | --- |
 | `public/index.html` | The page: hero, features, privacy policy (`#privacy`), support (`#support`) |
 | `public/styles.css` | All styling. Dark, matching the app icon |
-| `public/_headers` | Security headers, including a CSP that allows only this site's own CSS and images. Applied by Workers static assets, and not served as a file |
+| `public/_headers` | Security headers, including a CSP that allows only this site's own CSS, images and video. Applied by Workers static assets, and not served as a file |
 | `public/icon.svg` | Copy of `build/icon.svg`. Copy it again if the app icon changes |
 | `public/og.png`, `public/apple-touch-icon.png` | Rendered from `art/og.svg` and `public/icon.svg` |
 | `art/og.svg` | Source of the social sharing image. Not deployed |
+| `public/trailrt-promo.mp4` | The 43-second promo video, 1080p H.264 with no sound. Stored in **Git LFS** |
+| `public/trailrt-promo-poster.jpg` | The video's poster frame |
+| `worker.js` | Serves `*.mp4` with Range support (206), which Safari needs to play video. Workers static assets ignore Range and send no Content-Length, so this streams and trims the file instead. `run_worker_first` in `wrangler.toml` limits it to video; nothing else reaches it |
+| `check-assets.mjs` | Run by `npm run deploy` before Wrangler. Fetches LFS files and refuses to deploy a pointer or a file over 25 MiB. Not deployed |
 
 Regenerate the PNGs after changing their sources:
 
@@ -58,6 +63,15 @@ second safeguard: an install inside `website/` has nothing to fetch.
 
 `npm run deploy` runs Wrangler at the version pinned in `package.json`, where a
 bare `npx wrangler deploy` would take whatever is newest that day.
+
+It runs `check-assets.mjs` first. The promo video is in Git LFS, and a clone
+that skipped LFS has a 130-byte pointer file in its place, which Wrangler would
+publish without complaint. Cloudflare does not document whether Workers Builds
+fetches LFS objects, so the check runs `git lfs pull` when it finds a pointer
+and fails the deploy if one is still there. It also refuses any file over
+25 MiB, the Workers limit for a single static asset. If a Workers Build fails
+here, check its log: the fix is either git-lfs in the build image or a deploy
+by hand from a clone that has the video.
 
 By hand, from this folder:
 
@@ -98,3 +112,8 @@ When the app changes, check the features, "Good to know" and privacy sections.
   anywhere until then.
 - **The hero picture is an illustration and says so.** Store screenshots must be
   real captures of the app.
+- **The video's app screens are real captures** of TrailRT, run with a
+  made-up trip and the embedded routing engine. Its photos are illustrations,
+  and the caption says so. Map tiles are OpenStreetMap's, so the video and its
+  caption both carry the attribution. Re-record it when the screens it shows
+  change.
