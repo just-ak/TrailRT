@@ -42,9 +42,20 @@ const PERMISSIVE = new Set([
   'PostgreSQL', 'BSL-1.0', 'UPL-1.0', 'OFL-1.1',
 ]);
 
+/**
+ * Spellings that predate SPDX, mapped to the identifier their licence text
+ * matches. Each was checked against the package's own licence file before it
+ * was added; anything else unrecognised is still flagged for review.
+ */
+const SPDX_SPELLINGS = new Map([
+  // qrcode-terminal 0.12.0, inside npm (via semantic-release): its LICENSE is the Apache License 2.0.
+  ['Apache 2.0', 'Apache-2.0'],
+]);
+
 function classify(lic) {
   if (!lic) return 'UNKNOWN';
-  const s = String(lic).trim();
+  const raw = String(lic).trim();
+  const s = SPDX_SPELLINGS.get(raw) ?? raw;
   if (/^SEE LICEN[CS]E/i.test(s)) return 'CUSTOM';
   if (/^UNLICENSED$/i.test(s)) return 'PROPRIETARY';
   if (s.includes('OR')) {
@@ -74,7 +85,9 @@ function walk(dir, out) {
       try {
         const pkg = JSON.parse(readFileSync(manifest, 'utf8'));
         if (pkg.name && pkg.version) {
-          const lic = pkg.license ?? (Array.isArray(pkg.licenses)
+          // npm's old object form, { "type": "MIT", "url": … }, as config-chain 1.1.13 still uses.
+          const declared = typeof pkg.license === 'object' && pkg.license !== null ? pkg.license.type : pkg.license;
+          const lic = declared ?? (Array.isArray(pkg.licenses)
             ? pkg.licenses.map((l) => l.type).join(' OR ') : null);
           out.set(pkg.name, { version: pkg.version, licence: lic ?? '(none declared)' });
         }

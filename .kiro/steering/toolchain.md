@@ -87,6 +87,8 @@ peer conflicts. Treat this as the baseline; re-verify before changing any line.
 | Unit tests      | vitest + @vitest/coverage-v8    | 5.1.0                 |
 | E2E tests       | playwright                      | 1.65.0                |
 | Lint            | oxlint                          | 1.91.0                |
+| Release         | semantic-release                | 25.0.9 (26 skipped, ADR 0026) |
+| Release         | @semantic-release/exec          | 7.1.0                 |
 
 ### Linting: oxlint, not typescript-eslint
 

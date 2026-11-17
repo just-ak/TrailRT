@@ -239,7 +239,9 @@ and App Review, which is Phase 15.
 TrailRT needs a Mac with Apple silicon (M1 or later) running macOS 13.3 or
 later. Intel Macs are not supported; see ADR 0013.
 
-To download it from GitHub, open
+Download the DMG from the
+[latest release](https://github.com/just-ak/TrailRT/releases/latest), which
+also has its SHA-256. Or open
 [`downloads/TrailRT-0.1.0-arm64.dmg`](downloads/TrailRT-0.1.0-arm64.dmg) and
 click **Download**. The file is stored with Git LFS, so a `git clone` without
 [Git LFS](https://git-lfs.com) installed gets a small text pointer instead of
@@ -266,6 +268,30 @@ Building from source avoids the prompt entirely, since locally built bundles are
 not quarantined. Notarisation is already configured in the build and will be
 switched on if a Developer ID becomes available. See
 [ADR 0009](docs/adr/0009-unsigned-distribution-until-developer-id.md).
+
+## Publishing a release
+
+Version numbers come from the commit messages, through
+[semantic-release](https://semantic-release.gitbook.io): since the last
+release, a `fix:` makes a patch release, a `feat:` a minor one, and a
+breaking change a major one. `chore:`, `ci:` and `docs:` make none. See
+[ADR 0026](docs/adr/0026-semantic-release.md).
+
+1. On `main`, clean and up to date, run `npm run release:prepare`. It works
+   out the next version, sets it in `package.json`, runs `npm run package`
+   (which builds the app and checks the packaged app can build a routing
+   graph), and commits the version and the DMG together as
+   `chore(release): <version>`.
+2. Push. `.github/workflows/release.yml` works the version out again on an
+   Apple silicon runner and stops if it differs from the DMG's. It then checks
+   the DMG (`scripts/check-dmg.mjs`: not an LFS pointer, the right version,
+   arm64, a valid signature, a routing graph built with the shipped tools).
+   Last, it tags the commit and publishes the GitHub release, with notes made
+   from the commits, the DMG and its SHA-256.
+
+The website's download button links to the latest release. To see what
+would be released without publishing it, run the workflow from the Actions
+tab with **Dry run** ticked.
 
 ## Known limitations
 

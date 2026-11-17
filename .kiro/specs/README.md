@@ -7,24 +7,24 @@ Start with the review — it records where the source specification is internall
 inconsistent or technically unachievable as written, and what was decided
 instead.
 
-| Document                                                               | Purpose                                                                      |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| [`spec-review.md`](spec-review.md)                                     | Findings against the source specification, plus open questions for the owner |
-| [`phase-1-foundation/`](phase-1-foundation/)                           | Requirements, design and tasks. **Complete.**                                |
-| [`phase-2-routes-waypoints/`](phase-2-routes-waypoints/)               | Requirements, design and tasks. **Complete.**                                |
-| [`phase-3-tracks-import-export/`](phase-3-tracks-import-export/)       | Requirements, design and tasks. **Complete.**                                |
-| [`phase-4-advanced-mapping/`](phase-4-advanced-mapping/)               | Requirements, design and tasks. **Complete.**                                |
-| [`phase-5-object-point-management/`](phase-5-object-point-management/) | Requirements, design and tasks. **Complete.**                                |
-| [`phase-6-route-alternatives-shaping/`](phase-6-route-alternatives-shaping/) | Requirements, design and tasks. **Complete.**                            |
-| [`phase-7-regions-profile/`](phase-7-regions-profile/)                 | Requirements, design and tasks. **Complete.**                                |
-| [`phase-8-windy-roads-routing/`](phase-8-windy-roads-routing/)         | Investigation complete; requirements written. Next to build.                 |
-| [`phase-9-garmin-compatibility/`](phase-9-garmin-compatibility/)       | Requirements only. Mostly investigation deliverables.                        |
-| [`phase-10-road-trip-planning/`](phase-10-road-trip-planning/)         | Requirements, design and tasks. **Complete**, including owner feedback (Reqs 14–17). |
-| [`phase-11-geotagged-photos/`](phase-11-geotagged-photos/)             | Requirements, design and tasks, revised with owner feedback. **Next to build**, ahead of Phases 8 and 9 at the owner's request. |
-| [`phase-12-folder-gpx-sync/`](phase-12-folder-gpx-sync/)               | Requirements only. GPX kept in step with a linked folder.                    |
-| [`phase-13-media-flythroughs-sharing/`](phase-13-media-flythroughs-sharing/) | Requirements only. Video, flythroughs and sharing; mostly investigation. |
-| [`phase-14-library-day-companion/`](phase-14-library-day-companion/) | Requirements, design and tasks. **In build**, ahead of Phase 11's last two tasks at the owner's request. |
-| [`phase-15-mac-app-store/`](phase-15-mac-app-store/)                   | Requirements only. The Mac App Store build: sandbox, signing, LuaJIT, folder bookmarks. Partly investigation. |
+| Document                                                                     | Purpose                                                                                                                         |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| [`spec-review.md`](spec-review.md)                                           | Findings against the source specification, plus open questions for the owner                                                    |
+| [`phase-1-foundation/`](phase-1-foundation/)                                 | Requirements, design and tasks. **Complete.**                                                                                   |
+| [`phase-2-routes-waypoints/`](phase-2-routes-waypoints/)                     | Requirements, design and tasks. **Complete.**                                                                                   |
+| [`phase-3-tracks-import-export/`](phase-3-tracks-import-export/)             | Requirements, design and tasks. **Complete.**                                                                                   |
+| [`phase-4-advanced-mapping/`](phase-4-advanced-mapping/)                     | Requirements, design and tasks. **Complete.**                                                                                   |
+| [`phase-5-object-point-management/`](phase-5-object-point-management/)       | Requirements, design and tasks. **Complete.**                                                                                   |
+| [`phase-6-route-alternatives-shaping/`](phase-6-route-alternatives-shaping/) | Requirements, design and tasks. **Complete.**                                                                                   |
+| [`phase-7-regions-profile/`](phase-7-regions-profile/)                       | Requirements, design and tasks. **Complete.**                                                                                   |
+| [`phase-8-windy-roads-routing/`](phase-8-windy-roads-routing/)               | Investigation complete; requirements written. Next to build.                                                                    |
+| [`phase-9-garmin-compatibility/`](phase-9-garmin-compatibility/)             | Requirements only. Mostly investigation deliverables.                                                                           |
+| [`phase-10-road-trip-planning/`](phase-10-road-trip-planning/)               | Requirements, design and tasks. **Complete**, including owner feedback (Reqs 14–17).                                            |
+| [`phase-11-geotagged-photos/`](phase-11-geotagged-photos/)                   | Requirements, design and tasks, revised with owner feedback. **Next to build**, ahead of Phases 8 and 9 at the owner's request. |
+| [`phase-12-folder-gpx-sync/`](phase-12-folder-gpx-sync/)                     | Requirements only. GPX kept in step with a linked folder.                                                                       |
+| [`phase-13-media-flythroughs-sharing/`](phase-13-media-flythroughs-sharing/) | Requirements only. Video, flythroughs and sharing; mostly investigation.                                                        |
+| [`phase-14-library-day-companion/`](phase-14-library-day-companion/)         | Requirements, design and tasks. **In build**, ahead of Phase 11's last two tasks at the owner's request.                        |
+| [`phase-15-mac-app-store/`](phase-15-mac-app-store/)                         | Requirements only. The Mac App Store build: sandbox, signing, LuaJIT, folder bookmarks. Partly investigation.                   |
 
 Only the phases already built, and the next one, have a design and task
 breakdown. That is deliberate: section 20 of the source specification requires
@@ -161,8 +161,7 @@ thirteen. On 16 November 2026 the owner asked for the search to take
 regular expressions and find routes, and for Move to Trip to reach any
 trip rather than the first eight; those are Requirements 20 and 21.
 
-Phase 15 is the Mac App Store, from the owner's direction on 16 November
-2026. Two changes came first. osmium-tool was replaced by TrailRT's own
+Phase 15 is the Mac App Store, from the owner's direction on 16 November 2026. Two changes came first. osmium-tool was replaced by TrailRT's own
 `trailrt-osm` on libosmium (ADR 0023). TrailRT itself was relicensed from
 GPL-3.0-or-later to MIT, because no GPL program can be offered on the store
 (ADR 0024). Release 0.1.0 stays GPL. What remains is the store's own
@@ -186,30 +185,30 @@ DMG stays the primary channel.
 
 ## Decision index
 
-| ADR  | Decision                                                 |
-| ---- | -------------------------------------------------------- |
-| 0001 | Local-first autosave; no bare "Save" menu item           |
-| 0002 | TypeScript 7 with oxlint, not typescript-eslint          |
-| 0003 | Track points normalised, with a rebuildable render cache |
-| 0004 | Library tree top-level nodes are views, not containers   |
-| 0005 | Waze hand-off is single-destination only                 |
-| 0006 | Garmin proprietary format scope — amended by 0007        |
+| ADR  | Decision                                                                 |
+| ---- | ------------------------------------------------------------------------ |
+| 0001 | Local-first autosave; no bare "Save" menu item                           |
+| 0002 | TypeScript 7 with oxlint, not typescript-eslint                          |
+| 0003 | Track points normalised, with a rebuildable render cache                 |
+| 0004 | Library tree top-level nodes are views, not containers                   |
+| 0005 | Waze hand-off is single-destination only                                 |
+| 0006 | Garmin proprietary format scope — amended by 0007                        |
 | 0007 | GPL-3.0-or-later licence, free distribution — licence superseded by 0024 |
-| 0008 | Leaflet used directly; react-leaflet dropped on licence  |
-| 0009 | Ad-hoc signing until a Developer ID is available         |
-| 0010 | Native module ABI and Electron binary delivery findings  |
-| 0011 | Posted limit and recorded speed are separate; snapping   |
-| 0012 | Windy-roads routing needs Phase 4; twistiness steers     |
-| 0013 | Valhalla embedded in-process; arm64-only distribution    |
-| 0014 | Batch undo, the track undo gap, point-level editing      |
-| 0015 | Test geography is a real loop around Buxton              |
-| 0016 | Snapping reports points the graph cannot reach           |
-| 0017 | Per-leg alternatives, kept as shaping points; renumbering |
-| 0018 | UK county regions merged; terrain; twistiness; UK limits |
-| 0019 | Road trip itineraries; offline places, POIs and postcodes |
-| 0020 | Linked photo folders; in-house EXIF reader; Quick Look thumbnails |
-| 0021 | The library becomes a rail, a trip page and a day companion |
-| 0022 | Items outside a trip are kept by one hidden holder        |
-| 0023 | libosmium replaces the bundled osmium-tool executable     |
-| 0024 | MIT licence; the Mac App Store becomes a target           |
-| 0025 | Imported files stored once; backups within a space limit  |
+| 0008 | Leaflet used directly; react-leaflet dropped on licence                  |
+| 0009 | Ad-hoc signing until a Developer ID is available                         |
+| 0010 | Native module ABI and Electron binary delivery findings                  |
+| 0011 | Posted limit and recorded speed are separate; snapping                   |
+| 0012 | Windy-roads routing needs Phase 4; twistiness steers                     |
+| 0013 | Valhalla embedded in-process; arm64-only distribution                    |
+| 0014 | Batch undo, the track undo gap, point-level editing                      |
+| 0015 | Test geography is a real loop around Buxton                              |
+| 0016 | Snapping reports points the graph cannot reach                           |
+| 0017 | Per-leg alternatives, kept as shaping points; renumbering                |
+| 0018 | UK county regions merged; terrain; twistiness; UK limits                 |
+| 0019 | Road trip itineraries; offline places, POIs and postcodes                |
+| 0020 | Linked photo folders; in-house EXIF reader; Quick Look thumbnails        |
+| 0021 | The library becomes a rail, a trip page and a day companion              |
+| 0022 | Items outside a trip are kept by one hidden holder                       |
+| 0023 | libosmium replaces the bundled osmium-tool executable                    |
+| 0024 | MIT licence; the Mac App Store becomes a target                          |
+| 0026 | Version numbers from semantic-release, in two halves                     |
