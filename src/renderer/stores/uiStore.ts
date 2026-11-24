@@ -9,6 +9,7 @@ import type {
 } from '@shared/domain/types';
 import type { StagedImport } from '@shared/ipc/api';
 import type { ChosenFolder } from '@shared/domain/linkedFolders';
+import type { DuplicateKind } from '@shared/library/duplicates';
 import type { ExportScopeRequest } from '@shared/ipc/schemas';
 import { api, callOr } from '../lib/client';
 
@@ -50,7 +51,9 @@ export type DialogKind =
   /** Phase 11: confirms a folder the user chose, with Include subfolders. */
   | { kind: 'linkFolder'; tripName: string; chosen: ChosenFolder }
   /** Phase 11: unlinking forgets the folder; its files are untouched. */
-  | { kind: 'unlinkFolder'; folderId: string; name: string };
+  | { kind: 'unlinkFolder'; folderId: string; name: string }
+  /** Phase 14 Requirement 28: duplicates of one kind, by content. */
+  | { kind: 'removeDuplicates'; objectKind: DuplicateKind };
 
 /** What a POI search runs along. */
 export type PoiScope = { kind: 'route'; routeId: string } | { kind: 'itinerary'; tripId: string };

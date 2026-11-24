@@ -1,5 +1,6 @@
 import { isWaypointSource, type RoutePoint, type TrackPoint } from '@shared/domain/types';
 import type { Db } from '../db/client';
+import * as duplicateService from './duplicateService';
 import { ServiceError } from './errors';
 import * as folderService from './folderService';
 import * as itineraryService from './itineraryService';
@@ -84,6 +85,13 @@ export type CommandKind =
   | 'track:restorePointsAt'
   | 'track:deletePointsAt'
   | 'track:editPoint'
+  /**
+   * A track removed as a duplicate, and its redo. Undoable where an ordinary
+   * track deletion is not, because the restore copies the points from the
+   * copy that was kept (Phase 14 Requirement 28, ADR 0027).
+   */
+  | 'track:restoreDuplicate'
+  | 'track:removeDuplicate'
   /*
    * Phase 10 itinerary. Every structural change carries the leg links it
    * displaced in `restoreLinks`, so undo puts them back exactly. ADR 0019.
@@ -150,6 +158,8 @@ const LABELS: Record<CommandKind, string> = {
   'track:restorePointsAt': 'point deletion',
   'track:deletePointsAt': 'point restore',
   'track:editPoint': 'point edit',
+  'track:restoreDuplicate': 'duplicate removal',
+  'track:removeDuplicate': 'duplicate restore',
   // Named for the action the user took, which is what undoing reverses.
   'itinerary:remove': 'plan by date',
   'itinerary:restore': 'remove itinerary',
@@ -682,6 +692,10 @@ const HANDLERS: Record<CommandKind, Handler> = {
       ele: numOrNull(p, 'ele'),
       time: numOrNull(p, 'time'),
     }),
+
+  'track:restoreDuplicate': (db, p) => duplicateService.restoreDuplicateTrack(db, duplicateService.readTrackCopy(p)),
+
+  'track:removeDuplicate': (db, p) => duplicateService.removeDuplicateTrack(db, str(p, 'id'), str(p, 'keepId')),
 };
 
 /**

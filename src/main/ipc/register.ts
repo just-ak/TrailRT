@@ -20,6 +20,8 @@ import { ServiceError } from '../services/errors';
 import * as trackService from '../services/trackService';
 import * as backupService from '../services/backupService';
 import * as batchService from '../services/batchService';
+import * as duplicateService from '../services/duplicateService';
+import { duplicatesText } from '@shared/library/duplicates';
 import * as folderService from '../services/folderService';
 import * as itineraryService from '../services/itineraryService';
 import * as poiTripService from '../services/poiTripService';
@@ -924,6 +926,18 @@ export function registerIpcHandlers(): void {
       mutation,
       batchService.labelFor('move', mutation.result.counts),
     );
+  });
+
+  // ----------------------------------------------------------- duplicates
+
+  // Phase 14 Requirement 28: a read, then one commit for the whole removal.
+  handle(CHANNELS.duplicates.find, S.duplicatesFindRequest, (req) =>
+    duplicateService.find(ctx().handle.db, req.kind, req.includeArchived),
+  );
+
+  handle(CHANNELS.duplicates.remove, S.duplicatesRemoveRequest, (req) => {
+    const mutation = duplicateService.remove(ctx().handle.db, req.kind, req.removals);
+    return commit(mutation, `remove ${duplicatesText(mutation.result.removed, req.kind)}`);
   });
 
   // --------------------------------------------------------------- import

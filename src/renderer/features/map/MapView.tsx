@@ -90,6 +90,9 @@ const NO_LEGS: readonly (readonly LatLon[])[] = [];
 const NO_INDICES: readonly number[] = [];
 const NO_CANDIDATES: readonly Candidate[] = [];
 
+/** How far in the map goes to show one place asked for from the left panel. */
+const STREET_ZOOM = 15;
+
 function fitTo(bounds: Bounds | null): boolean {
   const map = getMapInstance();
   if (map === null || bounds === null) return false;
@@ -257,9 +260,14 @@ export function MapView(): ReactNode {
    * exercised on every edit instead of adding a second way to hide something.
    */
   const visibility = settings.layerVisibility;
-  const visibleRoutes = visibility.routes
-    ? (geometry?.routes ?? NO_ROUTES)
-    : NO_ROUTES;
+  // Phase 14 Requirement 26.4: a route or waypoint asked for by its arrow is
+  // drawn even with its layer hidden, while it stays selected.
+  const askedFor = useMapFocusStore((s) => s.shown);
+  const visibleRoutes = useMemo(() => {
+    if (visibility.routes) return geometry?.routes ?? NO_ROUTES;
+    const asked = askedFor?.kind === "route" ? geometry?.routes.find((r) => r.id === askedFor.id) : undefined;
+    return asked === undefined ? NO_ROUTES : [asked];
+  }, [visibility.routes, geometry, askedFor]);
   const tripTracks = visibility.tracks
     ? (geometry?.tracks ?? NO_TRACKS)
     : NO_TRACKS;
@@ -277,9 +285,11 @@ export function MapView(): ReactNode {
     const shown = useMapFocusStore.getState().focus;
     if (shown !== null && !fitTo(shown.bounds)) showToast("Those tracks have no points to show.", "error");
   }, [fitSeq, showToast]);
-  const visibleWaypoints = visibility.waypoints
-    ? (geometry?.waypoints ?? NO_WAYPOINTS)
-    : NO_WAYPOINTS;
+  const visibleWaypoints = useMemo(() => {
+    if (visibility.waypoints) return geometry?.waypoints ?? NO_WAYPOINTS;
+    const asked = askedFor?.kind === "waypoint" ? geometry?.waypoints.find((w) => w.id === askedFor.id) : undefined;
+    return asked === undefined ? NO_WAYPOINTS : [asked];
+  }, [visibility.waypoints, geometry, askedFor]);
 
   /**
    * "Show alternatives" for one leg of a saved snapped route (Requirement 2).
@@ -528,6 +538,20 @@ export function MapView(): ReactNode {
         ],
       }),
   });
+
+  // Phase 14 Requirements 26 and 27: a route, waypoint or photo asked for
+  // from the left panel. A box is fitted; a point is centred, zoomed in to
+  // street level but never out. After the photo layer's own pan, so this wins.
+  const target = useMapFocusStore((s) => s.target);
+  useEffect(() => {
+    if (map === null || target === null) return;
+    const { bounds } = target;
+    if (bounds.minLat === bounds.maxLat && bounds.minLon === bounds.maxLon) {
+      map.setView([bounds.minLat, bounds.minLon], Math.max(map.getZoom(), STREET_ZOOM));
+    } else {
+      fitTo(bounds);
+    }
+  }, [map, target]);
 
   useWaypointLayers(
     map,

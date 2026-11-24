@@ -1,12 +1,12 @@
-import { CalendarDays, ChevronLeft, Download, Ellipsis, FolderPlus, ImageOff, Upload } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { CalendarDays, ChevronLeft, Download, Ellipsis, FolderPlus, Upload } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Photo } from "@shared/domain/linkedFolders";
 import type { TreeNode, TripTab } from "@shared/domain/types";
 import { tripMeta } from "@shared/library/tripGroups";
 import { ContextMenu, type MenuItem } from "../../components/ContextMenu";
 import { IconButton } from "../../components/IconButton";
 import * as actions from "../../lib/actions";
-import { api, call, callOr, describeError } from "../../lib/client";
+import { api, call, describeError } from "../../lib/client";
 import { useGeometryStore } from "../../stores/geometryStore";
 import { useItineraryStore } from "../../stores/itineraryStore";
 import { useLibraryStore } from "../../stores/libraryStore";
@@ -15,6 +15,8 @@ import { usePhotoStore } from "../../stores/photoStore";
 import { useSelectionStore } from "../../stores/selectionStore";
 import { useUiStore } from "../../stores/uiStore";
 import { linkFolderToTrip } from "../photos/photoActions";
+import { dayLabel } from "../photos/photoGrid";
+import { PhotoThumb } from "../photos/PhotoThumb";
 import { LibraryList, NothingMatches } from "./LibraryList";
 import { PlanCards } from "./PlanCards";
 import { filterTree, linkedFoldersRoot, objectsRoot, planRoot } from "./libraryRoots";
@@ -196,72 +198,18 @@ function PhotosTab({
             </p>
             <div className="grid grid-cols-4 gap-1">
               {list.map((photo) => (
-                <PhotoCell key={photo.id} photo={photo} selected={selected.has(photo.id)} />
+                <PhotoThumb
+                  key={photo.id}
+                  photo={photo}
+                  selected={selected.has(photo.id)}
+                  onSelect={() => usePhotoStore.getState().selectFromMap([photo.id])}
+                />
               ))}
             </div>
           </section>
         ))}
       </div>
     </div>
-  );
-}
-
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-function dayLabel(date: string): string {
-  const [y, m, d] = date.split("-").map(Number);
-  const weekday = (new Date(Date.UTC(y ?? 0, (m ?? 1) - 1, d ?? 1)).getUTCDay() + 6) % 7;
-  return `${DAY_NAMES[weekday] ?? ""} ${d ?? ""} ${MONTHS[(m ?? 1) - 1] ?? ""} ${y ?? ""}`;
-}
-
-/** One thumbnail, fetched when it first scrolls into view. */
-function PhotoCell({ photo, selected }: { photo: Photo; selected: boolean }): ReactNode {
-  const box = useRef<HTMLButtonElement | null>(null);
-  const [url, setUrl] = useState<string | null>(null);
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    const element = box.current;
-    if (element === null) return undefined;
-    const held: { url: string | null; live: boolean } = { url: null, live: true };
-    const observer = new IntersectionObserver((entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
-      observer.disconnect();
-      void callOr(api().photos.thumbnail({ photoId: photo.id }), null).then((thumbnail) => {
-        if (!held.live) return;
-        if (thumbnail === null) {
-          setFailed(true);
-          return;
-        }
-        held.url = URL.createObjectURL(new Blob([thumbnail.bytes.slice().buffer], { type: "image/jpeg" }));
-        setUrl(held.url);
-      });
-    });
-    observer.observe(element);
-    return () => {
-      held.live = false;
-      observer.disconnect();
-      if (held.url !== null) URL.revokeObjectURL(held.url);
-    };
-  }, [photo.id]);
-
-  return (
-    <button
-      ref={box}
-      type="button"
-      aria-label={photo.relativePath}
-      aria-pressed={selected}
-      data-photo={photo.id}
-      onClick={() => usePhotoStore.getState().selectFromMap([photo.id])}
-      className={`relative aspect-square overflow-hidden rounded bg-[var(--color-surface-sunken)] ${selected ? "ring-2 ring-[var(--color-accent)]" : ""}`}
-    >
-      {url !== null && <img src={url} alt="" className="h-full w-full object-cover" />}
-      {url === null && failed && (
-        <span className="flex h-full w-full items-center justify-center text-[var(--color-text-muted)]">
-          <ImageOff size={16} aria-hidden="true" />
-        </span>
-      )}
-    </button>
   );
 }
 

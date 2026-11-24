@@ -32,8 +32,9 @@ interface Props {
    */
   onOpen?: () => void;
   /**
-   * Phase 14 Requirement 23: an arrow that shows the row on the map, for a
-   * track or a year, month or day of tracks. Shown on hover and focus, and
+   * Phase 14 Requirements 23 and 26: an arrow that shows the row on the map,
+   * for a track or a year, month or day of tracks, a route in the Routes
+   * section or a waypoint in the Waypoints section. Shown on hover and focus, and
    * always while the row is selected, since a heading cannot be selected.
    */
   onShow?: () => void;

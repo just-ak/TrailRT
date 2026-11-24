@@ -212,3 +212,4 @@ DMG stays the primary channel.
 | 0023 | libosmium replaces the bundled osmium-tool executable                    |
 | 0024 | MIT licence; the Mac App Store becomes a target                          |
 | 0026 | Version numbers from semantic-release, in two halves                     |
+| 0027 | Duplicates by content; a removed duplicate track can be undone           |

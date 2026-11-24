@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 31).
+  library's tens of thousands, which is the Photos section's case (task 34).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -781,6 +781,91 @@ with the new file protected. `restoreBackup` protects the file it restores.
 `backupMaxGb` is a setting; `BackupUsage` in Settings lists the backups when
 it opens and states what is and is not backed up.
 
+### 5.19 Routes and waypoints on the map; a folder's photos (Requirements 26, 27)
+
+**The arrow, wider.** `LibraryList`'s `showOnMap` also gives the Requirement
+23 arrow to route rows in the Routes section and waypoint rows in the
+Waypoints section. A route's arrow calls `mapFocusStore.showRoute`, which
+selects it, waits for the selection to load its points, and asks the map to
+fit their box; a waypoint's calls `showWaypoint`, which does the same with its
+position. The box comes from the existing `boundingBox` in
+`shared/geo/distance.ts`, which returns `null` for no points, so a route with
+none says so.
+
+**Moving the map.** `mapFocusStore.target` is a one-off request, `{ seq,
+bounds }`, separate from the tracks' `focus`. `MapView` fits to a box, or, for
+a single point, centres on it at `max(zoom, 15)`, so asking never zooms out.
+Its effect runs after `usePhotoLayer`'s own pan, so it wins in the same
+commit. Nothing is persisted.
+
+**Asked for, so drawn.** `mapFocusStore.shown` names the route or waypoint
+whose arrow was pressed. While the Routes or Waypoints layer is hidden,
+`MapView` still draws that one object. A selection subscription clears
+`shown` as soon as anything else is selected, so a hidden layer comes back
+into force without a Clear button for something the user never pinned.
+
+**A folder's photos.** In the Photos section, while a linked folder is
+selected, `LeftPanel` caps the list at 40% of the panel, as the trip page's
+Photos tab does, and draws `FolderPhotoGrid` underneath. It loads the folder
+with `photos:list` itself, rather than reading `photoStore`, because closing
+the photo list drawer empties the store's list. It reloads when the scanner
+says that folder changed. `layoutPhotoGrid` in `features/photos/photoGrid.ts`
+turns the photos into day headings and rows of four cells with their offsets,
+and `rowsInView` picks the rows that meet the viewport by binary search, so a
+40,000-photo folder draws a dozen rows. `PhotoThumb`, moved out of
+`TripPage`, fetches its thumbnail only when it is on screen. A photo with no
+location carries a crossed-out pin.
+
+**Selecting a photo.** A cell calls `photoStore.selectFromMap([id])`, so the
+preview box opens as it does from the map, then `mapFocusStore.goToPhoto`,
+which moves the map to the photo's position, or explains why it cannot,
+using `photoStateText`.
+
+### 5.20 Remove duplicates by content (Requirement 28, ADR 0027)
+
+**Comparing.** `duplicateService.find(db, kind, includeArchived)` gives each
+item in a shown trip, or outside one, a content key. A waypoint's is its
+latitude, longitude and elevation as exact JSON numbers. A route's is a
+SHA-256 over its points in `seq` order. A track's is a SHA-256 over its points
+in `(segment_index, seq)` order, with a break marked where the segment
+changes, so renumbered segments and gaps in `seq` do not change it. Numbers
+are written as their shortest round-trip text, so equal doubles give equal
+keys and nothing is rounded. Tracks are first grouped by their real point
+count and first and last point, read through the `(track_id, segment_index,
+seq)` index, and only tracks that share those are read in full, so a library
+of single copies costs one aggregate query.
+
+**Grouping.** `groupDuplicates` in `shared/library/duplicates.ts` is pure. It
+groups by key, keeps one copy by the rule of Requirement 28.4, lists copies a
+plan uses as kept too, drops groups with nothing to remove, and marks a group
+`acrossTrips` when its copies in trips are in more than one. A plan uses a
+waypoint through `itinerary_stops.waypoint_id`, and a route through
+`leg_route_id` or `entry_route_id`.
+
+**Removing.** `duplicateService.remove(db, kind, removals)` takes `{ id,
+keepId }` pairs. In one transaction it checks each pair again: both exist, the
+keys still match, and no plan uses the copy. A pair that fails is skipped and
+counted. Routes and waypoints go through `routeService.remove` and
+`waypointService.remove`, so their undo is the existing restore. Past
+`DUPLICATE_UNDO_POINTS` route points the step is recorded as not undoable,
+which the dialog states first from the routes' point counts.
+
+**Tracks, undoably.** `duplicateService` deletes a track copy and
+returns `track:restoreDuplicate` carrying its row without the render cache,
+the kept track's id, the content key, and its original file's hash. It
+carries the file's bytes only when the copy was the last track linked to
+that file, since the trigger in migration 0011 then deletes it. The restore
+checks the kept track still exists with the same key, inserts the row with
+its original id and dates, copies the kept track's points with their segment
+and sequence numbers, copies its render cache, and links the file again,
+writing it back first if it went (`restoreDuplicateTrack`). Its inverse is
+`track:removeDuplicate` (`removeDuplicateTrack`), so redo works.
+
+**The dialog.** `RemoveDuplicatesDialog` asks `duplicates:find` on opening,
+then lists the groups with a tick box each, unticked when `acrossTrips`. The
+footer removes the ticked copies with one `duplicates:remove`, labelled
+"remove 12 duplicate tracks" on the undo menu.
+
 ### 5.14 Move to any trip from the right-click menu (Requirement 21)
 
 `TripPickerDialog` in `features/library/` takes the destinations, a title and
@@ -806,7 +891,7 @@ photos' tens of thousands.
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 32).
+  checklist (task 35).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 
