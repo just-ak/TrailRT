@@ -12,9 +12,10 @@ import { useSelectionStore } from "../../stores/selectionStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { useUiStore } from "../../stores/uiStore";
 import { linkFolderToSelectedTrip, linkLooseFolder } from "../photos/photoActions";
+import { FolderPhotoGrid } from "../photos/FolderPhotoGrid";
 import { PhotoViewFilters } from "../photos/PhotoViewFilters";
 import { compileNamePattern } from "@shared/search/namePattern";
-import { LibraryList, NothingMatches, SearchProblem, SearchResults } from "./LibraryList";
+import { LibraryList, NothingMatches, removeDuplicatesItem, SearchProblem, SearchResults } from "./LibraryList";
 import { TripPage } from "./TripPage";
 import { today } from "../itinerary/viewModel";
 import { defaultOpen, filterTree, findTrip, sectionRoot, tripListRoot, tripPageRoot } from "./libraryRoots";
@@ -44,6 +45,7 @@ export function LeftPanel(): ReactNode {
   const section = useNavStore((s) => s.section);
   const openTripId = useNavStore((s) => s.openTripId);
   const selectedKey = useSelectionStore((s) => (s.selected === null ? null : `${s.selected.kind}:${s.selected.id}`));
+  const selectedFolder = useSelectionStore((s) => s.linkedFolder);
 
   useEffect(() => {
     void refresh();
@@ -85,6 +87,9 @@ export function LeftPanel(): ReactNode {
   const regex = pattern?.ok === true ? pattern.regex : null;
   const narrowed = useMemo(() => (regex === null ? null : filterTree(root, regex)), [root, regex]);
   const tripPage = section === "trips" && openTrip !== null;
+  // Only once its details have loaded, and only for the folder still selected.
+  const photoFolder =
+    section === "photos" && selectedFolder !== null && selectedKey === `linkedFolder:${selectedFolder.id}` ? selectedFolder : null;
   const here = tripPage ? "this trip" : SECTION_TITLE[section];
 
   return (
@@ -114,17 +119,22 @@ export function LeftPanel(): ReactNode {
           {narrowed !== null && narrowed.root.children.length === 0 ? (
             <NothingMatches where={SECTION_TITLE[section]} />
           ) : (
-            <LibraryList
-              root={narrowed?.root ?? root}
-              label={SECTION_TITLE[section]}
-              {...(narrowed === null ? {} : { openIds: narrowed.open })}
-              emptyText={
-                section === "trips"
-                  ? "No trips yet. Add one with the + button, or import a file."
-                  : root.hint ?? `No ${SECTION_TITLE[section].toLowerCase()} in the visible trips.`
-              }
-            />
+            // Phase 14 Requirement 27: a selected folder's photos sit under
+            // the list, which then takes at most 40% of the panel.
+            <div className={photoFolder === null ? "flex min-h-0 flex-1 flex-col" : "flex max-h-[40%] min-h-0 shrink-0 flex-col"}>
+              <LibraryList
+                root={narrowed?.root ?? root}
+                label={SECTION_TITLE[section]}
+                {...(narrowed === null ? {} : { openIds: narrowed.open })}
+                emptyText={
+                  section === "trips"
+                    ? "No trips yet. Add one with the + button, or import a file."
+                    : root.hint ?? `No ${SECTION_TITLE[section].toLowerCase()} in the visible trips.`
+                }
+              />
+            </div>
           )}
+          {photoFolder !== null && <FolderPhotoGrid key={photoFolder.id} folderId={photoFolder.id} folderName={photoFolder.name} />}
         </>
       )}
     </div>
@@ -223,12 +233,15 @@ function Header(): ReactNode {
       ? [
           { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
           { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
+          removeDuplicatesItem("route"),
         ]
       : section === "waypoints"
-        ? [{ label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() }]
-        : section === "photos"
-          ? [{ label: "Link a Folder…", onSelect: () => void linkLooseFolder() }]
-          : [];
+        ? [{ label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() }, removeDuplicatesItem("waypoint")]
+        : section === "tracks"
+          ? [{ ...removeDuplicatesItem("track"), separatorBefore: false }]
+          : section === "photos"
+            ? [{ label: "Link a Folder…", onSelect: () => void linkLooseFolder() }]
+            : [];
   const moreItems: MenuItem[] = [
     ...sectionItems,
     { label: "New Trip", separatorBefore: sectionItems.length > 0, onSelect: () => useNavStore.getState().ask("newTrip") },

@@ -28,6 +28,7 @@ import type {
 } from '../io/types';
 import type { Itinerary, ItineraryStop, ItineraryView } from '../domain/itinerary';
 import type { TripOverview } from '../domain/library';
+import type { DuplicateOutcome, DuplicateReport } from '../library/duplicates';
 import type {
   ChosenFolder,
   LinkedFolderSummary,
@@ -356,6 +357,11 @@ export interface TrailRtApi {
       req: Req<typeof S.batchDeleteRequest>,
     ): Promise<Result<BatchOutcome>>;
     move(req: Req<typeof S.batchMoveRequest>): Promise<Result<BatchOutcome>>;
+  };
+  /** Phase 14 Requirement 28: duplicates by content. `find` reads; `remove` is one undo step. */
+  duplicates: {
+    find(req: Req<typeof S.duplicatesFindRequest>): Promise<Result<DuplicateReport>>;
+    remove(req: Req<typeof S.duplicatesRemoveRequest>): Promise<Result<DuplicateOutcome>>;
   };
   importing: {
     /** Opens the file dialog in the main process and stages what was chosen. */

@@ -13,6 +13,7 @@ import type {
   ObjectRef,
   TreeNode,
 } from "@shared/domain/types";
+import type { DuplicateKind } from "@shared/library/duplicates";
 import { ContextMenu, type MenuItem } from "../../components/ContextMenu";
 import * as actions from "../../lib/actions";
 import { api, call, describeError } from "../../lib/client";
@@ -70,8 +71,20 @@ function moveDestinations(
   return [...(looseTripId === null ? [] : [{ id: looseTripId, name: "Not in a trip" }]), ...overview];
 }
 
-/** The Tracks section's root, from `sectionRoot`. */
+/** Phase 14 Requirement 28: the section's Remove Duplicates… item. */
+export function removeDuplicatesItem(kind: DuplicateKind): MenuItem {
+  const many = kind === "track" ? "Tracks" : kind === "route" ? "Routes" : "Waypoints";
+  return {
+    label: `Remove Duplicate ${many}…`,
+    separatorBefore: true,
+    onSelect: () => useUiStore.getState().openDialog({ kind: "removeDuplicates", objectKind: kind }),
+  };
+}
+
+/** The sections' roots, from `sectionRoot`. */
 const TRACKS_ROOT = "section:tracks";
+const ROUTES_ROOT = "section:routes";
+const WAYPOINTS_ROOT = "section:waypoints";
 
 /** Every track in a row and under it. */
 function trackIdsIn(node: TreeNode): string[] {
@@ -576,7 +589,17 @@ export function LibraryList({
   // Phase 14 Requirement 23: in the Tracks section, a track's arrow, or a
   // year's, month's or day's, shows those tracks on the map. A track's also
   // selects it, as clicking the row does.
+  // Requirement 26: in the Routes and Waypoints sections, a route's arrow
+  // selects it and fits the map to it; a waypoint's centres the map on it.
   const showOnMap = (node: TreeNode): { onShow?: () => void; showLabel?: string } => {
+    const ref = node.ref;
+    if ((root.id === ROUTES_ROOT && ref?.kind === "route") || (root.id === WAYPOINTS_ROOT && ref?.kind === "waypoint")) {
+      const focus = useMapFocusStore.getState();
+      return {
+        showLabel: `Show ${node.name} on the map`,
+        onShow: () => void (ref.kind === "route" ? focus.showRoute(ref.id) : focus.showWaypoint(ref.id)),
+      };
+    }
     if (root.id !== TRACKS_ROOT) return {};
     const ids = trackIdsIn(node);
     if (ids.length === 0) return {};
@@ -879,13 +902,16 @@ export function LibraryList({
           { label: "New Route", onSelect: () => void actions.startDrawingRoute() },
           { label: "New Straight-Line Route", onSelect: () => void actions.startStraightLineRoute() },
           { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+          removeDuplicatesItem("route"),
         ];
       case "section:waypoints":
         return [
           { label: "New Waypoint", onSelect: () => void actions.startPlacingWaypoint() },
           { label: "Import Files…", separatorBefore: true, onSelect: () => void actions.chooseFilesToImport() },
+          removeDuplicatesItem("waypoint"),
         ];
       case "section:tracks":
+        return [{ label: "Import Files…", onSelect: () => void actions.chooseFilesToImport() }, removeDuplicatesItem("track")];
       case "section:imported":
         return [{ label: "Import Files…", onSelect: () => void actions.chooseFilesToImport() }];
       case "section:photos":

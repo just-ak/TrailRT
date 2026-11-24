@@ -92,6 +92,9 @@ test.describe('security posture', () => {
       // Phase 5. Multi-object move and delete, kept out of the per-kind
       // namespaces because a batch is one undo entry rather than N.
       'batch',
+      // Phase 14 Requirement 28. Duplicates by content: a read that finds
+      // them, and a removal that is one undo step.
+      'duplicates',
       'events',
       'exporting',
       'folders',

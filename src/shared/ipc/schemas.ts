@@ -1318,3 +1318,18 @@ export const photoYearsRequest = z.object({ includeArchived: z.boolean().default
 export const tripsOverviewRequest = z.object({ includeArchived: z.boolean().default(false) }).strict();
 
 export const photosForTripRequest = z.object({ tripId: idSchema }).strict();
+
+/** Phase 14 Requirement 28: which kind to compare, in the trips the library shows. */
+export const duplicateKindSchema = z.enum(['route', 'track', 'waypoint']);
+
+export const duplicatesFindRequest = z
+  .object({ kind: duplicateKindSchema, includeArchived: z.boolean() })
+  .strict();
+
+/** The copies to remove, each with the copy it duplicates. Capped as `duplicateService.MAX_DUPLICATE_REMOVALS`. */
+export const duplicatesRemoveRequest = z
+  .object({
+    kind: duplicateKindSchema,
+    removals: z.array(z.object({ id: idSchema, keepId: idSchema }).strict()).min(1).max(10_000),
+  })
+  .strict();

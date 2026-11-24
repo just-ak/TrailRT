@@ -235,3 +235,22 @@ export function resequence(db: Db, orderedIds: readonly string[]): void {
     db.update(itineraryStops).set({ seq }).where(eq(itineraryStops.id, id)).run();
   }
 }
+
+/**
+ * The waypoints and routes any trip's plan uses, so removing duplicates never
+ * takes one out from under a plan (Phase 14 Requirement 28.4).
+ */
+export function idsInPlans(db: Db): { waypoints: Set<string>; routes: Set<string> } {
+  const rows = db
+    .select({ waypointId: itineraryStops.waypointId, legRouteId: itineraryStops.legRouteId, entryRouteId: itineraryStops.entryRouteId })
+    .from(itineraryStops)
+    .all();
+  const waypoints = new Set<string>();
+  const routes = new Set<string>();
+  for (const row of rows) {
+    if (row.waypointId !== null) waypoints.add(row.waypointId);
+    if (row.legRouteId !== null) routes.add(row.legRouteId);
+    if (row.entryRouteId !== null) routes.add(row.entryRouteId);
+  }
+  return { waypoints, routes };
+}

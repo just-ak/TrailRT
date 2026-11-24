@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 32 here, against the new panels.
+after task 35 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -509,7 +509,69 @@ after task 32 here, against the new panels.
     (2,166 unit, 203 end-to-end)
   - _Requirements: 24.1–24.5_
 
-- [ ] 29. The day and what is in it
+- [x] 29. Show routes and waypoints on the map from the list
+  - `showRoute`, `showWaypoint`, `target` and `shown` in `mapFocusStore`,
+    with the box from `boundingBox`; the arrow on route and waypoint rows in
+    `LibraryList`; `MapView` moves to the target and draws the shown object
+    with its layer hidden (design §5.19)
+  - Unit tests: a route's arrow asks for its box, a waypoint's for its
+    point, a route with no points asks for nothing; the shown object is
+    forgotten when something else is selected
+  - End-to-end: a route's arrow selects it and moves the map to it; a
+    waypoint's centres on it zoomed in; a waypoint asked for is drawn with
+    its layer hidden until something else is selected
+  - Done: as above. `mapFocusStore.test.ts` covers both arrows, the route
+    with no points, forgetting the shown object, and a second request;
+    `show-on-map.spec.ts` covers the three cases above. Routes draw on the
+    canvas, so the hidden-layer case is checked through a waypoint's marker,
+    which takes the same path. `npm run verify` passes (2,179 unit, 207
+    end-to-end)
+  - _Requirements: 26.1–26.4_
+
+- [x] 30. A folder's photos under the Photos list
+  - `features/photos/photoGrid.ts`: `layoutPhotoGrid`, `rowsInView`,
+    `dayLabel`; `PhotoThumb` out of `TripPage`; `FolderPhotoGrid` under the
+    Photos section's list; `goToPhoto` in `mapFocusStore` (design §5.19)
+  - Unit tests: days in order with undated last, four to a row, offsets
+    that add up; only the rows meeting the viewport are drawn, for 40,000
+    photos as for 30
+  - End-to-end: selecting the folder shows its 29 photos underneath; a
+    located photo opens the preview and moves the map to it; one with no
+    location says why
+  - Done: as above. `photoGrid.test.ts` covers the days, the rows and
+    offsets, and the window over 40,000 photos; `photos.spec.ts` selects the
+    folder in the Photos section, opens a located photo and checks the map's
+    centre and zoom, then scrolls to an unlocated one and checks its mark
+    and message. `npm run verify` passes (2,179 unit, 207 end-to-end)
+  - _Requirements: 27.1–27.4_
+
+- [x] 31. Remove duplicates by content
+  - `shared/library/duplicates.ts`: `groupDuplicates`, the keep rule and
+    `DUPLICATE_UNDO_POINTS`; `contentKeys.ts`; `duplicateService.find`,
+    `remove`, `removeDuplicateTrack` and `restoreDuplicateTrack` with the
+    `track:removeDuplicate` and `track:restoreDuplicate` commands;
+    `duplicates:find` and `duplicates:remove`; `RemoveDuplicatesDialog` and
+    its menu items; ADR 0027 (design §5.20)
+  - Unit tests: groups by key whatever the name; the keep rule; a copy a plan
+    uses is never removed; across trips marked; through the database, exact
+    content only, segment breaks count, archived trips hidden; removal is one
+    step and undo puts each kind back, a track rebuilt from its twin with its
+    original file; a changed twin refuses; redo; a changed pair is skipped
+  - End-to-end: the same file imported twice leaves duplicate tracks, which
+    the dialog finds and removes, and undo puts back; duplicate routes with
+    different names; a waypoint copied to another trip starts unticked; none
+    found says how many were compared
+  - Done: as above. `duplicates.test.ts` in `shared/library` covers the
+    grouping and keep rule; in `main/services` it covers exact content,
+    elevation, time and segment breaks, archived trips, a planned waypoint
+    never removed, undo of two tracks with both original files and redo, a
+    changed or deleted twin refusing, routes and waypoints, and a changed
+    pair skipped. `duplicates.spec.ts` covers the four cases above, and
+    `app.spec.ts` lists the new `duplicates` bridge namespace. `npm run
+    verify` passes (2,194 unit, 210 end-to-end)
+  - _Requirements: 28.1–28.8_
+
+- [ ] 32. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -517,19 +579,19 @@ after task 32 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 30. The left panel as drawn
+- [ ] 33. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 31. The Photos section
+- [ ] 34. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 32. End-to-end and verification pass
+- [ ] 35. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

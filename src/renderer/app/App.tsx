@@ -5,6 +5,7 @@ import { RestoreDialog } from "../features/backup/RestoreDialog";
 import { ExportDialog } from "../features/export/ExportDialog";
 import { ImportDialog } from "../features/import/ImportDialog";
 import { ConfirmBatchDeleteDialog } from "../features/library/ConfirmBatchDeleteDialog";
+import { RemoveDuplicatesDialog } from "../features/library/RemoveDuplicatesDialog";
 import { ConfirmDeleteDialog } from "../features/library/ConfirmDeleteDialog";
 import { RegionPickerDialog } from "../features/settings/RegionPickerDialog";
 import { SettingsDialog } from "../features/settings/SettingsDialog";
@@ -225,6 +226,7 @@ export function App(): ReactNode {
       {dialog.kind === "unlinkFolder" && (
         <UnlinkFolderDialog folderId={dialog.folderId} name={dialog.name} />
       )}
+      {dialog.kind === "removeDuplicates" && <RemoveDuplicatesDialog key={dialog.objectKind} kind={dialog.objectKind} />}
       {dialog.kind === "regionPicker" && (
         <RegionPickerDialog
           onClose={() => useUiStore.getState().closeDialog()}

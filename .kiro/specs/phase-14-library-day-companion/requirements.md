@@ -602,6 +602,80 @@ Found while measuring the owner's library for Requirement 24. ADR 0025.
 3. AN existing library SHALL be upgraded in place: the copies collapsed and the
    database compacted, with nothing lost.
 
+## Requirement 26: Show routes and waypoints on the map from the list
+
+Added 24 November 2026 from the owner's feedback: "the Routes in the left
+menu should have the same arrow when selected and then click on the arrow to
+show the route on the map. this should also be on the waypoints too." It
+extends Requirement 23 to the Routes and Waypoints sections.
+
+1. IN the Routes and Waypoints sections, every route and waypoint row SHALL
+   have the arrow of Requirement 23. It SHALL appear on hover and focus, and
+   stay while the row is selected.
+2. A ROUTE's arrow SHALL select the route and fit the map to it. A route with
+   no points SHALL say so rather than leave the map where it was.
+3. A WAYPOINT's arrow SHALL select the waypoint and centre the map on it,
+   zoomed in to at least street level but never zoomed out.
+4. THE route or waypoint SHALL be drawn even with its layer hidden, since it
+   was asked for, for as long as it stays selected.
+
+## Requirement 27: A folder's photos under the Photos list
+
+Added 24 November 2026 from the owner's feedback: "when selecting photo's the
+preview of each photo should be underneath, and then when you select it, then
+navigate the map to the position."
+
+1. IN the Photos section, selecting a linked folder SHALL show its photos as
+   thumbnails underneath the list, grouped by the day they were taken, undated
+   last, as the trip page's Photos tab does.
+2. THE grid SHALL stay responsive with a folder of tens of thousands of
+   photos: only the rows on screen are drawn, and a thumbnail is made only for
+   a cell that is on screen (Requirement 7.3).
+3. SELECTING a thumbnail SHALL select the photo, as clicking it on the map
+   does, and move the map to where it was taken, zoomed in to at least street
+   level but never zoomed out.
+4. A PHOTO with no location SHALL be marked as such in the grid, and selecting
+   it SHALL say why it cannot be shown on the map rather than move the map.
+
+## Requirement 28: Remove duplicates by content
+
+Added 24 November 2026 from the owner's request: "need a remove duplicates,
+from trails, routes, waypoints, based on content, not on name". ADR 0027.
+
+1. THE Tracks, Routes and Waypoints sections SHALL each offer Remove
+   Duplicates…, from the panel's More menu and from a right-click on the
+   list's empty space.
+2. TWO items SHALL be duplicates when their content is exactly the same,
+   whatever their names, descriptions, colours or symbols:
+   - tracks: every recorded point in order, with its position, elevation and
+     time, and where each segment breaks;
+   - routes: every point of the drawn line in order, with its position and
+     elevation;
+   - waypoints: the position and elevation.
+   Content SHALL be compared exactly. Items that are only nearly the same are
+   not duplicates.
+3. ONLY items in the trips the library shows SHALL be compared, with those
+   outside a trip; archived trips SHALL count only while they are shown.
+4. FROM each group of duplicates one copy SHALL be kept: one a trip's plan
+   uses first, then one in a trip rather than outside one, then the oldest.
+   A copy a plan uses SHALL never be removed, and SHALL be listed as kept and
+   why.
+5. BEFORE anything is removed, a dialog SHALL list each group: the copy kept
+   and the copies to remove, with the trip each is in. Each group SHALL have
+   a tick box. A group whose copies sit in more than one trip SHALL start
+   unticked and say so, since copying an item to another trip may be
+   deliberate; items outside a trip do not count as another trip.
+6. REMOVING SHALL be one undo step that puts every copy back as it was, with
+   its name, trip, metadata and original file. A removed track SHALL be
+   rebuilt from the copy that was kept, and SHALL refuse with a reason if that
+   copy has since changed or gone. If the routes removed hold more points
+   than one undo step carries, the dialog SHALL say before removing that it
+   cannot be undone.
+7. AN item that changed between the dialog opening and the removal SHALL be
+   skipped rather than removed, and the result SHALL say how many were.
+8. WITH no duplicates, the dialog SHALL say how many items it compared and
+   that none are the same.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its

@@ -204,6 +204,11 @@ export const CHANNELS = {
     delete: 'batch:delete',
     move: 'batch:move',
   },
+  /** Phase 14 Requirement 28: duplicates by content, found and then removed as one undo step. */
+  duplicates: {
+    find: 'duplicates:find',
+    remove: 'duplicates:remove',
+  },
   /**
    * Import is a three-step conversation, not one call: the main process opens
    * the dialog, parses, and hands back **opaque tokens** plus previews. The

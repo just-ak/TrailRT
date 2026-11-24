@@ -194,6 +194,10 @@ const api: TrailRtApi = {
     delete: (req) => call(CHANNELS.batch.delete, req),
     move: (req) => call(CHANNELS.batch.move, req),
   },
+  duplicates: {
+    find: (req) => call(CHANNELS.duplicates.find, req),
+    remove: (req) => call(CHANNELS.duplicates.remove, req),
+  },
   importing: {
     choose: () => call(CHANNELS.importing.choose),
     /**

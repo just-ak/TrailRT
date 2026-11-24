@@ -277,6 +277,51 @@ test('shows every linked folder in the Photos view, annotated with its trip, wit
   expect(years.some((y) => /^\d{4} \(\d+\)$/.test(y))).toBe(true);
 });
 
+test('selecting a folder in the Photos section shows its photos underneath, and a photo moves the map to it (Phase 14 task 30)', async () => {
+  const { page } = harness;
+  await page.getByRole('tab', { name: 'Photos', exact: true }).click();
+  await page.locator('[data-path^="view:photos/linkedFolder:"]').first().click();
+  const grid = page.getByTestId('folder-photos');
+  await expect(grid).toBeVisible();
+  await expect(page.getByTestId('folder-photos-count')).toHaveText('29 photos');
+
+  const photos = await page.evaluate(async () => {
+    const folders = await window.trailrt.linkedFolders.list({});
+    const folderId = folders.ok ? folders.data[0]?.id : undefined;
+    if (folderId === undefined) return [];
+    const listed = await window.trailrt.photos.list({ folderId });
+    return listed.ok ? listed.data.map((p) => ({ id: p.id, name: p.relativePath, state: p.state, lat: p.lat, lon: p.lon })) : [];
+  });
+  const located = photos.find((p) => p.state === 'located' && p.lat !== null && p.lon !== null);
+  const unlocated = photos.find((p) => p.state === 'unlocated');
+  if (located === undefined || unlocated === undefined) throw new Error('the fixtures have a located and an unlocated photo');
+
+  // Selecting a thumbnail opens the preview and centres the map on it, zoomed in.
+  await grid.locator(`[data-photo="${located.id}"]`).click();
+  await expect(page.getByTestId('photo-preview')).toContainText(located.name.split('/').at(-1) ?? '');
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const result = await window.trailrt.settings.all();
+        return result.ok ? result.data.mapPosition : null;
+      }).then((at) => at !== null && Math.abs(at.lat - (located.lat ?? 0)) < 1e-4 && Math.abs(at.lon - (located.lon ?? 0)) < 1e-4 && at.zoom >= 15),
+    { timeout: 10_000 })
+    .toBe(true);
+
+  // A photo with no location is marked, and says why rather than moving the map.
+  const cell = grid.locator(`[data-photo="${unlocated.id}"]`);
+  const scroller = grid.locator('.overflow-y-auto');
+  for (let i = 0; i < 30 && (await cell.count()) === 0; i += 1) {
+    // eslint-disable-next-line no-await-in-loop
+    await scroller.evaluate((element) => {
+      element.scrollTop += 150;
+    });
+  }
+  await expect(cell).toHaveAttribute('aria-label', /No location/);
+  await cell.click();
+  await expect(page.getByText(/^This photo is not on the map: no location/)).toBeVisible();
+});
+
 test('unlinks after confirmation, and undo brings the folder back', async () => {
   const { page } = harness;
   await page.getByRole('treeitem', { name: 'Peak 2026' }).first().click();

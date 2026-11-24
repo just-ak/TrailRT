@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { asc, eq, inArray, sql } from 'drizzle-orm';
+import { asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { GeometrySource } from '@shared/domain/types';
 import type { Db } from '../client';
 import { encodeMetadata } from '../metadata';
@@ -501,4 +501,101 @@ export function trackBoundsForTrip(
     maxLat: row.maxLat,
     maxLon: row.maxLon,
   };
+}
+
+// ------------------------------------------------- duplicates (ADR 0027)
+
+/** A track's row as stored, for putting a removed duplicate back exactly. */
+export type RawTrackRow = typeof tracks.$inferSelect;
+
+export function rawTrack(db: Db, id: string): RawTrackRow | null {
+  return db.select().from(tracks).where(eq(tracks.id, id)).get() ?? null;
+}
+
+export function insertRawTrack(db: Db, row: RawTrackRow): void {
+  db.insert(tracks).values(row).run();
+}
+
+/** Each track's real point count, in one pass over the point index. */
+export function pointCounts(db: Db): Map<string, number> {
+  const rows = db
+    .select({ trackId: trackPoints.trackId, n: sql<number>`count(*)` })
+    .from(trackPoints)
+    .groupBy(trackPoints.trackId)
+    .all();
+  return new Map(rows.map((r) => [r.trackId, r.n]));
+}
+
+/** A track's last point, by segment then sequence. */
+export function endPoint(db: Db, trackId: string): { lat: number; lon: number } | null {
+  return (
+    db
+      .select({ lat: trackPoints.lat, lon: trackPoints.lon })
+      .from(trackPoints)
+      .where(eq(trackPoints.trackId, trackId))
+      .orderBy(desc(trackPoints.segmentIndex), desc(trackPoints.seq))
+      .limit(1)
+      .get() ?? null
+  );
+}
+
+/**
+ * Copies one track's points onto another, keeping their segment and sequence
+ * numbers. Chunked as `replaceTrackPoints` is. Must run inside the caller's
+ * transaction.
+ */
+export function copyTrackPoints(db: Db, fromId: string, toId: string): number {
+  const CHUNK = 1000;
+  const points = listTrackPoints(db, fromId);
+  for (let i = 0; i < points.length; i += CHUNK) {
+    db.insert(trackPoints)
+      .values(
+        points.slice(i, i + CHUNK).map((p) => ({
+          id: randomUUID(),
+          trackId: toId,
+          segmentIndex: p.segmentIndex,
+          seq: p.seq,
+          lat: p.lat,
+          lon: p.lon,
+          eleM: p.eleM,
+          recordedAt: p.recordedAt,
+        })),
+      )
+      .run();
+  }
+  return points.length;
+}
+
+/** The hashes of the files a track was read from. One, for every import so far. */
+export function sourceHashes(db: Db, trackId: string): string[] {
+  return db
+    .select({ hash: trackSources.contentHash })
+    .from(trackSources)
+    .where(eq(trackSources.trackId, trackId))
+    .all()
+    .map((r) => r.hash);
+}
+
+/** How many tracks link to a file. */
+export function sourceLinkCount(db: Db, contentHash: string): number {
+  const row = db
+    .select({ n: sql<number>`count(*)` })
+    .from(trackSources)
+    .where(eq(trackSources.contentHash, contentHash))
+    .get();
+  return row?.n ?? 0;
+}
+
+export function sourceFile(db: Db, contentHash: string): { format: string; bytes: Uint8Array } | null {
+  const row = db
+    .select({ format: sourceFiles.format, bytes: sourceFiles.bytes })
+    .from(sourceFiles)
+    .where(eq(sourceFiles.contentHash, contentHash))
+    .get();
+  return row === undefined ? null : { format: row.format, bytes: new Uint8Array(row.bytes) };
+}
+
+/** Links a track to a file that is already stored. */
+export function linkTrackSource(db: Db, trackId: string, contentHash: string, now: number): void {
+  db.insert(trackSources).values({ id: randomUUID(), trackId, contentHash, createdAt: now }).run();
 }
