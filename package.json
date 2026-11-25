@@ -1,6 +1,6 @@
 {
   "name": "trailrt",
-  "version": "0.2.1",
+  "version": "0.2.0",
   "private": true,
   "description": "A modern desktop replacement for Garmin BaseCamp. Local-first trip, route, track and waypoint planning.",
   "license": "MIT",
@@ -31,7 +31,9 @@
     "db:generate": "drizzle-kit generate",
     "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e",
     "package": "npm run build && electron-builder --mac && npm run verify:package && cp \"./release/TrailRT-${npm_package_version}-arm64.dmg\" ./downloads/",
+    "release": "npm run release:prepare && npm run release:publish",
     "release:prepare": "node scripts/release-prepare.mjs",
+    "release:publish": "node scripts/release-publish.mjs",
     "verify:package": "node scripts/verify-package.mjs",
     "postinstall": "install-electron && electron-builder install-app-deps",
     "verify:native": "electron scripts/verify-native.mjs",

@@ -65,8 +65,11 @@ not an inconvenience.
    and document the Gatekeeper consequence honestly rather than hiding it.
    Version numbers come from semantic-release (ADR 0026):
    `npm run release:prepare` works out the version, packages the DMG and
-   commits both; pushing that commit runs `.github/workflows/release.yml`,
-   which checks the DMG and publishes release `v<version>`. CI does not build
+   commits both. `npm run release:publish` then pushes that commit, which runs
+   `.github/workflows/release.yml` to check the DMG and publish release
+   `v<version>`, and follows the run with `gh` until the release is up.
+   `npm run release` does both. Every release tag must also be on GitHub, or
+   the workflow works out a different version from the Mac. CI does not build
    the DMG, because the bundled Valhalla is compiled locally (ADR 0013).
 2. **The Mac App Store**, permitted by ADR 0024 and not available yet. Phase 15
    holds the requirements: Apple Developer Program membership, the App

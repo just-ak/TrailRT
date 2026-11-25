@@ -7,14 +7,21 @@
 # owner's Mac, because the bundled Valhalla is compiled there (ADR 0013). So a
 # release starts locally:
 #
-#   npm run release:prepare   # works out the version, packages the DMG, commits both
-#   git push                  # runs this workflow
+#   npm run release           # = release:prepare, then release:publish
 #
-# Here semantic-release works the version out again and refuses to go on if
-# it is not the one the DMG was built as (scripts/release-verify.mjs), checks
-# the DMG on an Apple silicon runner (scripts/check-dmg.mjs), then tags the
-# commit and publishes the release with notes made from the commits, the DMG
-# and its checksum. release.config.mjs holds the rules.
+#   npm run release:prepare   # works out the version, packages the DMG, commits both
+#   npm run release:publish   # pushes, follows this workflow with gh, checks the release
+#
+# Here semantic-release works the version out again from the tags on GitHub,
+# and refuses to go on if it is not the one the DMG was built as
+# (scripts/release-verify.mjs). It checks the DMG on an Apple silicon runner
+# (scripts/check-dmg.mjs), then tags the commit and publishes the release with
+# notes made from the commits, the DMG and its checksum. release.config.mjs
+# holds the rules.
+#
+# Every release tag must be on GitHub, not only on the Mac. Without them this
+# workflow sees a first release and wants 1.0.0: that is how 0.2.0 failed twice,
+# with v0.1.0 never pushed. The release scripts now check for it.
 
 name: Release
 
@@ -66,8 +73,28 @@ jobs:
           registry-url: https://npm.pkg.github.com
           scope: '@just-ak'
 
+      - name: Check the release tags are here
+        # semantic-release counts from the last tag; with none it would want 1.0.0.
+        run: |
+          last=$(git tag --list 'v*' --merged HEAD --sort=-v:refname | head -n1)
+          if [ -z "$last" ]; then
+            echo "::error::No release tag (v*) is behind this commit, so this would be a first release (1.0.0). Push the last release tag from the Mac: git push origin refs/tags/<tag>"
+            exit 1
+          fi
+          echo "Last release: $last"
+
       - name: Fetch the DMG for package.json's version from Git LFS
-        run: git lfs pull --include "downloads/TrailRT-$(node -p "require('./package.json').version")-arm64.dmg"
+        id: dmg
+        run: |
+          version=$(node -p "require('./package.json').version")
+          dmg="downloads/TrailRT-$version-arm64.dmg"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if ! git ls-files --error-unmatch "$dmg" > /dev/null 2>&1; then
+            echo "::error::package.json says $version but $dmg is not committed. Run npm run release:prepare on the Mac."
+            exit 1
+          fi
+          git lfs pull --include "$dmg"
+          ls -l "$dmg"
 
       - name: Install the release tools
         # --ignore-scripts: semantic-release needs neither Electron's binary
@@ -80,3 +107,18 @@ jobs:
         run: npx --no-install semantic-release ${{ inputs.dry_run && '--dry-run' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Confirm the release
+        if: ${{ !inputs.dry_run }}
+        run: |
+          tag="v${{ steps.dmg.outputs.version }}"
+          gh release view "$tag" --json url,assets --jq '"\(.url)\n" + ([.assets[] | "  \(.name) (\(.size) bytes)"] | join("\n"))'
+          {
+            echo "### TrailRT $tag"
+            echo
+            gh release view "$tag" --json url --jq '"Published: " + .url'
+            echo
+            echo "Latest download: https://github.com/${{ github.repository }}/releases/latest"
+          } >> "$GITHUB_STEP_SUMMARY"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

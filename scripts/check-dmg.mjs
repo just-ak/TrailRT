@@ -4,7 +4,8 @@
  *
  *   node scripts/check-dmg.mjs downloads/TrailRT-0.1.0-arm64.dmg [expected-version]
  *
- * Run by .github/workflows/publish-dmg.yml, and safe to run locally. It:
+ * Run by scripts/release-prepare.mjs on the Mac and by scripts/release-verify.mjs
+ * in .github/workflows/release.yml, and safe to run by hand. It:
  *
  * 1. refuses a Git LFS pointer, which is what a clone without LFS has in
  *    place of the DMG and what a careless upload would publish;

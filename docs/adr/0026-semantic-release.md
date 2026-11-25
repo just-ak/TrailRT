@@ -71,3 +71,40 @@ commit the DMG was built from.
 - semantic-release adds 35 audit findings to the development tree. None reach
   the shipped app, whose 5 findings are unchanged, and the tools run only in
   the release job.
+
+## Amendment, 25 November 2026: tags on GitHub, and publishing with gh
+
+0.2.0 failed in the Release workflow twice. `v0.1.0` had been tagged on the
+Mac and never pushed. `release:prepare` worked the version out from the tag
+here and built 0.2.0. On GitHub there was no tag, so semantic-release
+treated it as a first release, wanted 1.0.0, and `release-verify.mjs`
+rightly refused. `package.json` was then hand-edited to 0.2.1. That made the
+version no longer match the DMG, which was still built as 0.2.0.
+
+**Every release tag must be on GitHub.** `release:prepare` and the new
+`release:publish` stop if a release tag here is missing on `origin`, or
+points at a different commit there. The workflow and `release-verify.mjs`
+also stop, with that cause named, when no release tag is behind the commit.
+
+**`release:prepare` always sets the version.** It writes semantic-release's
+version into `package.json` and `package-lock.json`, whatever they said
+before, so a hand edit cannot reach the DMG. It also stops if GitHub already
+has that tag or release, and runs `check-dmg.mjs` on the copy in
+`downloads/` before committing.
+
+**`npm run release:publish` replaces the bare `git push`.** It uses the
+GitHub CLI to:
+
+1. check that HEAD is `chore(release): <version>` and holds the real DMG;
+2. push `main`, with Git LFS uploading the DMG;
+3. follow the Release run with `gh run watch`, and print the failing log if
+   the run fails;
+4. check the published release: the tag is on this commit, and the DMG's size
+   and SHA-256 and its `.sha256` file match the local DMG.
+
+If GitHub already has the commit and its run failed, it starts the workflow
+again through `workflow_dispatch`, so a fix outside the commit, such as a
+pushed tag, needs no new release commit. `npm run release` runs both halves.
+CI is still what tags and publishes. The local `gh` only pushes, watches and
+checks, so a release is still checked on a clean runner before anyone can
+download it.
