@@ -1,12 +1,16 @@
-import { ASHBOURNE, BUXTON, MACCLESFIELD } from '@fixtures/places';
+import { join, resolve } from 'node:path';
+import { ASHBOURNE, BUXTON, LEEK, MACCLESFIELD } from '@fixtures/places';
 import { expect, test, type Page } from '@playwright/test';
-import { cleanup, close, launch, makeUserDataDir, type Harness } from './helpers';
+import { cleanup, close, launch, makeUserDataDir, openTrip, showTripList, type Harness } from './helpers';
 
 /**
  * Phase 14 task 29 (Requirement 26), against the built application: the
  * arrow on a route in the Routes section and on a waypoint in the Waypoints
  * section selects it and moves the map to it, and a waypoint asked for is
  * drawn with the Waypoints layer hidden.
+ *
+ * Task 32 (Requirement 29): on a trip's page, the trip's arrow fits the map
+ * to the whole trip, and its route, track and waypoint rows have the arrow too.
  */
 
 let userDataDir: string;
@@ -109,4 +113,87 @@ test('a waypoint asked for is drawn with the Waypoints layer hidden, until somet
   await page.getByRole('button', { name: 'Show Ashbourne market on the map' }).click();
   await expect(markers).not.toHaveCount(0);
   await page.getByTestId('waypoints-on-map').click();
+});
+
+/** The Buxton square: the box the trip's route, track and waypoints span. */
+const SQUARE = [BUXTON, MACCLESFIELD, LEEK, ASHBOURNE];
+const inSquare = (at: { lat: number; lon: number }): boolean =>
+  at.lat >= Math.min(...SQUARE.map((p) => p.lat)) &&
+  at.lat <= Math.max(...SQUARE.map((p) => p.lat)) &&
+  at.lon >= Math.min(...SQUARE.map((p) => p.lon)) &&
+  at.lon <= Math.max(...SQUARE.map((p) => p.lon));
+
+/** Zooms right in on one waypoint, so a later fit to something larger is seen to move the map. */
+async function zoomInOnAshbourne(page: Page): Promise<void> {
+  await page.getByRole('treeitem', { name: 'Ashbourne' }).hover();
+  await page.getByRole('button', { name: 'Show Ashbourne on the map' }).click();
+  await expect.poll(async () => (await mapPosition(page))?.zoom ?? 0, { timeout: 10_000 }).toBeGreaterThanOrEqual(15);
+}
+
+/** The map has fitted something the size of the square: zoomed out, centred inside it. */
+async function expectSquareFitted(page: Page): Promise<void> {
+  await expect
+    .poll(async () => {
+      const at = await mapPosition(page);
+      return at !== null && at.zoom <= 13 && inSquare(at);
+    }, { timeout: 10_000 })
+    .toBe(true);
+}
+
+test.describe("on a trip's page (Requirement 29)", () => {
+  let tripName = '';
+
+  test.beforeAll(async () => {
+    // The loop round the four towns, imported as a user would: one route, one
+    // track, four waypoints, in a new trip named after the file.
+    const { app, page } = harness;
+    await app.evaluate(({ dialog }, filePaths: string[]) => {
+      dialog.showOpenDialog = async () => ({ canceled: false, filePaths });
+    }, [join(resolve('test-data'), 'generated', 'peak-district-loop.gpx')]);
+    await showTripList(page);
+    await page.getByRole('button', { name: 'Import files' }).click();
+    await page.getByRole('heading', { name: /^Import \d+ file/ }).waitFor({ timeout: 20_000 });
+    await page.getByLabel('Destination trip').selectOption('');
+    // Dispatched, not clicked: see the import spec on native dialogs.
+    await page.getByRole('button', { name: 'Confirm import' }).dispatchEvent('click');
+    await page.getByRole('heading', { name: 'Import report' }).waitFor({ timeout: 30_000 });
+    await page.getByRole('button', { name: 'Close import report' }).dispatchEvent('click');
+    tripName = await page.evaluate(async () => {
+      const trips = await window.trailrt.trips.list({});
+      return (trips.ok ? trips.data.find((t) => t.trackCount > 0)?.name : undefined) ?? '';
+    });
+    expect(tripName).not.toBe('');
+    await openTrip(page, tripName);
+    await page.getByRole('tab', { name: /^Objects/ }).click();
+  });
+
+  test("the trip's arrow selects the trip and fits the map to all of it", async () => {
+    const { page } = harness;
+    await zoomInOnAshbourne(page);
+    await page.getByTestId('show-trip-on-map').click();
+    // The trip is selected: the companion shows the trip, which for one with no dates is its prompt.
+    await expect(page.getByTestId('companion')).toHaveAttribute('data-view', /^(trip|undated)$/);
+    await expectSquareFitted(page);
+  });
+
+  test("a track's arrow selects it and fits the map to it", async () => {
+    const { page } = harness;
+    await zoomInOnAshbourne(page);
+    await page.getByRole('treeitem', { name: 'Peak District ride' }).hover();
+    await page.getByRole('button', { name: 'Show Peak District ride on the map' }).click();
+    await expect(page.getByTestId('object-card')).toContainText('Peak District ride');
+    await expectSquareFitted(page);
+    // Selected, the arrow stays without hovering.
+    await page.mouse.move(0, 0);
+    await expect(page.getByRole('button', { name: 'Show Peak District ride on the map' })).toHaveCSS('opacity', '1');
+  });
+
+  test("a route's arrow selects it and fits the map to it", async () => {
+    const { page } = harness;
+    await zoomInOnAshbourne(page);
+    await page.getByRole('treeitem', { name: 'Buxton square' }).hover();
+    await page.getByRole('button', { name: 'Show Buxton square on the map' }).click();
+    await expect(page.getByTestId('object-card')).toContainText('Buxton square');
+    await expectSquareFitted(page);
+  });
 });

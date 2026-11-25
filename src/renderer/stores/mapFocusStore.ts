@@ -4,6 +4,7 @@ import type { Bounds, ObjectRef, Track } from '@shared/domain/types';
 import { boundingBox } from '@shared/geo/distance';
 import { photoStateText } from '@shared/photos/library';
 import { api, callOr } from '../lib/client';
+import { useGeometryStore } from './geometryStore';
 import { useSelectionStore } from './selectionStore';
 import { useUiStore } from './uiStore';
 
@@ -19,6 +20,10 @@ import { useUiStore } from './uiStore';
  * trip the selection loads, so nothing extra is drawn. The map is moved to
  * them once, through `target`, and a route or waypoint is drawn even with its
  * layer hidden while it stays selected, through `shown`.
+ *
+ * On a trip's page (Requirement 29) a track is treated as a route is, since
+ * it too belongs to the trip the map draws, and the trip's own arrow fits the
+ * map to the whole trip without overriding hidden layers.
  */
 
 export interface MapFocus {
@@ -38,11 +43,15 @@ interface MapFocusState {
   focus: MapFocus | null;
   fitSeq: number;
   target: MapTarget | null;
-  /** The route or waypoint whose arrow was pressed, drawn even with its layer hidden. */
+  /** The route, track or waypoint whose arrow was pressed, drawn even with its layer hidden. */
   shown: ObjectRef | null;
   showTracks(ids: readonly string[], label: string): Promise<void>;
   showRoute(id: string): Promise<void>;
+  /** A track of the trip being viewed: selected, fitted, and drawn with its layer hidden. */
+  showTrack(id: string): Promise<void>;
   showWaypoint(id: string): Promise<void>;
+  /** A whole trip: selected, and the map fitted to its routes, tracks and waypoints. */
+  showTrip(id: string): Promise<void>;
   /** Moves the map to a photo, or says why it cannot. */
   goToPhoto(photo: Pick<Photo, 'lat' | 'lon' | 'state' | 'reason'>): void;
   clear(): void;
@@ -89,6 +98,38 @@ export const useMapFocusStore = create<MapFocusState>((set, get) => ({
       return;
     }
     set({ shown: { kind: 'route', id }, target: { seq, bounds } });
+  },
+
+  showTrack: async (id) => {
+    const seq = ++targetSeq;
+    // The box is a SQL aggregate, so a long track's points are never walked here.
+    const [, bounds] = await Promise.all([
+      useSelectionStore.getState().select({ kind: 'track', id }),
+      callOr(api().tracks.bounds({ ids: [id] }), null),
+    ]);
+    const selected = useSelectionStore.getState().selected;
+    if (seq !== targetSeq || selected?.kind !== 'track' || selected.id !== id) return;
+    if (bounds === null) {
+      toast('That track has no points to show.');
+      return;
+    }
+    set({ shown: { kind: 'track', id }, target: { seq, bounds } });
+  },
+
+  showTrip: async (id) => {
+    const seq = ++targetSeq;
+    await useSelectionStore.getState().select({ kind: 'trip', id });
+    if (seq !== targetSeq) return;
+    // Selecting the trip loads its geometry unless it is already the trip
+    // loaded; make sure what is read is that trip's, and not an earlier one's.
+    if (useGeometryStore.getState().geometry?.tripId !== id) await useGeometryStore.getState().load(id);
+    const geometry = useGeometryStore.getState().geometry;
+    if (seq !== targetSeq || geometry?.tripId !== id) return;
+    if (geometry.bounds === null) {
+      toast('This trip has nothing to show on the map yet: no routes, tracks or waypoints.');
+      return;
+    }
+    set({ target: { seq, bounds: geometry.bounds } });
   },
 
   showWaypoint: async (id) => {

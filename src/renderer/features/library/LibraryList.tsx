@@ -85,6 +85,8 @@ export function removeDuplicatesItem(kind: DuplicateKind): MenuItem {
 const TRACKS_ROOT = "section:tracks";
 const ROUTES_ROOT = "section:routes";
 const WAYPOINTS_ROOT = "section:waypoints";
+/** A trip's page: its Plan and Objects tabs, and the trip searched (Requirement 29). */
+const TRIP_PAGE_ROOTS: ReadonlySet<string> = new Set([PLAN_ROOT, OBJECTS_ROOT, TRIP_PAGE_ROOT]);
 
 /** Every track in a row and under it. */
 function trackIdsIn(node: TreeNode): string[] {
@@ -591,8 +593,18 @@ export function LibraryList({
   // selects it, as clicking the row does.
   // Requirement 26: in the Routes and Waypoints sections, a route's arrow
   // selects it and fits the map to it; a waypoint's centres the map on it.
+  // Requirement 29: on a trip's page, every route, track and waypoint row. Its
+  // tracks belong to the trip the map draws, so a track is shown as a route is.
   const showOnMap = (node: TreeNode): { onShow?: () => void; showLabel?: string } => {
     const ref = node.ref;
+    if (TRIP_PAGE_ROOTS.has(root.id) && (ref?.kind === "route" || ref?.kind === "track" || ref?.kind === "waypoint")) {
+      const focus = useMapFocusStore.getState();
+      return {
+        showLabel: `Show ${node.name} on the map`,
+        onShow: () =>
+          void (ref.kind === "route" ? focus.showRoute(ref.id) : ref.kind === "track" ? focus.showTrack(ref.id) : focus.showWaypoint(ref.id)),
+      };
+    }
     if ((root.id === ROUTES_ROOT && ref?.kind === "route") || (root.id === WAYPOINTS_ROOT && ref?.kind === "waypoint")) {
       const focus = useMapFocusStore.getState();
       return {

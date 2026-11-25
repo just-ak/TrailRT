@@ -676,6 +676,29 @@ from trails, routes, waypoints, based on content, not on name". ADR 0027.
 8. WITH no duplicates, the dialog SHALL say how many items it compared and
    that none are the same.
 
+## Requirement 29: Show a trip and what is in it on the map from its page
+
+Added 25 November 2026 from the owner's feedback: "When viewing a trip, we're
+missing the right arrow to show the selected trip/route/track/waypoint on the
+map." Requirements 23 and 26 gave the arrow only to the Tracks, Routes and
+Waypoints sections, so a trip's own page had none. This extends them to it.
+
+1. ON a trip's page, the header SHALL have the arrow beside the trip's name.
+   It SHALL select the trip and fit the map to everything in it: its routes,
+   tracks and waypoints. A trip with nothing to show SHALL say so rather than
+   leave the map where it was.
+2. ON a trip's page, in the Plan and Objects tabs and in a search of the
+   trip, every route, track and waypoint row SHALL have the arrow of
+   Requirement 26. It SHALL appear on hover and focus, and stay while the row
+   is selected.
+3. A ROUTE's and a WAYPOINT's arrow SHALL behave as in Requirement 26.2 and
+   26.3. A TRACK's arrow SHALL select the track and fit the map to it. A track
+   with no points SHALL say so.
+4. THE route, track or waypoint SHALL be drawn even with its layer hidden, as
+   in Requirement 26.4, for as long as it stays selected. The trip's own arrow
+   SHALL leave the layer settings as they are, since it asks for the whole
+   trip rather than one object.
+
 ## Changes to earlier phases
 
 - **Phase 1 Requirement 4.1 to 4.3** (a tree rooted at My Collection, its

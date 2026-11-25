@@ -1,7 +1,7 @@
 # Phase 14: The library and the day companion — tasks
 
 Built ahead of Phase 11's tasks 12 and 13 at the owner's request; those finish
-after task 35 here, against the new panels.
+after task 36 here, against the new panels.
 
 - [x] 1. Spec, ADR 0021 and the out-of-order build
   - `requirements.md`, `design.md` and this file; ADR 0021; the spec index and
@@ -571,7 +571,28 @@ after task 35 here, against the new panels.
     verify` passes (2,194 unit, 210 end-to-end)
   - _Requirements: 28.1–28.8_
 
-- [ ] 32. The day and what is in it
+- [x] 32. Show a trip and what is in it on the map from its page
+  - `showTrack` and `showTrip` in `mapFocusStore`; the arrow on route, track
+    and waypoint rows of the trip page's Plan and Objects tabs and its search
+    in `LibraryList`; the trip's arrow beside its name in `TripHeader`;
+    `MapView` draws a shown track with the Tracks layer hidden (design §5.21)
+  - Unit tests: a track's arrow selects it and asks for its box, a track with
+    no points says so; a trip's arrow selects the trip and asks for its
+    geometry's box, a trip with nothing says so, and it leaves `shown` alone
+  - End-to-end: on a trip page, the trip's arrow fits the map to the trip; a
+    route's, track's and waypoint's arrow in the Objects tab selects it and
+    moves the map to it
+  - Done: as above. `mapFocusStore.test.ts` covers a track's arrow, a track
+    with no points, a trip's arrow, a trip with nothing in it, a trip's arrow
+    leaving hidden layers hidden, and reading the asked-for trip's geometry;
+    `show-on-map.spec.ts` imports the Buxton loop into a trip, then checks
+    the trip's, the track's and the route's arrows each select and fit after
+    the waypoint's has zoomed in. Tracks draw on the canvas, so the track
+    drawn with its layer hidden takes the path task 29 checked through a
+    waypoint's marker. `npm run verify` passes (2,200 unit, 213 end-to-end)
+  - _Requirements: 29.1–29.4_
+
+- [ ] 33. The day and what is in it
   - `DayView` with `HourScale`, day switching and stay dragging; `StopCard`,
     `DriveCard`, `TrackCard`, `PhotoMoment`; photos here, nearby and along
     the way
@@ -579,19 +600,19 @@ after task 35 here, against the new panels.
     without times says so
   - _Requirements: 4.3–4.7, 4.9, 10.4_
 
-- [ ] 33. The left panel as drawn
+- [ ] 34. The left panel as drawn
   - Line icons for every row; day cards; the Trips header as in view 1
     (design §4.6)
   - Unit tests: every row kind has an icon; no emoji in any root
   - _Requirements: 10.1–10.3_
 
-- [ ] 34. The Photos section
+- [ ] 35. The Photos section
   - Virtualised grid by trip with Trip and Year filters; all-trips mode;
     `PhotoMoment` with Open the trip at that day; photos outside a trip
   - Unit tests: the grid draws only visible rows; filters narrow the groups
   - _Requirements: 7.1–7.3, 9.2_
 
-- [ ] 35. End-to-end and verification pass
+- [ ] 36. End-to-end and verification pass
   - `library.spec.ts`; every spec on the new panels; the old tree's
     behaviours checked off or recorded as removed (Requirement 8.3)
   - Phase 1, 2, 10 and 11 specs amended as listed in the requirements; then

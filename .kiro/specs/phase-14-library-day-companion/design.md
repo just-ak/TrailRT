@@ -221,7 +221,7 @@ the selection colour.
   the trip's photos by the wall-clock day they were taken, fetched with
   `photos:forTrip`. Thumbnails are requested only when a cell scrolls into
   view. The tab is not virtualised: a trip's photos are hundreds, not the
-  library's tens of thousands, which is the Photos section's case (task 34).
+  library's tens of thousands, which is the Photos section's case (task 35).
 - Linking a folder opens its trip on the Photos tab, where the new folder is.
 
 ### 4.6 As drawn (Requirement 10)
@@ -866,6 +866,32 @@ then lists the groups with a tick box each, unticked when `acrossTrips`. The
 footer removes the ticked copies with one `duplicates:remove`, labelled
 "remove 12 duplicate tracks" on the undo menu.
 
+### 5.21 A trip and what is in it on the map, from its page (Requirement 29)
+
+**Rows.** `showOnMap` in `LibraryList` decided by the list's root, and only
+the three section roots qualified. The trip page's roots, `PLAN_ROOT`,
+`OBJECTS_ROOT` and `TRIP_PAGE_ROOT` (the trip searched), now qualify too.
+There, a route row calls `showRoute` and a waypoint row `showWaypoint`, as in
+§5.19, and a track row calls the new `showTrack`. A track on a trip page
+belongs to the trip the map already draws. It is therefore treated as a route
+is, not through the Tracks section's `showTracks`, which draws extra tracks
+beside the trip and labels them.
+
+**`showTrack`.** It selects the track, then asks `tracks:bounds` for its box.
+That is a SQL aggregate, so a 200,000-point track is never walked in the
+renderer for this. It sets `shown` and `target` as `showRoute` does, and stops
+if something else was selected meanwhile. `MapView`'s hidden-layer rule gains
+the track case: with the Tracks layer off, the shown track is still drawn.
+
+**The trip's arrow.** `TripHeader` draws the same arrow beside the name,
+always visible, because a header has no hover row. It calls the new
+`showTrip`. That selects the trip, makes sure the geometry store holds that
+trip, and fits to `TripGeometry.bounds`, which already spans routes,
+waypoints and the tracks' SQL extent. One waypoint gives a zero-size box,
+which `MapView` centres at street level as for a waypoint. `showTrip` leaves
+`shown` alone, so hidden layers stay hidden: the user asked for the trip, not
+for one object in it.
+
 ### 5.14 Move to any trip from the right-click menu (Requirement 21)
 
 `TripPickerDialog` in `features/library/` takes the destinations, a title and
@@ -891,7 +917,7 @@ photos' tens of thousands.
   tasks: data and pure layout first, then the left panel, then the companion,
   each verified before the next.
 - **Lost behaviour.** Requirement 8.3 makes the old tree's behaviours a
-  checklist (task 35).
+  checklist (task 36).
 - **Performance.** The Photos section and tab are virtualised; thumbnails are
   made only for visible cells.
 

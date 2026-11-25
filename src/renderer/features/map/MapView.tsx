@@ -268,9 +268,12 @@ export function MapView(): ReactNode {
     const asked = askedFor?.kind === "route" ? geometry?.routes.find((r) => r.id === askedFor.id) : undefined;
     return asked === undefined ? NO_ROUTES : [asked];
   }, [visibility.routes, geometry, askedFor]);
-  const tripTracks = visibility.tracks
-    ? (geometry?.tracks ?? NO_TRACKS)
-    : NO_TRACKS;
+  // Requirement 29.4: a track asked for from its trip's page, likewise.
+  const tripTracks = useMemo(() => {
+    if (visibility.tracks) return geometry?.tracks ?? NO_TRACKS;
+    const asked = askedFor?.kind === "track" ? geometry?.tracks.find((t) => t.id === askedFor.id) : undefined;
+    return asked === undefined ? NO_TRACKS : [asked];
+  }, [visibility.tracks, geometry, askedFor]);
   // Phase 14 Requirement 23: tracks asked for by their arrow are drawn beside
   // the open trip's, even with the Tracks layer off, because they were asked for.
   const focus = useMapFocusStore((s) => s.focus);

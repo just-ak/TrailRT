@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronLeft, Download, Ellipsis, FolderPlus, Upload } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Download, Ellipsis, FolderPlus, Upload } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Photo } from "@shared/domain/linkedFolders";
 import type { TreeNode, TripTab } from "@shared/domain/types";
@@ -10,6 +10,7 @@ import { api, call, describeError } from "../../lib/client";
 import { useGeometryStore } from "../../stores/geometryStore";
 import { useItineraryStore } from "../../stores/itineraryStore";
 import { useLibraryStore } from "../../stores/libraryStore";
+import { useMapFocusStore } from "../../stores/mapFocusStore";
 import { useNavStore } from "../../stores/navStore";
 import { usePhotoStore } from "../../stores/photoStore";
 import { useSelectionStore } from "../../stores/selectionStore";
@@ -322,15 +323,29 @@ function TripHeader({ tripId, name }: { tripId: string; name: string }): ReactNo
           className="mt-1 w-full rounded border border-[var(--color-accent)] bg-[var(--color-surface)] px-1 text-[17px] font-bold text-[var(--color-text-primary)] outline-none"
         />
       ) : (
-        // Clicking the name selects the trip itself, so the right panel shows
-        // the trip again after a route or waypoint was selected.
-        <h2
-          className="mt-1 cursor-default truncate text-[17px] font-bold text-[var(--color-text-primary)]"
-          onClick={() => void useSelectionStore.getState().select({ kind: "trip", id: tripId })}
-          onDoubleClick={() => setRenaming(true)}
-        >
-          {name}
-        </h2>
+        <div className="mt-1 flex items-center gap-1">
+          {/* Clicking the name selects the trip itself, so the right panel
+              shows the trip again after a route or waypoint was selected. */}
+          <h2
+            className="min-w-0 cursor-default truncate text-[17px] font-bold text-[var(--color-text-primary)]"
+            onClick={() => void useSelectionStore.getState().select({ kind: "trip", id: tripId })}
+            onDoubleClick={() => setRenaming(true)}
+          >
+            {name}
+          </h2>
+          {/* Requirement 29.1: the list rows' arrow, for the whole trip. Always
+              shown, since a header has no row to hover. */}
+          <button
+            type="button"
+            aria-label={`Show ${name} on the map`}
+            title="Show on the map"
+            data-testid="show-trip-on-map"
+            onClick={() => void useMapFocusStore.getState().showTrip(tripId)}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-[var(--color-accent)] hover:bg-[var(--color-surface-sunken)]"
+          >
+            <ChevronRight size={15} aria-hidden="true" />
+          </button>
+        </div>
       )}
       {meta !== "" && <p className="text-[11.5px] text-[var(--color-text-secondary)]">{meta}</p>}
       {menu !== null && <ContextMenu x={menu.x} y={menu.y} items={items} onClose={() => setMenu(null)} />}
